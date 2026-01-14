@@ -1,0 +1,18 @@
+model OrderItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId   String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  productId String  @db.ObjectId
+
+  quantity  Int
+  unitPrice Float
+  discount  Float @default(0)
+  subtotal  Float
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("orderItems")
+}

@@ -1,0 +1,92 @@
+model Order {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber String @unique
+  employeeId  String @db.ObjectId
+
+  // Order details
+  status OrderStatus @default(PENDING)
+  items  OrderItem[]
+
+  // Pricing
+  subtotal     Float
+  discount     Float @default(0)
+  tax          Float @default(0)
+  shippingCost Float @default(0)
+  total        Float
+
+  // Payment Type
+  paymentType PaymentType @default(INSTALLMENT)
+
+  // Installment Details (if applicable)
+  installmentMonths Int?
+  installmentCount  Int?
+  installmentAmount Float?
+  installments      Installment[]
+
+  // Points Payment (if applicable)
+  pointsUsed Float?
+
+  // Shipping
+  shippingAddress String?
+  shippingCity    String?
+  shippingState   String?
+  shippingZip     String?
+  shippingCountry String?
+  trackingNumber  String?
+
+  // Payment
+  paymentMethod PaymentMethod @default(PAYROLL_DEDUCTION)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Dates
+  orderDate     DateTime  @default(now())
+  shippedDate   DateTime?
+  deliveredDate DateTime?
+  cancelledDate DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([orderDate])
+  @@index([paymentType])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  PAYROLL_DEDUCTION
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  POINTS
+  MIXED
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  CASH
+  INSTALLMENT
+  POINTS
+  MIXED
+}

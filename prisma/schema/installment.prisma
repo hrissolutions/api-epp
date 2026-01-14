@@ -1,0 +1,38 @@
+model Installment {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String @db.ObjectId
+
+  installmentNumber Int
+  amount            Float
+  status            InstallmentStatus @default(PENDING)
+
+  // Cut-off dates
+  cutOffDate    DateTime
+  scheduledDate DateTime
+  deductedDate  DateTime?
+
+  // Salary deduction tracking
+  payrollBatchId     String?
+  deductionReference String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, installmentNumber])
+  @@index([orderId])
+  @@index([status])
+  @@index([cutOffDate])
+  @@index([scheduledDate])
+  @@map("installments")
+}
+
+enum InstallmentStatus {
+  PENDING
+  SCHEDULED
+  DEDUCTED
+  FAILED
+  CANCELLED
+  REFUNDED
+}

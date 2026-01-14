@@ -1,0 +1,38 @@
+model Purchase {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId      String         @db.ObjectId
+  productId       String         @db.ObjectId
+  purchaseType    PurchaseType
+  totalAmount     Float
+  downPayment     Float?
+  status          PurchaseStatus @default(PENDING)
+  approvedBy      String?        @db.ObjectId
+  approvedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([employeeId])
+  @@index([productId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("purchases")
+}
+
+enum PurchaseType {
+  FULL_PAYMENT
+  PAYROLL_LOAN
+}
+
+enum PurchaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}

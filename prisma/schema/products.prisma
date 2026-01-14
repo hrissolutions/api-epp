@@ -1,0 +1,58 @@
+model Product {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  sku         String   @unique
+  name        String
+  description String?
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  categoryId  String   @db.ObjectId
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  vendorId    String   @db.ObjectId
+
+  // Pricing
+  retailPrice   Float
+  employeePrice Float
+  costPrice     Float?
+
+  // Inventory
+  stockQuantity     Int @default(0)
+  lowStockThreshold Int @default(10)
+
+  // Product details
+  imageUrl       String?
+  images         Json? // Array of ProductImage (structured images with type, name, url)
+  specifications Json?
+  weight         Float?
+  dimensions     String?
+
+  // Status
+  isActive    Boolean @default(true)
+  isFeatured  Boolean @default(false)
+  isAvailable Boolean @default(true)
+
+  // Relations
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+  // reviews           ProductReview[]
+  purchases     Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([vendorId])
+  @@map("products")
+}
+
+enum ProductImageType {
+  COVER // Main cover/hero image
+  FEATURED // Featured images
+  GALLERY // Gallery images
+  THUMBNAIL // Thumbnail/preview image
+  PACKAGING // Product packaging image
+  DETAIL // Detail/close-up images
+  LIFESTYLE // Lifestyle/usage images
+  SIZE_CHART // Size chart image
+  INSTRUCTION // Instruction manual images
+  OTHER
+}

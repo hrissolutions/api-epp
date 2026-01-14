@@ -1,0 +1,24 @@
+enum Status {
+  active
+  inactive
+  suspended
+  archived
+}
+
+model User {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  personId    String    @db.ObjectId
+  person      Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  avatar      String?
+  userName    String?   @unique
+  email       String    @unique
+  password    String?
+  status      Status    @default(active)
+  isDeleted   Boolean   @default(false)
+  lastLogin   DateTime?
+  loginMethod String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("users")
+}

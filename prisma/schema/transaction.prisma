@@ -1,0 +1,66 @@
+model Transaction {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  transactionNumber String @unique
+
+  // Link to employee and order
+  employeeId String @db.ObjectId
+  orderId    String @unique @db.ObjectId // One transaction per order
+
+  // Transaction details
+  type   TransactionType
+  status TransactionStatus @default(PENDING)
+
+  // Payment amounts (ledger)
+  totalAmount Float // Total order amount
+  paidAmount  Float @default(0) // Amount paid so far
+  balance     Float // Remaining balance
+
+  // Payment method specifics
+  paymentMethod PaymentMethod
+
+  // Payment history (track each installment payment)
+  paymentHistory Json? // Array of payment records
+
+  // For points payments
+  pointsUsed          Float?
+  pointsTransactionId String?
+
+  // For cash payments
+  cashAmount    Float?
+  receiptNumber String?
+
+  // Reconciliation
+  isReconciled Boolean   @default(false)
+  reconciledAt DateTime?
+  reconciledBy String?
+
+  notes    String?
+  metadata Json? // Additional data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([type])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  PURCHASE // Full payment
+  INSTALLMENT // Single installment payment
+  POINTS_REDEMPTION // Points used for payment
+  REFUND // Money returned to employee
+  ADJUSTMENT // Manual adjustment
+}
+
+enum TransactionStatus {
+  PENDING // Transaction created but not processed
+  PROCESSING // Being processed
+  COMPLETED // Successfully completed
+  FAILED // Failed to process
+  CANCELLED // Transaction cancelled
+  REVERSED // Transaction reversed/refunded
+}
