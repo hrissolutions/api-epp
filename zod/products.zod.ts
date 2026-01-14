@@ -65,13 +65,12 @@ export const ProductSchema = z.object({
 	imageUrl: z.string().url().optional().nullable(),
 	images: z.array(ProductImageSchema).optional().nullable(),
 	specifications: z.record(z.any()).optional().nullable(),
-	weight: decimalSchema.optional().nullable(),
-	dimensions: z.string().optional().nullable(),
 
 	// Status
 	isActive: z.boolean().default(true),
 	isFeatured: z.boolean().default(false),
 	isAvailable: z.boolean().default(true),
+	status: z.enum(["PENDING", "APPROVED", "REJECTED"]).default("PENDING"),
 
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
@@ -90,8 +89,6 @@ export const CreateProductSchema = ProductSchema.omit({
 	imageUrl: true,
 	images: true,
 	specifications: true,
-	weight: true,
-	dimensions: true,
 	stockQuantity: true,
 	lowStockThreshold: true,
 	isActive: true,

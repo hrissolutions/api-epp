@@ -3,8 +3,9 @@ import { isValidObjectId } from "mongoose";
 
 // Enums
 export const OrderStatusEnum = z.enum([
-	"PENDING",
+	"PENDING_APPROVAL",
 	"APPROVED",
+	"REJECTED",
 	"PROCESSING",
 	"SHIPPED",
 	"DELIVERED",
@@ -56,7 +57,7 @@ export const OrderSchema = z.object({
 	employeeId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid employeeId ObjectId format",
 	}),
-	status: OrderStatusEnum.default("PENDING"),
+	status: OrderStatusEnum.default("PENDING_APPROVAL"),
 	subtotal: decimalSchema,
 	discount: decimalSchema.default(0),
 	tax: decimalSchema.default(0),

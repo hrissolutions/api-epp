@@ -20,6 +20,7 @@ import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
 import { createTransactionForOrder } from "../../helper/transactionService";
+import { createApprovalChain } from "../../helper/approvalService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -143,6 +144,45 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			}
 
+			// Automatically create approval chain for the order
+			let approvalChain = null;
+			try {
+				orderLogger.info(
+					`Creating approval chain for order ${order.id}: Total=${order.total}, PaymentType=${order.paymentType}`
+				);
+				
+				// Get employee name (TODO: fetch from Person/User database)
+				const employeeName = "Employee Name"; // You should fetch this from your employee database
+				
+				approvalChain = await createApprovalChain(
+					prisma,
+					order.id,
+					order.orderNumber,
+					order.employeeId,
+					employeeName,
+					order.total,
+					order.paymentType,
+					order.orderDate || new Date(),
+					order.notes || undefined
+				);
+				
+				if (approvalChain) {
+					orderLogger.info(
+						`Successfully created approval chain for order ${order.id}: ` +
+						`Workflow=${approvalChain.workflow.name}, Levels=${approvalChain.approvals.length}`
+					);
+				} else {
+					orderLogger.warn(`No approval workflow matched for order ${order.id}`);
+				}
+			} catch (approvalError) {
+				orderLogger.error(
+					`Failed to create approval chain for order ${order.id}:`,
+					approvalError
+				);
+				// Note: Order is still created even if approval chain creation fails
+				// This allows manual intervention if needed
+			}
+
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
 				action: config.ACTIVITY_LOG.ORDER.ACTIONS.CREATE_ORDER,
@@ -203,6 +243,19 @@ export const controller = (prisma: PrismaClient) => {
 							installmentAmount: generatedInstallments[0]?.amount || 0,
 							firstPayment: generatedInstallments[0]?.scheduledDate,
 							lastPayment: generatedInstallments[generatedInstallments.length - 1]?.scheduledDate,
+						}
+					}),
+					...(approvalChain && {
+						approvalWorkflow: {
+							name: approvalChain.workflow.name,
+							totalLevels: approvalChain.approvals.length,
+							currentLevel: 1,
+							approvalChain: approvalChain.approvals.map(a => ({
+								level: a.approvalLevel,
+								role: a.approverRole,
+								approverName: a.approverName,
+								status: a.status,
+							})),
 						}
 					}),
 				},

@@ -50,6 +50,9 @@ const orderitem = require("./app/orderitem")(prisma);
 const vendor = require("./app/vendor")(prisma);
 const installment = require("./app/installment")(prisma);
 const transaction = require("./app/transaction")(prisma);
+const orderApproval = require("./app/orderApproval")(prisma);
+const approvalWorkflow = require("./app/approvalWorkflow")(prisma);
+const approvalLevel = require("./app/approvalLevel")(prisma);
 const docs = require("./app/docs/docs");
 
 app.use(express.json());
@@ -128,10 +131,10 @@ if (process.env.NODE_ENV !== "production") {
 // Apply authentication-specific security middleware
 app.use(`${config.baseApiPath}/auth`, authSecurityMiddleware);
 
-// Apply middleware for protected routes, excluding /docs, /auth, /products, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, and /transaction
+// Apply middleware for protected routes, excluding /docs, /auth, /products, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, /transaction, /orderApproval, /approvalWorkflow, and /approvalLevel
 app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) => {
-	if (req.path.startsWith("/docs") || req.path.startsWith("/auth") || req.path.startsWith("/products") || req.path.startsWith("/purchase") || req.path.startsWith("/category") || req.path.startsWith("/wishlistItem") || req.path.startsWith("/wishlist") || req.path.startsWith("/cartItem") || req.path.startsWith("/cart") || req.path.startsWith("/order") || req.path.startsWith("/orderItem") || req.path.startsWith("/vendor") || req.path.startsWith("/installment") || req.path.startsWith("/transaction")) {
-		// Skip middleware for the docs, auth, products, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, and transaction routes
+	if (req.path.startsWith("/docs") || req.path.startsWith("/auth") || req.path.startsWith("/products") || req.path.startsWith("/purchase") || req.path.startsWith("/category") || req.path.startsWith("/wishlistItem") || req.path.startsWith("/wishlist") || req.path.startsWith("/cartItem") || req.path.startsWith("/cart") || req.path.startsWith("/order") || req.path.startsWith("/orderItem") || req.path.startsWith("/vendor") || req.path.startsWith("/installment") || req.path.startsWith("/transaction") || req.path.startsWith("/orderApproval") || req.path.startsWith("/approvalWorkflow") || req.path.startsWith("/approvalLevel")) {
+		// Skip middleware for the docs, auth, products, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, and approvalLevel routes
 		return next();
 	}
 	verifyToken(req, res, () => {
@@ -150,6 +153,9 @@ app.use(config.baseApiPath, orderitem);
 app.use(config.baseApiPath, vendor);
 app.use(config.baseApiPath, installment);
 app.use(config.baseApiPath, transaction);
+app.use(config.baseApiPath, orderApproval);
+app.use(config.baseApiPath, approvalWorkflow);
+app.use(config.baseApiPath, approvalLevel);
 app.use(config.baseApiPath, docs(prisma, app));
 
 // Store app instance globally for docs generation after all routes are registered

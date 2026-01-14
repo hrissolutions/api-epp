@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approval Request</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            margin: -30px -30px 30px -30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .badge {
+            display: inline-block;
+            background-color: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .order-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detail-value {
+            color: #212529;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Approval Required</h1>
+        </div>
+
+        <p>Hello <strong><%= approverName %></strong>,</p>
+        
+        <p>You have a new order approval request that requires your attention.</p>
+
+        <div class="badge">Level <%= approvalLevel %> - <%= approverRole %></div>
+
+        <div class="order-details">
+            <div class="detail-row">
+                <span class="detail-label">Employee:</span>
+                <span class="detail-value"><%= employeeName %></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order Number:</span>
+                <span class="detail-value"><strong>#<%= orderNumber %></strong></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order Date:</span>
+                <span class="detail-value"><%= orderDate %></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order Total:</span>
+                <span class="detail-value amount">$<%= orderTotal %></span>
+            </div>
+        </div>
+
+        <% if (notes && notes !== 'No additional notes') { %>
+        <div class="note">
+            <strong>📝 Order Notes:</strong><br>
+            <%= notes %>
+        </div>
+        <% } %>
+
+        <center>
+            <a href="<%= approvalUrl %>" class="button">
+                Review & Approve Order
+            </a>
+        </center>
+
+        <p style="color: #6c757d; font-size: 14px; margin-top: 30px;">
+            This order is pending your approval as part of the Level <%= approvalLevel %> review process. 
+            Please review the order details and approve or reject accordingly.
+        </p>
+
+        <div class="footer">
+            <p>Employee Purchase Program (EPP) System<br>
+            This is an automated notification. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

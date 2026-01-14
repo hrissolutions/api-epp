@@ -21,13 +21,12 @@ model Product {
   imageUrl       String?
   images         Json? // Array of ProductImage (structured images with type, name, url)
   specifications Json?
-  weight         Float?
-  dimensions     String?
 
   // Status
   isActive    Boolean @default(true)
   isFeatured  Boolean @default(false)
   isAvailable Boolean @default(true)
+  status      ProductStatus @default(PENDING)
 
   // Relations
   orderItems    OrderItem[]
@@ -42,6 +41,12 @@ model Product {
   @@index([categoryId])
   @@index([vendorId])
   @@map("products")
+}
+
+enum ProductStatus {
+  PENDING   // Created by vendor, awaiting approval
+  APPROVED  // Approved and visible in product listings
+  REJECTED  // Rejected and not visible to normal users
 }
 
 enum ProductImageType {

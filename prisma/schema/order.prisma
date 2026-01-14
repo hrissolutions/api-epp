@@ -4,7 +4,7 @@ model Order {
   employeeId  String @db.ObjectId
 
   // Order details
-  status OrderStatus @default(PENDING)
+  status OrderStatus @default(PENDING_APPROVAL)
   items  OrderItem[]
 
   // Pricing
@@ -38,6 +38,15 @@ model Order {
   paymentMethod PaymentMethod @default(PAYROLL_DEDUCTION)
   paymentStatus PaymentStatus @default(PENDING)
 
+  // Approval Workflow
+  approvals            OrderApproval[]
+  currentApprovalLevel Int               @default(1)
+  isFullyApproved      Boolean           @default(false)
+  approvedAt           DateTime?
+  rejectedAt           DateTime?
+  rejectedBy           String?
+  rejectionReason      String?
+
   // Dates
   orderDate     DateTime  @default(now())
   shippedDate   DateTime?
@@ -56,13 +65,14 @@ model Order {
 }
 
 enum OrderStatus {
-  PENDING
-  APPROVED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  RETURNED
+  PENDING_APPROVAL  // Waiting for approvals
+  APPROVED          // All approvals completed
+  REJECTED          // Rejected by an approver
+  PROCESSING        // Being prepared/packed
+  SHIPPED           // Out for delivery
+  DELIVERED         // Successfully delivered
+  CANCELLED         // Cancelled by employee or system
+  RETURNED          // Returned by employee
 }
 
 enum PaymentMethod {

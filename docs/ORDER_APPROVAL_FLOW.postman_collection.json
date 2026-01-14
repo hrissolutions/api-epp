@@ -1,0 +1,653 @@
+{
+  "info": {
+    "name": "Order Approval Workflow - Complete Flow",
+    "description": "Complete collection to test the order approval workflow system with sample data",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "workflow_standard_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workflow_high_value_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workflow_installment_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_001_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_002_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_003_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "approval_001_level_1_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "approval_001_level_2_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Setup - Create Workflows",
+      "item": [
+        {
+          "name": "Create Standard Order Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('workflow_standard_id', response.data.approvalWorkflow.id);",
+                  "    console.log('Standard Workflow ID:', response.data.approvalWorkflow.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Order Approval\",\n  \"description\": \"For orders under $5,000\",\n  \"isActive\": true,\n  \"minOrderAmount\": 0,\n  \"maxOrderAmount\": 5000,\n  \"requiresInstallment\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalWorkflow",
+              "host": ["{{base_url}}"],
+              "path": ["approvalWorkflow"]
+            }
+          }
+        },
+        {
+          "name": "Create High-Value Order Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('workflow_high_value_id', response.data.approvalWorkflow.id);",
+                  "    console.log('High-Value Workflow ID:', response.data.approvalWorkflow.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"High-Value Order Approval\",\n  \"description\": \"For orders $5,000 - $20,000\",\n  \"isActive\": true,\n  \"minOrderAmount\": 5000,\n  \"maxOrderAmount\": 20000,\n  \"requiresInstallment\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalWorkflow",
+              "host": ["{{base_url}}"],
+              "path": ["approvalWorkflow"]
+            }
+          }
+        },
+        {
+          "name": "Create Installment Order Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('workflow_installment_id', response.data.approvalWorkflow.id);",
+                  "    console.log('Installment Workflow ID:', response.data.approvalWorkflow.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Installment Order Approval\",\n  \"description\": \"For all orders with installment payments\",\n  \"isActive\": true,\n  \"minOrderAmount\": 0,\n  \"maxOrderAmount\": null,\n  \"requiresInstallment\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalWorkflow",
+              "host": ["{{base_url}}"],
+              "path": ["approvalWorkflow"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Setup - Create Approval Levels",
+      "item": [
+        {
+          "name": "Standard Workflow - Level 1 (Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"{{workflow_standard_id}}\",\n  \"level\": 1,\n  \"role\": \"MANAGER\",\n  \"description\": \"Direct manager must approve order\",\n  \"isRequired\": true,\n  \"autoApproveUnder\": 1000,\n  \"timeoutDays\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalLevel",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"]
+            }
+          }
+        },
+        {
+          "name": "Standard Workflow - Level 2 (HR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"{{workflow_standard_id}}\",\n  \"level\": 2,\n  \"role\": \"HR\",\n  \"description\": \"HR verification for employee benefits\",\n  \"isRequired\": true,\n  \"autoApproveUnder\": null,\n  \"timeoutDays\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalLevel",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"]
+            }
+          }
+        },
+        {
+          "name": "High-Value Workflow - Level 1 (Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"{{workflow_high_value_id}}\",\n  \"level\": 1,\n  \"role\": \"MANAGER\",\n  \"description\": \"Direct manager approval required\",\n  \"isRequired\": true,\n  \"autoApproveUnder\": null,\n  \"timeoutDays\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalLevel",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"]
+            }
+          }
+        },
+        {
+          "name": "High-Value Workflow - Level 2 (Dept Head)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"{{workflow_high_value_id}}\",\n  \"level\": 2,\n  \"role\": \"DEPARTMENT_HEAD\",\n  \"description\": \"Department head must review high-value orders\",\n  \"isRequired\": true,\n  \"autoApproveUnder\": null,\n  \"timeoutDays\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalLevel",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"]
+            }
+          }
+        },
+        {
+          "name": "High-Value Workflow - Level 3 (Finance)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"{{workflow_high_value_id}}\",\n  \"level\": 3,\n  \"role\": \"FINANCE\",\n  \"description\": \"Finance department final approval\",\n  \"isRequired\": true,\n  \"autoApproveUnder\": null,\n  \"timeoutDays\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/approvalLevel",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Example 1 - Standard Order Flow",
+      "item": [
+        {
+          "name": "Create Standard Order ($2,737.50)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('order_001_id', response.data.order.id);",
+                  "    console.log('Order ID:', response.data.order.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": \"ORD-2026-001\",\n  \"employeeId\": \"507f1f77bcf86cd799439011\",\n  \"status\": \"PENDING_APPROVAL\",\n  \"subtotal\": 2500,\n  \"discount\": 0,\n  \"tax\": 187.50,\n  \"shippingCost\": 50,\n  \"total\": 2737.50,\n  \"paymentType\": \"CASH\",\n  \"paymentMethod\": \"PAYROLL_DEDUCTION\",\n  \"paymentStatus\": \"PENDING\",\n  \"currentApprovalLevel\": 1,\n  \"isFullyApproved\": false,\n  \"shippingAddress\": \"123 Main St\",\n  \"shippingCity\": \"New York\",\n  \"shippingState\": \"NY\",\n  \"shippingZip\": \"10001\",\n  \"notes\": \"Laptop for remote work\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/order",
+              "host": ["{{base_url}}"],
+              "path": ["order"]
+            }
+          }
+        },
+        {
+          "name": "Create Level 1 Approval (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('approval_001_level_1_id', response.data.orderApproval.id);",
+                  "    console.log('Approval Level 1 ID:', response.data.orderApproval.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{order_001_id}}\",\n  \"approvalLevel\": 1,\n  \"approverRole\": \"MANAGER\",\n  \"approverId\": \"emp_sarah_smith_mgr\",\n  \"approverName\": \"Sarah Smith\",\n  \"approverEmail\": \"sarah.smith@company.com\",\n  \"status\": \"PENDING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orderApproval",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval"]
+            }
+          }
+        },
+        {
+          "name": "Manager Approves (Level 1)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"comments\": \"Approved. Laptop is needed for remote work setup.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orderApproval/{{approval_001_level_1_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval", "{{approval_001_level_1_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Order to Level 2",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentApprovalLevel\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/order/{{order_001_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["order", "{{order_001_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Level 2 Approval (HR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('approval_001_level_2_id', response.data.orderApproval.id);",
+                  "    console.log('Approval Level 2 ID:', response.data.orderApproval.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{order_001_id}}\",\n  \"approvalLevel\": 2,\n  \"approverRole\": \"HR\",\n  \"approverId\": \"emp_mike_johnson_hr\",\n  \"approverName\": \"Mike Johnson\",\n  \"approverEmail\": \"mike.johnson@company.com\",\n  \"status\": \"PENDING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orderApproval",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval"]
+            }
+          }
+        },
+        {
+          "name": "HR Approves (Level 2 - Final)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"comments\": \"Verified employee eligibility. Approved.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orderApproval/{{approval_001_level_2_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval", "{{approval_001_level_2_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Order to APPROVED",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"isFullyApproved\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/order/{{order_001_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["order", "{{order_001_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Query Examples",
+      "item": [
+        {
+          "name": "Get All Workflows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/approvalWorkflow?document=true&count=true",
+              "host": ["{{base_url}}"],
+              "path": ["approvalWorkflow"],
+              "query": [
+                {
+                  "key": "document",
+                  "value": "true"
+                },
+                {
+                  "key": "count",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Workflows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/approvalWorkflow?filter=[{\"isActive\":true}]&document=true",
+              "host": ["{{base_url}}"],
+              "path": ["approvalWorkflow"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"isActive\":true}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Levels for Standard Workflow",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/approvalLevel?filter=[{\"workflowId\":\"{{workflow_standard_id}}\"}]&document=true&sort=level&order=asc",
+              "host": ["{{base_url}}"],
+              "path": ["approvalLevel"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"workflowId\":\"{{workflow_standard_id}}\"}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                },
+                {
+                  "key": "sort",
+                  "value": "level"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Approvals for Order",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/orderApproval?filter=[{\"orderId\":\"{{order_001_id}}\"}]&document=true&sort=approvalLevel&order=asc",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"orderId\":\"{{order_001_id}}\"}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                },
+                {
+                  "key": "sort",
+                  "value": "approvalLevel"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Approvals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/orderApproval?filter=[{\"status\":\"PENDING\"}]&document=true",
+              "host": ["{{base_url}}"],
+              "path": ["orderApproval"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"status\":\"PENDING\"}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Orders Pending Approval",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/order?filter=[{\"status\":\"PENDING_APPROVAL\"}]&document=true&pagination=true",
+              "host": ["{{base_url}}"],
+              "path": ["order"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"status\":\"PENDING_APPROVAL\"}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                },
+                {
+                  "key": "pagination",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Fully Approved Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/order?filter=[{\"isFullyApproved\":true}]&document=true",
+              "host": ["{{base_url}}"],
+              "path": ["order"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "[{\"isFullyApproved\":true}]"
+                },
+                {
+                  "key": "document",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order with Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/order/{{order_001_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["order", "{{order_001_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

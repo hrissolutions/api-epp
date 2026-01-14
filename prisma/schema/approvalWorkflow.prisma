@@ -1,0 +1,19 @@
+model ApprovalWorkflow {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  name            String   @unique
+  description     String?
+  isActive        Boolean  @default(true)
+  
+  // Workflow conditions
+  minOrderAmount  Float?
+  maxOrderAmount  Float?
+  requiresInstallment Boolean @default(false)
+  
+  // Approval chain
+  levels          ApprovalLevel[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("approvalWorkflows")
+}

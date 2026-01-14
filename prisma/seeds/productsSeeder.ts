@@ -30,8 +30,7 @@ export async function seedProducts() {
 				processor: "A17 Pro chip",
 				storage: "256GB",
 				camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
-				battery: "4,422 mAh",
-				weight: "221g"
+				battery: "4,422 mAh"
 			},
 			status: "ACTIVE",
 			stockQuantity: 50,
@@ -60,8 +59,7 @@ export async function seedProducts() {
 				processor: "Apple M2 chip",
 				memory: "16GB",
 				storage: "512GB SSD",
-				display: "13.6-inch Liquid Retina",
-				weight: "1.24kg"
+				display: "13.6-inch Liquid Retina"
 			},
 			status: "ACTIVE",
 			stockQuantity: 30,
@@ -110,7 +108,6 @@ export async function seedProducts() {
 			sku: "MDF-LSOFA-GRY",
 			imageUrls: ["https://example.com/images/l-shape-sofa.jpg"],
 			specifications: {
-				dimensions: "280cm x 180cm x 85cm",
 				material: "Premium Fabric",
 				color: "Grey",
 				seatingCapacity: "5-6 persons"

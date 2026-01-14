@@ -273,6 +273,23 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
+			// Only show approved and available products by default
+			// Admin/internal endpoints can still override this via explicit filters if needed
+			const statusVisibilityFilter: any = {
+				status: "APPROVED",
+				isAvailable: true,
+				isActive: true,
+			};
+
+			if (whereClause.AND) {
+				(whereClause as any).AND = [
+					statusVisibilityFilter,
+					...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
+				];
+			} else {
+				(whereClause as any).AND = [statusVisibilityFilter];
+			}
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [products, total] = await Promise.all([
@@ -344,7 +361,12 @@ export const controller = (prisma: PrismaClient) => {
 
 			if (!product) {
 				const query: Prisma.ProductFindFirstArgs = {
-					where: { id },
+					where: {
+						id,
+						status: "APPROVED",
+						isAvailable: true,
+						isActive: true,
+					} as any,
 				};
 
 				query.select = getNestedFields(fields);
@@ -692,7 +714,9 @@ export const controller = (prisma: PrismaClient) => {
 							error: "Category slug is required",
 						});
 						errorCount++;
-						productsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Category slug is missing`);
+						productsLogger.warn(
+							`Row ${i + 1} (SKU: ${row.sku}): Category slug is missing`,
+						);
 						continue;
 					}
 
@@ -725,7 +749,9 @@ export const controller = (prisma: PrismaClient) => {
 							error: "Vendor code is required",
 						});
 						errorCount++;
-						productsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`);
+						productsLogger.warn(
+							`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`,
+						);
 						continue;
 					}
 
@@ -769,11 +795,11 @@ export const controller = (prisma: PrismaClient) => {
 					let specifications: any = null;
 					if (detailsArray.length > 0 || Object.keys(metadata).length > 0) {
 						specifications = {};
-						
+
 						if (detailsArray.length > 0) {
 							specifications.details = detailsArray;
 						}
-						
+
 						if (Object.keys(metadata).length > 0) {
 							specifications.metadata = metadata;
 						}
@@ -799,7 +825,8 @@ export const controller = (prisma: PrismaClient) => {
 					const productData: any = {
 						sku: row.sku,
 						name: row.name,
-						description: row.description && row.description.trim() ? row.description : null,
+						description:
+							row.description && row.description.trim() ? row.description : null,
 						categoryId: categoryId,
 						vendorId: vendorId,
 
@@ -818,29 +845,30 @@ export const controller = (prisma: PrismaClient) => {
 						imageUrl: row.imageUrl || null,
 						images: images.length > 0 ? images : null,
 						specifications: specifications,
-						weight: row.weight ? parseFloat(row.weight) : null,
-						dimensions: row.dimensions || null,
 
-					// Status - handle both uppercase and lowercase TRUE/FALSE
-					isActive:
-						row.isActive === "true" ||
-						row.isActive === "TRUE" ||
-						row.isActive === "1" ||
-						row.isActive === true ||
-						(typeof row.isActive === "string" && row.isActive.toLowerCase() === "true"),
-					isFeatured:
-						row.isFeatured === "true" ||
-						row.isFeatured === "TRUE" ||
-						row.isFeatured === "1" ||
-						row.isFeatured === true ||
-						(typeof row.isFeatured === "string" && row.isFeatured.toLowerCase() === "true"),
-					isAvailable:
-						row.isAvailable === "true" ||
-						row.isAvailable === "TRUE" ||
-						row.isAvailable === "1" ||
-						row.isAvailable === true ||
-						row.isAvailable === undefined ||
-						(typeof row.isAvailable === "string" && row.isAvailable.toLowerCase() === "true"),
+						// Status - handle both uppercase and lowercase TRUE/FALSE
+						isActive:
+							row.isActive === "true" ||
+							row.isActive === "TRUE" ||
+							row.isActive === "1" ||
+							row.isActive === true ||
+							(typeof row.isActive === "string" &&
+								row.isActive.toLowerCase() === "true"),
+						isFeatured:
+							row.isFeatured === "true" ||
+							row.isFeatured === "TRUE" ||
+							row.isFeatured === "1" ||
+							row.isFeatured === true ||
+							(typeof row.isFeatured === "string" &&
+								row.isFeatured.toLowerCase() === "true"),
+						isAvailable:
+							row.isAvailable === "true" ||
+							row.isAvailable === "TRUE" ||
+							row.isAvailable === "1" ||
+							row.isAvailable === true ||
+							row.isAvailable === undefined ||
+							(typeof row.isAvailable === "string" &&
+								row.isAvailable.toLowerCase() === "true"),
 					};
 
 					// Validate using Zod schema
