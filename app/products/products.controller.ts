@@ -22,6 +22,9 @@ import {
 	uploadMultipleToCloudinary,
 	deleteMultipleFromCloudinary,
 } from "../../helper/cloudinaryUpload";
+import csvParser from "csv-parser";
+import { Readable } from "stream";
+import * as fs from "fs";
 
 const logger = getLogger();
 const productsLogger = logger.child({ module: "products" });
@@ -604,5 +607,326 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove };
+	const importFromCSV = async (req: Request, res: Response, _next: NextFunction) => {
+		try {
+			if (!req.file) {
+				productsLogger.error("No CSV file uploaded");
+				const errorResponse = buildErrorResponse("CSV file is required", 400, [
+					{ field: "file", message: "Please upload a CSV file" },
+				]);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			productsLogger.info(`Starting CSV import from file: ${req.file.originalname}`);
+
+			const results: any[] = [];
+			const errors: any[] = [];
+			let processedCount = 0;
+			let successCount = 0;
+			let errorCount = 0;
+
+			// Parse CSV file
+			const parseCSV = (): Promise<void> => {
+				return new Promise((resolve, reject) => {
+					const stream = Readable.from(req.file!.buffer.toString());
+
+					stream
+						.pipe(csvParser())
+						.on("data", (row) => {
+							results.push(row);
+						})
+						.on("end", () => {
+							resolve();
+						})
+						.on("error", (error) => {
+							reject(error);
+						});
+				});
+			};
+
+			try {
+				await parseCSV();
+				productsLogger.info(`CSV parsed successfully, found ${results.length} rows`);
+			} catch (parseError: any) {
+				productsLogger.error(`CSV parsing error: ${parseError.message}`);
+				const errorResponse = buildErrorResponse("Failed to parse CSV file", 400, [
+					{ field: "file", message: parseError.message },
+				]);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// Process each row
+			for (let i = 0; i < results.length; i++) {
+				const row = results[i];
+				processedCount++;
+
+				try {
+					// Look up category by slug
+					let categoryId: string | null = null;
+					if (row.category && row.category.trim()) {
+						const category = await prisma.category.findFirst({
+							where: { slug: row.category.trim() },
+							select: { id: true },
+						});
+
+						if (!category) {
+							errors.push({
+								row: i + 1,
+								sku: row.sku,
+								error: `Category not found with slug: ${row.category}`,
+							});
+							errorCount++;
+							productsLogger.warn(
+								`Row ${i + 1} (SKU: ${row.sku}): Category not found with slug: ${row.category}`,
+							);
+							continue;
+						}
+
+						categoryId = category.id;
+					} else {
+						errors.push({
+							row: i + 1,
+							sku: row.sku,
+							error: "Category slug is required",
+						});
+						errorCount++;
+						productsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Category slug is missing`);
+						continue;
+					}
+
+					// Look up vendor by code
+					let vendorId: string | null = null;
+					if (row.vendor && row.vendor.trim()) {
+						const vendor = await prisma.vendor.findFirst({
+							where: { code: row.vendor.trim() },
+							select: { id: true },
+						});
+
+						if (!vendor) {
+							errors.push({
+								row: i + 1,
+								sku: row.sku,
+								error: `Vendor not found with code: ${row.vendor}`,
+							});
+							errorCount++;
+							productsLogger.warn(
+								`Row ${i + 1} (SKU: ${row.sku}): Vendor not found with code: ${row.vendor}`,
+							);
+							continue;
+						}
+
+						vendorId = vendor.id;
+					} else {
+						errors.push({
+							row: i + 1,
+							sku: row.sku,
+							error: "Vendor code is required",
+						});
+						errorCount++;
+						productsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`);
+						continue;
+					}
+
+					// Parse images from comma-separated string
+					let images: ProductUploadedImageInfo[] = [];
+					if (row.images && row.images.trim()) {
+						const imageUrls = row.images
+							.split(",")
+							.map((url: string) => url.trim())
+							.filter((url: string) => url);
+
+						images = imageUrls.map((url: string, index: number) => ({
+							name: `image-${index + 1}`,
+							url: url,
+							type: "FEATURED" as ProductImageType,
+						}));
+					}
+
+					// Parse details from comma-separated string - this becomes the main details array
+					let detailsArray: string[] = [];
+					if (row.details && row.details.trim()) {
+						detailsArray = row.details
+							.split(",")
+							.map((detail: string) => detail.trim())
+							.filter((detail: string) => detail);
+					}
+
+					// Parse metadata (additional product information)
+					let metadata: any = {};
+					if (row.metadata && row.metadata.trim()) {
+						try {
+							metadata = JSON.parse(row.metadata);
+						} catch (jsonError) {
+							productsLogger.warn(
+								`Row ${i + 1}: Invalid JSON in metadata field, skipping`,
+							);
+						}
+					}
+
+					// Build specifications object with details array and metadata
+					let specifications: any = null;
+					if (detailsArray.length > 0 || Object.keys(metadata).length > 0) {
+						specifications = {};
+						
+						if (detailsArray.length > 0) {
+							specifications.details = detailsArray;
+						}
+						
+						if (Object.keys(metadata).length > 0) {
+							specifications.metadata = metadata;
+						}
+					}
+
+					// Parse additional specifications if provided (JSON format) - merge with existing
+					if (row.specifications && row.specifications.trim()) {
+						try {
+							const additionalSpecs = JSON.parse(row.specifications);
+							specifications = specifications || {};
+							specifications = {
+								...specifications,
+								...additionalSpecs,
+							};
+						} catch (jsonError) {
+							productsLogger.warn(
+								`Row ${i + 1}: Invalid JSON in specifications field, skipping`,
+							);
+						}
+					}
+
+					// Prepare product data
+					const productData: any = {
+						sku: row.sku,
+						name: row.name,
+						description: row.description && row.description.trim() ? row.description : null,
+						categoryId: categoryId,
+						vendorId: vendorId,
+
+						// Pricing - handle multiple price fields
+						retailPrice: parseFloat(row.retailPrice),
+						employeePrice: parseFloat(row.employeePrice),
+						costPrice: row.costPrice ? parseFloat(row.costPrice) : null,
+
+						// Inventory
+						stockQuantity: row.stockQuantity ? parseInt(row.stockQuantity) : 0,
+						lowStockThreshold: row.lowStockThreshold
+							? parseInt(row.lowStockThreshold)
+							: 10,
+
+						// Product details
+						imageUrl: row.imageUrl || null,
+						images: images.length > 0 ? images : null,
+						specifications: specifications,
+						weight: row.weight ? parseFloat(row.weight) : null,
+						dimensions: row.dimensions || null,
+
+					// Status - handle both uppercase and lowercase TRUE/FALSE
+					isActive:
+						row.isActive === "true" ||
+						row.isActive === "TRUE" ||
+						row.isActive === "1" ||
+						row.isActive === true ||
+						(typeof row.isActive === "string" && row.isActive.toLowerCase() === "true"),
+					isFeatured:
+						row.isFeatured === "true" ||
+						row.isFeatured === "TRUE" ||
+						row.isFeatured === "1" ||
+						row.isFeatured === true ||
+						(typeof row.isFeatured === "string" && row.isFeatured.toLowerCase() === "true"),
+					isAvailable:
+						row.isAvailable === "true" ||
+						row.isAvailable === "TRUE" ||
+						row.isAvailable === "1" ||
+						row.isAvailable === true ||
+						row.isAvailable === undefined ||
+						(typeof row.isAvailable === "string" && row.isAvailable.toLowerCase() === "true"),
+					};
+
+					// Validate using Zod schema
+					const validation = CreateProductSchema.safeParse(productData);
+
+					if (!validation.success) {
+						const formattedErrors = formatZodErrors(validation.error.format());
+						errors.push({
+							row: i + 1,
+							sku: row.sku,
+							errors: formattedErrors,
+						});
+						errorCount++;
+						productsLogger.warn(
+							`Row ${i + 1} (SKU: ${row.sku}): Validation failed - ${JSON.stringify(formattedErrors)}`,
+						);
+						continue;
+					}
+
+					// Create product in database
+					const product = await prisma.product.create({
+						data: validation.data as any,
+					});
+
+					successCount++;
+					productsLogger.info(
+						`Row ${i + 1}: Product created successfully (SKU: ${product.sku}, ID: ${product.id})`,
+					);
+				} catch (error: any) {
+					errorCount++;
+					errors.push({
+						row: i + 1,
+						sku: row.sku,
+						error: error.message,
+					});
+					productsLogger.error(
+						`Row ${i + 1} (SKU: ${row.sku}): Failed to create product - ${error.message}`,
+					);
+				}
+			}
+
+			// Invalidate cache after bulk import
+			try {
+				await invalidateCache.byPattern("cache:products:list:*");
+				productsLogger.info("Products list cache invalidated after CSV import");
+			} catch (cacheError) {
+				productsLogger.warn("Failed to invalidate cache after CSV import:", cacheError);
+			}
+
+			// Log activity
+			logActivity(req, {
+				userId: (req as any).user?.id || "unknown",
+				action: "IMPORT_PRODUCTS_CSV",
+				description: `Imported ${successCount} products from CSV (${errorCount} errors)`,
+				page: {
+					url: req.originalUrl,
+					title: "Products CSV Import",
+				},
+			});
+
+			const responseData = {
+				summary: {
+					totalRows: results.length,
+					processed: processedCount,
+					successful: successCount,
+					failed: errorCount,
+				},
+				errors: errors.length > 0 ? errors : undefined,
+			};
+
+			productsLogger.info(
+				`CSV import completed: ${successCount} successful, ${errorCount} failed out of ${results.length} rows`,
+			);
+
+			const successResponse = buildSuccessResponse(
+				`Products imported successfully: ${successCount} created, ${errorCount} failed`,
+				responseData,
+				201,
+			);
+			res.status(201).json(successResponse);
+		} catch (error) {
+			productsLogger.error(`CSV import failed: ${error}`);
+			const errorResponse = buildErrorResponse("CSV import failed", 500);
+			res.status(500).json(errorResponse);
+		}
+	};
+
+	return { create, getAll, getById, update, remove, importFromCSV };
 };

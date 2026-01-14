@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { cache, cacheShort, cacheMedium, cacheUser } from "../../middleware/cache";
-import { uploadProductImages } from "../../middleware/upload";
+import { uploadProductImages, uploadCSV } from "../../middleware/upload";
 
 interface IController {
 	getById(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -8,6 +8,7 @@ interface IController {
 	create(req: Request, res: Response, next: NextFunction): Promise<void>;
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
+	importFromCSV(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -212,6 +213,61 @@ export const router = (route: Router, controller: IController): Router => {
 		}),
 		controller.getAll,
 	);
+
+	/**
+	 * @openapi
+	 * /api/products/import:
+	 *   post:
+	 *     summary: Import products from CSV
+	 *     description: Bulk import products from a CSV file
+	 *     tags: [Products]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         multipart/form-data:
+	 *           schema:
+	 *             type: object
+	 *             required:
+	 *               - file
+	 *             properties:
+	 *               file:
+	 *                 type: string
+	 *                 format: binary
+	 *                 description: CSV file containing product data
+	 *     responses:
+	 *       201:
+	 *         description: Products imported successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               allOf:
+	 *                 - $ref: '#/components/schemas/Success'
+	 *                 - type: object
+	 *                   properties:
+	 *                     data:
+	 *                       type: object
+	 *                       properties:
+	 *                         summary:
+	 *                           type: object
+	 *                           properties:
+	 *                             totalRows:
+	 *                               type: integer
+	 *                             processed:
+	 *                               type: integer
+	 *                             successful:
+	 *                               type: integer
+	 *                             failed:
+	 *                               type: integer
+	 *                         errors:
+	 *                           type: array
+	 *                           items:
+	 *                             type: object
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/import", uploadCSV, controller.importFromCSV);
 
 	/**
 	 * @openapi
