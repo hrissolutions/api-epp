@@ -276,20 +276,20 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Only show approved and available products by default
 			// Admin/internal endpoints can still override this via explicit filters if needed
-			const statusVisibilityFilter: any = {
-				status: "APPROVED",
-				isAvailable: true,
-				isActive: true,
-			};
+			// const statusVisibilityFilter: any = {
+			// 	status: "APPROVED",
+			// 	isAvailable: true,
+			// 	isActive: true,
+			// };
 
-			if (whereClause.AND) {
-				(whereClause as any).AND = [
-					statusVisibilityFilter,
-					...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
-				];
-			} else {
-				(whereClause as any).AND = [statusVisibilityFilter];
-			}
+			// if (whereClause.AND) {
+			// 	(whereClause as any).AND = [
+			// 		statusVisibilityFilter,
+			// 		...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
+			// 	];
+			// } else {
+			// 	(whereClause as any).AND = [statusVisibilityFilter];
+			// }
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [products, total] = await Promise.all([
