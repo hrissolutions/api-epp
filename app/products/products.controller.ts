@@ -373,9 +373,6 @@ export const controller = (prisma: PrismaClient) => {
 				const query: Prisma.ProductFindFirstArgs = {
 					where: {
 						id,
-						status: "APPROVED",
-						isAvailable: true,
-						isActive: true,
 					} as any,
 				};
 

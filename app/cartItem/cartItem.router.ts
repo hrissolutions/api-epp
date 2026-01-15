@@ -7,6 +7,7 @@ interface IController {
 	create(req: Request, res: Response, next: NextFunction): Promise<void>;
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
+	checkout(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -401,6 +402,100 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.delete("/:id", controller.remove);
+
+	/**
+	 * @openapi
+	 * /api/cartItem/checkout:
+	 *   post:
+	 *     summary: Checkout cart items to create an order
+	 *     description: Convert all cart items for an employee into an order with optional installment payment. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears the cart.
+	 *     tags: [CartItem]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             required:
+	 *               - employeeId
+	 *             properties:
+	 *               employeeId:
+	 *                 type: string
+	 *                 description: Employee ID who owns the cart
+	 *                 example: "507f1f77bcf86cd799439011"
+	 *               paymentType:
+	 *                 type: string
+	 *                 enum: [CASH, INSTALLMENT, POINTS, MIXED]
+	 *                 default: INSTALLMENT
+	 *                 description: Payment type for the order
+	 *                 example: "INSTALLMENT"
+	 *               installmentMonths:
+	 *                 type: integer
+	 *                 minimum: 1
+	 *                 description: Number of months for installment plan (required if paymentType is INSTALLMENT)
+	 *                 example: 6
+	 *               paymentMethod:
+	 *                 type: string
+	 *                 enum: [PAYROLL_DEDUCTION, CASH, CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, OTHER]
+	 *                 default: PAYROLL_DEDUCTION
+	 *                 description: Payment method
+	 *                 example: "PAYROLL_DEDUCTION"
+	 *               discount:
+	 *                 type: number
+	 *                 minimum: 0
+	 *                 default: 0
+	 *                 description: Discount amount
+	 *                 example: 0
+	 *               tax:
+	 *                 type: number
+	 *                 minimum: 0
+	 *                 default: 0
+	 *                 description: Tax amount
+	 *                 example: 0
+	 *               pointsUsed:
+	 *                 type: number
+	 *                 minimum: 0
+	 *                 description: Points used for payment
+	 *                 example: 0
+	 *               notes:
+	 *                 type: string
+	 *                 description: Additional notes for the order
+	 *                 example: "Please deliver during business hours"
+	 *     responses:
+	 *       201:
+	 *         description: Order created successfully from cart
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               allOf:
+	 *                 - $ref: '#/components/schemas/Success'
+	 *                 - type: object
+	 *                   properties:
+	 *                     data:
+	 *                       type: object
+	 *                       properties:
+	 *                         order:
+	 *                           $ref: '#/components/schemas/Order'
+	 *                         transaction:
+	 *                           type: object
+	 *                           description: Transaction ledger information
+	 *                         installments:
+	 *                           type: array
+	 *                           items:
+	 *                             $ref: '#/components/schemas/Installment'
+	 *                           description: Present when paymentType is INSTALLMENT
+	 *                         installmentSummary:
+	 *                           type: object
+	 *                           description: Summary of installments (present when paymentType is INSTALLMENT)
+	 *                         approvalWorkflow:
+	 *                           type: object
+	 *                           description: Approval workflow information
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/checkout", controller.checkout);
 
 	route.use(path, routes);
 

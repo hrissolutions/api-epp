@@ -18,6 +18,10 @@ import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
 import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
+import { generateInstallments } from "../../helper/installmentService";
+import { createTransactionForOrder } from "../../helper/transactionService";
+import { createApprovalChain } from "../../helper/approvalService";
+import { z } from "zod";
 
 const logger = getLogger();
 const cartItemLogger = logger.child({ module: "cartItem" });
@@ -450,5 +454,496 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove };
+	const checkout = async (req: Request, res: Response, _next: NextFunction) => {
+		let requestData = req.body;
+		const contentType = req.get("Content-Type") || "";
+
+		if (
+			contentType.includes("application/x-www-form-urlencoded") ||
+			contentType.includes("multipart/form-data")
+		) {
+			cartItemLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
+			requestData = transformFormDataToObject(req.body);
+			requestData = convertStringNumbers(requestData);
+			cartItemLogger.info(
+				"Transformed form data to object structure:",
+				JSON.stringify(requestData, null, 2),
+			);
+		}
+
+		// Validate checkout request
+		const CheckoutSchema = z.object({
+			employeeId: z.string().min(1, "Employee ID is required"),
+			paymentType: z.enum(["CASH", "INSTALLMENT", "POINTS", "MIXED"]).default("INSTALLMENT"),
+			installmentMonths: z.number().int().min(1).optional().nullable(),
+			paymentMethod: z
+				.enum([
+					"PAYROLL_DEDUCTION",
+					"CASH",
+					"CREDIT_CARD",
+					"DEBIT_CARD",
+					"BANK_TRANSFER",
+					"OTHER",
+				])
+				.default("PAYROLL_DEDUCTION"),
+			discount: z.number().min(0).default(0),
+			tax: z.number().min(0).default(0),
+			pointsUsed: z.number().min(0).optional().nullable(),
+			notes: z.string().optional().nullable(),
+		});
+
+		const validation = CheckoutSchema.safeParse(requestData);
+		if (!validation.success) {
+			const formattedErrors = formatZodErrors(validation.error.format());
+			cartItemLogger.error(`Checkout validation failed: ${JSON.stringify(formattedErrors)}`);
+			const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
+			res.status(400).json(errorResponse);
+			return;
+		}
+
+		const {
+			employeeId,
+			paymentType,
+			installmentMonths,
+			paymentMethod,
+			discount,
+			tax,
+			pointsUsed,
+			notes,
+		} = validation.data;
+
+		// Validate installment months if payment type is INSTALLMENT
+		if (paymentType === "INSTALLMENT" && !installmentMonths) {
+			cartItemLogger.error("Installment months required for INSTALLMENT payment type");
+			const errorResponse = buildErrorResponse(
+				"installmentMonths is required when paymentType is INSTALLMENT",
+				400,
+				[{ field: "installmentMonths", message: "Installment months is required" }],
+			);
+			res.status(400).json(errorResponse);
+			return;
+		}
+
+		try {
+			// Get all cart items for the employee (without product relation to avoid null errors)
+			const allCartItems = await prisma.cartItem.findMany({
+				where: { employeeId },
+			});
+
+			if (allCartItems.length === 0) {
+				cartItemLogger.error(`No cart items found for employee ${employeeId}`);
+				const errorResponse = buildErrorResponse("Cart is empty", 400, [
+					{ field: "cart", message: "Cannot checkout with an empty cart" },
+				]);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// Get all product IDs from cart items
+			const productIds = [...new Set(allCartItems.map((item) => item.productId))];
+
+			// Fetch products separately to handle missing products gracefully
+			const products = await prisma.product.findMany({
+				where: {
+					id: { in: productIds },
+				},
+			});
+
+			// Create a map of products by ID for quick lookup
+			const productMap = new Map(products.map((p) => [p.id, p]));
+
+			// Separate valid and invalid cart items
+			const validCartItems: Array<{
+				cartItem: (typeof allCartItems)[0];
+				product: (typeof products)[0];
+			}> = [];
+			const invalidCartItemIds: string[] = [];
+
+			for (const cartItem of allCartItems) {
+				const product = productMap.get(cartItem.productId);
+				if (product) {
+					validCartItems.push({ cartItem, product });
+				} else {
+					invalidCartItemIds.push(cartItem.id);
+				}
+			}
+
+			// Remove invalid cart items from database
+			if (invalidCartItemIds.length > 0) {
+				cartItemLogger.warn(
+					`Found ${invalidCartItemIds.length} cart items with missing products for employee ${employeeId}`,
+				);
+				try {
+					await prisma.cartItem.deleteMany({
+						where: {
+							id: { in: invalidCartItemIds },
+						},
+					});
+					cartItemLogger.info(
+						`Removed ${invalidCartItemIds.length} invalid cart items from database`,
+					);
+				} catch (deleteError) {
+					cartItemLogger.error(`Failed to remove invalid cart items: ${deleteError}`);
+				}
+			}
+
+			// Check if there are any valid cart items after filtering
+			if (validCartItems.length === 0) {
+				cartItemLogger.error(
+					`No valid cart items found for employee ${employeeId} (all products are missing)`,
+				);
+				const errorResponse = buildErrorResponse(
+					"Cart contains invalid items. Please remove items with unavailable products and try again.",
+					400,
+					[
+						{
+							field: "cart",
+							message: "All cart items reference products that no longer exist",
+						},
+					],
+				);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// Calculate order totals
+			let subtotal = 0;
+			const orderItemsData: any[] = [];
+
+			for (const { cartItem, product } of validCartItems) {
+				// Check if product is available and approved
+				if (product.status !== "APPROVED" || !product.isAvailable || !product.isActive) {
+					cartItemLogger.warn(
+						`Product ${product.id} is not available for checkout (status: ${product.status}, isAvailable: ${product.isAvailable}, isActive: ${product.isActive})`,
+					);
+					continue;
+				}
+
+				// Use employeePrice if available, otherwise retailPrice
+				const unitPrice = product.employeePrice || product.retailPrice;
+				const itemSubtotal = unitPrice * cartItem.quantity;
+				subtotal += itemSubtotal;
+
+				orderItemsData.push({
+					productId: product.id,
+					quantity: cartItem.quantity,
+					unitPrice: unitPrice,
+					discount: 0,
+					subtotal: itemSubtotal,
+				});
+			}
+
+			// Check if we have any valid order items after filtering
+			if (orderItemsData.length === 0) {
+				cartItemLogger.error(
+					`No valid order items after filtering for employee ${employeeId}`,
+				);
+				const errorResponse = buildErrorResponse(
+					"Cart contains items that are not available for purchase. Please remove unavailable items and try again.",
+					400,
+					[
+						{
+							field: "cart",
+							message: "No available products in cart for checkout",
+						},
+					],
+				);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// No shipping cost for company internal delivery
+			const total = subtotal - discount + tax - (pointsUsed || 0);
+
+			if (total <= 0) {
+				cartItemLogger.error(`Invalid order total: ${total}`);
+				const errorResponse = buildErrorResponse("Invalid order total", 400, [
+					{ field: "total", message: "Order total must be greater than 0" },
+				]);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// Generate order number
+			const orderNumber = `ORDER-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+			// Create order (no shipping for company internal delivery)
+			const order = await prisma.order.create({
+				data: {
+					orderNumber,
+					employeeId,
+					subtotal,
+					discount,
+					tax,
+					total,
+					paymentType,
+					installmentMonths: paymentType === "INSTALLMENT" ? installmentMonths : null,
+					paymentMethod,
+					pointsUsed: pointsUsed || null,
+					notes: notes || null,
+					orderDate: new Date(),
+					items: {
+						create: orderItemsData,
+					},
+				} as any,
+			});
+
+			cartItemLogger.info(`Order created successfully from cart: ${order.id}`);
+
+			// Create transaction ledger for the order
+			let transaction = null;
+			try {
+				transaction = await createTransactionForOrder(
+					prisma,
+					order.id,
+					order.employeeId,
+					order.total,
+					order.paymentType,
+					order.paymentMethod,
+				);
+				cartItemLogger.info(`Transaction ledger created for order ${order.id}`);
+			} catch (transactionError) {
+				cartItemLogger.error(
+					`Failed to create transaction for order ${order.id}:`,
+					transactionError,
+				);
+			}
+
+			// Automatically generate installments if payment type is INSTALLMENT
+			let generatedInstallments = null;
+			if (order.paymentType === "INSTALLMENT" && order.installmentMonths) {
+				try {
+					cartItemLogger.info(
+						`Generating installments for order ${order.id}: ${order.installmentMonths} months`,
+					);
+
+					generatedInstallments = await generateInstallments(
+						prisma,
+						order.id,
+						order.installmentMonths,
+						order.total,
+						order.orderDate || new Date(),
+					);
+
+					// Update order with installment details
+					await prisma.order.update({
+						where: { id: order.id },
+						data: {
+							installmentCount: generatedInstallments.length,
+							installmentAmount: generatedInstallments[0]?.amount || 0,
+						},
+					});
+
+					cartItemLogger.info(
+						`Successfully generated ${generatedInstallments.length} installments for order ${order.id}`,
+					);
+				} catch (installmentError) {
+					cartItemLogger.error(
+						`Failed to generate installments for order ${order.id}:`,
+						installmentError,
+					);
+				}
+			}
+
+			// Automatically create approval chain for the order
+			let approvalChain = null;
+			try {
+				cartItemLogger.info(
+					`Creating approval chain for order ${order.id}: Total=${order.total}, PaymentType=${order.paymentType}`,
+				);
+
+				// Get employee name (TODO: fetch from Person/User database)
+				const employeeName = "Employee Name"; // You should fetch this from your employee database
+
+				approvalChain = await createApprovalChain(
+					prisma,
+					order.id,
+					order.orderNumber,
+					order.employeeId,
+					employeeName,
+					order.total,
+					order.paymentType,
+					order.orderDate || new Date(),
+					order.notes || undefined,
+				);
+
+				if (approvalChain) {
+					cartItemLogger.info(
+						`Successfully created approval chain for order ${order.id}: ` +
+							`Workflow=${approvalChain.workflow.name}, Levels=${approvalChain.approvals.length}`,
+					);
+				} else {
+					cartItemLogger.warn(`No approval workflow matched for order ${order.id}`);
+				}
+			} catch (approvalError) {
+				cartItemLogger.error(
+					`Failed to create approval chain for order ${order.id}:`,
+					approvalError,
+				);
+			}
+
+			// Clear cart items after successful order creation (only valid ones that were used)
+			try {
+				const productIdsUsed = new Set(orderItemsData.map((item) => item.productId));
+				const cartItemIdsToDelete = validCartItems
+					.filter(({ product }) => productIdsUsed.has(product.id))
+					.map(({ cartItem }) => cartItem.id);
+
+				if (cartItemIdsToDelete.length > 0) {
+					await prisma.cartItem.deleteMany({
+						where: {
+							id: { in: cartItemIdsToDelete },
+						},
+					});
+					cartItemLogger.info(
+						`Cleared ${cartItemIdsToDelete.length} cart items for employee ${employeeId}`,
+					);
+				}
+			} catch (clearCartError) {
+				cartItemLogger.error(
+					`Failed to clear cart items for employee ${employeeId}:`,
+					clearCartError,
+				);
+				// Don't fail the checkout if cart clearing fails
+			}
+
+			// Invalidate caches
+			try {
+				await invalidateCache.byPattern("cache:cartItem:list:*");
+				await invalidateCache.byPattern("cache:order:list:*");
+				cartItemLogger.info("Cache invalidated after checkout");
+			} catch (cacheError) {
+				cartItemLogger.warn("Failed to invalidate cache after checkout:", cacheError);
+			}
+
+			// Log activity and audit
+			logActivity(req, {
+				userId: (req as any).user?.id || employeeId,
+				action: config.ACTIVITY_LOG.ORDER.ACTIONS.CREATE_ORDER,
+				description: `Order created from cart: ${order.orderNumber || order.id}`,
+				page: {
+					url: req.originalUrl,
+					title: "Cart Checkout",
+				},
+			});
+
+			logAudit(req, {
+				userId: (req as any).user?.id || employeeId,
+				action: config.AUDIT_LOG.ACTIONS.CREATE,
+				resource: config.AUDIT_LOG.RESOURCES.ORDER,
+				severity: config.AUDIT_LOG.SEVERITY.LOW,
+				entityType: config.AUDIT_LOG.ENTITY_TYPES.ORDER,
+				entityId: order.id,
+				changesBefore: null,
+				changesAfter: {
+					id: order.id,
+					orderNumber: order.orderNumber,
+					employeeId: order.employeeId,
+					status: order.status,
+					total: order.total,
+					installmentMonths: order.installmentMonths,
+					installmentCount: generatedInstallments?.length,
+					createdAt: order.createdAt,
+					updatedAt: order.updatedAt,
+				},
+				description: `Order created from cart: ${order.orderNumber || order.id}`,
+			});
+
+			// Fetch order with items and product details
+			const orderWithItems = await prisma.order.findUnique({
+				where: { id: order.id },
+				include: {
+					items: {
+						include: {
+							product: {
+								select: {
+									id: true,
+									name: true,
+									sku: true,
+									imageUrl: true,
+								},
+							},
+						},
+					},
+				},
+			});
+
+			// Calculate total quantity of products
+			const totalQuantity = orderItemsData.reduce((sum, item) => sum + item.quantity, 0);
+			const totalProducts = orderItemsData.length;
+
+			// Prepare product summary
+			const productsSummary = orderItemsData.map((item) => {
+				const product = validCartItems.find(
+					({ product: p }) => p.id === item.productId,
+				)?.product;
+				return {
+					productId: item.productId,
+					productName: product?.name || "Unknown Product",
+					productSku: product?.sku || "N/A",
+					quantity: item.quantity,
+					unitPrice: item.unitPrice,
+					subtotal: item.subtotal,
+				};
+			});
+
+			const successResponse = buildSuccessResponse(
+				"Order created successfully from cart",
+				{
+					order: orderWithItems || order,
+					checkoutSummary: {
+						totalProducts: totalProducts,
+						totalQuantity: totalQuantity,
+						products: productsSummary,
+						cartItemsProcessed: validCartItems.length,
+						cartItemsRemoved: invalidCartItemIds.length,
+					},
+					transaction: transaction
+						? {
+								transactionNumber: transaction.transactionNumber,
+								totalAmount: transaction.totalAmount,
+								paidAmount: transaction.paidAmount,
+								balance: transaction.balance,
+								status: transaction.status,
+							}
+						: null,
+					...(generatedInstallments && {
+						installments: generatedInstallments,
+						installmentSummary: {
+							totalInstallments: generatedInstallments.length,
+							installmentAmount: generatedInstallments[0]?.amount || 0,
+							firstPayment: generatedInstallments[0]?.scheduledDate,
+							lastPayment:
+								generatedInstallments[generatedInstallments.length - 1]
+									?.scheduledDate,
+						},
+					}),
+					...(approvalChain && {
+						approvalWorkflow: {
+							name: approvalChain.workflow.name,
+							totalLevels: approvalChain.approvals.length,
+							currentLevel: 1,
+							approvalChain: approvalChain.approvals.map((a) => ({
+								level: a.approvalLevel,
+								role: a.approverRole,
+								approverName: a.approverName,
+								status: a.status,
+							})),
+						},
+					}),
+				},
+				201,
+			);
+			res.status(201).json(successResponse);
+		} catch (error) {
+			cartItemLogger.error(`Checkout failed: ${error}`);
+			const errorResponse = buildErrorResponse(
+				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
+				500,
+			);
+			res.status(500).json(errorResponse);
+		}
+	};
+
+	return { create, getAll, getById, update, remove, checkout };
 };
