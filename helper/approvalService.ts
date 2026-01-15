@@ -75,19 +75,16 @@ export const getApproverForRole = async (
 	// For now, return placeholder data
 	// You should query your Person/User database to find the actual approver
 
-	const roleMap: Record<
-		string,
-		{ id: string; name: string; email: string }
-	> = {
+	const roleMap: Record<string, { id: string; name: string; email: string }> = {
 		MANAGER: {
 			id: "manager_001",
 			name: "Manager Name",
-			email: "manager@company.com",
+			email: "brygab528@gmail.com",
 		},
 		HR: {
 			id: "hr_001",
 			name: "HR Representative",
-			email: "hr@company.com",
+			email: "hris.solutions.tech@gmail.com",
 		},
 		FINANCE: {
 			id: "finance_001",

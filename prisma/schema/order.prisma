@@ -39,6 +39,8 @@ model Order {
   paymentStatus PaymentStatus @default(PENDING)
 
   // Approval Workflow
+  workflow             ApprovalWorkflow? @relation(fields: [workflowId], references: [id])
+  workflowId           String?           @db.ObjectId
   approvals            OrderApproval[]
   currentApprovalLevel Int               @default(1)
   isFullyApproved      Boolean           @default(false)

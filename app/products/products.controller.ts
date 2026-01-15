@@ -267,29 +267,55 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			}
 
+			// Check if user has explicitly provided status, isAvailable, or isActive filters
+			let hasStatusFilter = false;
+			let hasIsAvailableFilter = false;
+			let hasIsActiveFilter = false;
+
 			if (filter) {
 				const filterConditions = buildFilterConditions("Product", filter);
 				if (filterConditions.length > 0) {
 					whereClause.AND = filterConditions;
+					// Check if user explicitly filtered by these fields
+					const filterString = filter.toLowerCase();
+					hasStatusFilter = filterString.includes("status:");
+					hasIsAvailableFilter = filterString.includes("isavailable:");
+					hasIsActiveFilter = filterString.includes("isactive:");
 				}
 			}
 
 			// Only show approved and available products by default
-			// Admin/internal endpoints can still override this via explicit filters if needed
-			const statusVisibilityFilter: any = {
-				status: "APPROVED",
-				isAvailable: true,
-				isActive: true,
-			};
+			// Admin/internal endpoints can override this via explicit filters
+			// Only apply default visibility filter if user hasn't explicitly filtered by these fields
+			if (!hasStatusFilter || !hasIsAvailableFilter || !hasIsActiveFilter) {
+				const statusVisibilityFilter: any = {};
+				
+				if (!hasStatusFilter) {
+					statusVisibilityFilter.status = "APPROVED";
+				}
+				if (!hasIsAvailableFilter) {
+					statusVisibilityFilter.isAvailable = true;
+				}
+				if (!hasIsActiveFilter) {
+					statusVisibilityFilter.isActive = true;
+				}
 
-			if (whereClause.AND) {
-				(whereClause as any).AND = [
-					statusVisibilityFilter,
-					...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
-				];
-			} else {
-				(whereClause as any).AND = [statusVisibilityFilter];
+				// Only add the filter if it has at least one condition
+				if (Object.keys(statusVisibilityFilter).length > 0) {
+					if (whereClause.AND) {
+						(whereClause as any).AND = [
+							statusVisibilityFilter,
+							...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
+						];
+					} else {
+						(whereClause as any).AND = [statusVisibilityFilter];
+					}
+				}
 			}
+
+			productsLogger.info(
+				`Where clause: ${JSON.stringify(whereClause, null, 2)}`,
+			);
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [products, total] = await Promise.all([
