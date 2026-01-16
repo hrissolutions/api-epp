@@ -14,7 +14,7 @@
 		"export-docs": "ts-node scripts/generate-openapi.ts && ts-node scripts/export-openapi.ts && npx openapi-to-postmanv2 -s docs/generated/swagger.json -o docs/generated/postman.collection.json -p",
 		"prisma-docs": "npx prisma studio",
 		"prisma-migrate": "npx prisma migrate dev",
-		"prisma-generate": "npx prisma@6.5.0 generate --schema prisma/schema/schema.prisma",
+		"prisma-generate": "npx prisma@6.5.0 generate --schema prisma/schema",
 		"prisma-format": "npx prisma format",
 		"prisma-seed": "npx prisma db seed",
 		"prisma-reset": "npx prisma migrate reset --force",
