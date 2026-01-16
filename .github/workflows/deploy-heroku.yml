@@ -1,0 +1,42 @@
+name: Deploy to Heroku
+
+on:
+    push:
+        branches:
+            - develop # Trigger on push to develop branch
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Fetch all history for unshallow clone
+
+            - name: Setup Git
+              run: |
+                  git config --global user.name "GitHub Actions"
+                  git config --global user.email "actions@github.com"
+
+            - name: Install Heroku CLI
+              run: |
+                  curl https://cli-assets.heroku.com/install.sh | sh
+
+            - name: Authenticate with Heroku and Deploy
+              env:
+                  HEROKU_API_KEY: ${{secrets.HEROKU_API_KEY}}
+                  HEROKU_APP: epp-api-dev
+              run: |
+                  # Verify we're on the develop branch
+                  echo "Deploying from branch: ${{ github.ref_name }}"
+
+                  # Heroku CLI automatically uses HEROKU_API_KEY environment variable
+                  # Add Heroku remote using heroku git:remote command
+                  heroku git:remote -a $HEROKU_APP
+
+                  # Unshallow the repository (Heroku requires full clone)
+                  git fetch --unshallow || git fetch --all
+
+                  # Push to Heroku main branch
+                  git push heroku HEAD:main --force
