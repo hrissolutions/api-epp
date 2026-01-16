@@ -8,6 +8,7 @@
     "lint": "eslint app/**/*.ts index.ts lib-entry.ts",
     "format": "eslint app/**/*.ts index.ts lib-entry.ts --fix",
     "test": "mocha --require ts-node/register tests/**/*.spec.ts",
+    "postinstall": "npm run prisma-generate",
     "build": "webpack --config webpack.config.js",
     "prod": "node ./dist/server.ts",
     "export-docs": "ts-node scripts/generate-openapi.ts && ts-node scripts/export-openapi.ts && npx openapi-to-postmanv2 -s docs/generated/swagger.json -o docs/generated/postman.collection.json -p",
