@@ -13,10 +13,9 @@ const numberSchema = z.union([
 });
 
 // ApprovalLevel Schema (full, including ID)
+// Note: workflowId and level are now in WorkflowApprovalLevel junction table
 export const ApprovalLevelSchema = z.object({
 	id: z.string(),
-	workflowId: z.string().min(1, "Workflow ID is required"),
-	level: z.number().int().positive("Level must be positive"),
 	role: ApproverRoleEnum,
 	description: z.string().optional().nullable(),
 	isRequired: z.boolean().default(true),
@@ -45,7 +44,6 @@ export type CreateApprovalLevel = z.infer<typeof CreateApprovalLevelSchema>;
 // Update ApprovalLevel Schema (partial, excluding immutable fields)
 export const UpdateApprovalLevelSchema = ApprovalLevelSchema.omit({
 	id: true,
-	workflowId: true,
 	createdAt: true,
 	updatedAt: true,
 }).partial();

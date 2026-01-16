@@ -1,0 +1,23 @@
+model WorkflowApprovalLevel {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  workflowId      String            @db.ObjectId
+  approvalLevelId String            @db.ObjectId
+  level           Int               // Level number in this workflow (1, 2, 3...)
+  
+  // Approver details (specific person assigned to this level in this workflow)
+  approverId      String?           @db.ObjectId  // Person/User ID of the approver
+  approverName    String?           // Name of the approver
+  approverEmail   String?           // Email for sending notifications
+  
+  workflow        ApprovalWorkflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  approvalLevel   ApprovalLevel     @relation(fields: [approvalLevelId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@unique([workflowId, level])
+  @@index([workflowId])
+  @@index([approvalLevelId])
+  @@index([approverId])
+  @@map("workflowApprovalLevels")
+}

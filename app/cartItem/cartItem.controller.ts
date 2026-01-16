@@ -87,13 +87,57 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const cartItem = await prisma.cartItem.create({ data: validation.data as any });
-			cartItemLogger.info(`CartItem created successfully: ${cartItem.id}`);
+			const { employeeId, productId, quantity = 1 } = validation.data;
+
+			// Ensure quantity is at least 1
+			const quantityToAdd = quantity || 1;
+
+			// Check if cart item already exists for this employee and product
+			const existingCartItem = await prisma.cartItem.findFirst({
+				where: {
+					employeeId: employeeId,
+					productId: productId,
+				},
+			});
+
+			let cartItem;
+			let isUpdate = false;
+
+			if (existingCartItem) {
+				// Update quantity by adding the new quantity to existing quantity
+				const newQuantity = existingCartItem.quantity + quantityToAdd;
+				cartItem = await prisma.cartItem.update({
+					where: {
+						id: existingCartItem.id,
+					},
+					data: {
+						quantity: newQuantity,
+					},
+				});
+				isUpdate = true;
+				cartItemLogger.info(
+					`CartItem updated: ${cartItem.id}, quantity increased from ${existingCartItem.quantity} to ${newQuantity}`,
+				);
+			} else {
+				// Create new cart item with quantity (default to 1 if not provided)
+				cartItem = await prisma.cartItem.create({
+					data: {
+						employeeId: employeeId,
+						productId: productId,
+						quantity: quantityToAdd,
+					} as any,
+				});
+				cartItemLogger.info(`CartItem created successfully: ${cartItem.id}`);
+			}
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
-				action: config.ACTIVITY_LOG.CARTITEM.ACTIONS.CREATE_CARTITEM,
-				description: `${config.ACTIVITY_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_CREATED}: ${cartItem.id}`,
+				action: isUpdate
+					? config.ACTIVITY_LOG.CARTITEM.ACTIONS.UPDATE_CARTITEM
+					: config.ACTIVITY_LOG.CARTITEM.ACTIONS.CREATE_CARTITEM,
+				description: isUpdate
+					? `${config.ACTIVITY_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_UPDATED}: ${cartItem.id}`
+					: `${config.ACTIVITY_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_CREATED}: ${cartItem.id}`,
 				page: {
 					url: req.originalUrl,
 					title: config.ACTIVITY_LOG.CARTITEM.PAGES.CARTITEM_CREATION,
@@ -102,12 +146,19 @@ export const controller = (prisma: PrismaClient) => {
 
 			logAudit(req, {
 				userId: (req as any).user?.id || "unknown",
-				action: config.AUDIT_LOG.ACTIONS.CREATE,
+				action: isUpdate ? config.AUDIT_LOG.ACTIONS.UPDATE : config.AUDIT_LOG.ACTIONS.CREATE,
 				resource: config.AUDIT_LOG.RESOURCES.CARTITEM,
 				severity: config.AUDIT_LOG.SEVERITY.LOW,
 				entityType: config.AUDIT_LOG.ENTITY_TYPES.CARTITEM,
 				entityId: cartItem.id,
-				changesBefore: null,
+				changesBefore: isUpdate
+					? {
+							id: existingCartItem!.id,
+							employeeId: existingCartItem!.employeeId,
+							productId: existingCartItem!.productId,
+							quantity: existingCartItem!.quantity,
+						}
+					: null,
 				changesAfter: {
 					id: cartItem.id,
 					employeeId: cartItem.employeeId,
@@ -116,29 +167,56 @@ export const controller = (prisma: PrismaClient) => {
 					createdAt: cartItem.createdAt,
 					updatedAt: cartItem.updatedAt,
 				},
-				description: `${config.AUDIT_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_CREATED}: ${cartItem.id}`,
+				description: isUpdate
+					? `${config.AUDIT_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_UPDATED}: ${cartItem.id}`
+					: `${config.AUDIT_LOG.CARTITEM.DESCRIPTIONS.CARTITEM_CREATED}: ${cartItem.id}`,
 			});
 
 			try {
 				await invalidateCache.byPattern("cache:cartItem:list:*");
-				cartItemLogger.info("CartItem list cache invalidated after creation");
+				cartItemLogger.info("CartItem list cache invalidated after creation/update");
 			} catch (cacheError) {
 				cartItemLogger.warn(
-					"Failed to invalidate cache after cartItem creation:",
+					"Failed to invalidate cache after cartItem creation/update:",
 					cacheError,
 				);
 			}
 
 			const successResponse = buildSuccessResponse(
-				config.SUCCESS.CARTITEM.CREATED,
-				cartItem,
-				201,
+				isUpdate ? "Cart item quantity updated successfully" : config.SUCCESS.CARTITEM.CREATED,
+				{
+					...cartItem,
+					action: isUpdate ? "updated" : "created",
+					previousQuantity: isUpdate ? existingCartItem!.quantity : null,
+				},
+				isUpdate ? 200 : 201,
 			);
-			res.status(201).json(successResponse);
-		} catch (error) {
+			res.status(isUpdate ? 200 : 201).json(successResponse);
+		} catch (error: any) {
 			cartItemLogger.error(`${config.ERROR.CARTITEM.CREATE_FAILED}: ${error}`);
+			
+			// Handle unique constraint error specifically
+			if (error.code === "P2002" && error.meta?.target?.includes("employeeId_productId")) {
+				// This shouldn't happen now, but handle it gracefully
+				cartItemLogger.warn(
+					`Duplicate cart item detected for employee ${validation.data.employeeId} and product ${validation.data.productId}, attempting update`,
+				);
+				const errorResponse = buildErrorResponse(
+					"This product is already in your cart. Quantity will be updated.",
+					409,
+					[
+						{
+							field: "productId",
+							message: "Product already exists in cart",
+						},
+					],
+				);
+				res.status(409).json(errorResponse);
+				return;
+			}
+
 			const errorResponse = buildErrorResponse(
-				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
+				error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
 			);
 			res.status(500).json(errorResponse);
@@ -609,12 +687,33 @@ export const controller = (prisma: PrismaClient) => {
 			// Calculate order totals
 			let subtotal = 0;
 			const orderItemsData: any[] = [];
+			const unavailableProducts: Array<{
+				productId: string;
+				productName: string;
+				reasons: string[];
+			}> = [];
 
 			for (const { cartItem, product } of validCartItems) {
 				// Check if product is available and approved
-				if (product.status !== "APPROVED" || !product.isAvailable || !product.isActive) {
+				const reasons: string[] = [];
+				if (product.status !== "APPROVED") {
+					reasons.push(`Status is ${product.status} (must be APPROVED)`);
+				}
+				if (!product.isAvailable) {
+					reasons.push("Product is marked as not available");
+				}
+				if (!product.isActive) {
+					reasons.push("Product is inactive");
+				}
+
+				if (reasons.length > 0) {
+					unavailableProducts.push({
+						productId: product.id,
+						productName: product.name || "Unknown",
+						reasons,
+					});
 					cartItemLogger.warn(
-						`Product ${product.id} is not available for checkout (status: ${product.status}, isAvailable: ${product.isAvailable}, isActive: ${product.isActive})`,
+						`Product ${product.id} (${product.name}) is not available for checkout: ${reasons.join(", ")}`,
 					);
 					continue;
 				}
@@ -638,15 +737,27 @@ export const controller = (prisma: PrismaClient) => {
 				cartItemLogger.error(
 					`No valid order items after filtering for employee ${employeeId}`,
 				);
+				const errorMessages: Array<{ field: string; message: string }> = [
+					{
+						field: "cart",
+						message: "No available products in cart for checkout",
+					},
+				];
+
+				// Add detailed information about unavailable products
+				if (unavailableProducts.length > 0) {
+					unavailableProducts.forEach((unavailable) => {
+						errorMessages.push({
+							field: `product.${unavailable.productId}`,
+							message: `${unavailable.productName}: ${unavailable.reasons.join(", ")}`,
+						});
+					});
+				}
+
 				const errorResponse = buildErrorResponse(
 					"Cart contains items that are not available for purchase. Please remove unavailable items and try again.",
 					400,
-					[
-						{
-							field: "cart",
-							message: "No available products in cart for checkout",
-						},
-					],
+					errorMessages,
 				);
 				res.status(400).json(errorResponse);
 				return;
@@ -765,6 +876,7 @@ export const controller = (prisma: PrismaClient) => {
 					order.paymentType,
 					order.orderDate || new Date(),
 					order.notes || undefined,
+					generatedInstallments || undefined,
 				);
 
 				if (approvalChain) {

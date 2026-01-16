@@ -507,5 +507,170 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove, approve, reject };
+	// Custom endpoint: Get approval summary for an order
+	const getApprovalSummary = async (req: Request, res: Response, _next: NextFunction) => {
+		const { orderId: rawOrderId } = req.params;
+
+		try {
+			if (!rawOrderId) {
+				orderApprovalLogger.error("Order ID is required");
+				const errorResponse = buildErrorResponse("Order ID is required", 400);
+				res.status(400).json(errorResponse);
+				return;
+			}
+
+			const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+
+			orderApprovalLogger.info(`Getting approval summary for order: ${orderId}`);
+
+			// Get order with workflow to know total required approvals
+			const order = await prisma.order.findUnique({
+				where: { id: orderId },
+				include: {
+					workflow: {
+						include: {
+							workflowLevels: {
+								orderBy: { level: "asc" },
+							},
+						},
+					},
+					approvals: {
+						orderBy: { approvalLevel: "asc" },
+					},
+				},
+			});
+
+			if (!order) {
+				orderApprovalLogger.error(`Order not found: ${orderId}`);
+				const errorResponse = buildErrorResponse("Order not found", 404);
+				res.status(404).json(errorResponse);
+				return;
+			}
+
+			// Calculate summary statistics
+			const totalRequired = order.workflow?.workflowLevels.length || order.approvals.length;
+			const approvedApprovals = order.approvals.filter((a) => a.status === "APPROVED");
+			const pendingApprovals = order.approvals.filter((a) => a.status === "PENDING");
+			const rejectedApprovals = order.approvals.filter((a) => a.status === "REJECTED");
+
+			const approvedCount = approvedApprovals.length;
+			const pendingCount = pendingApprovals.length;
+			const rejectedCount = rejectedApprovals.length;
+
+			// Build list of approved approvers
+			const approvedApprovers = approvedApprovals.map((approval) => ({
+				approvalLevel: approval.approvalLevel,
+				approverRole: approval.approverRole,
+				approverName: approval.approverName,
+				approverEmail: approval.approverEmail,
+				approvedAt: approval.approvedAt,
+				comments: approval.comments,
+			}));
+
+			// Build list of pending approvers
+			const pendingApprovers = pendingApprovals.map((approval) => ({
+				approvalLevel: approval.approvalLevel,
+				approverRole: approval.approverRole,
+				approverName: approval.approverName,
+				approverEmail: approval.approverEmail,
+				status: approval.status,
+			}));
+
+			// Build list of rejected approvers (if any)
+			const rejectedApprovers = rejectedApprovals.map((approval) => ({
+				approvalLevel: approval.approvalLevel,
+				approverRole: approval.approverRole,
+				approverName: approval.approverName,
+				approverEmail: approval.approverEmail,
+				rejectedAt: approval.rejectedAt,
+				comments: approval.comments,
+			}));
+
+			// Auto-approve order if all approvals are complete but order is still pending
+			if (
+				order.status === "PENDING_APPROVAL" &&
+				approvedCount >= totalRequired &&
+				totalRequired > 0 &&
+				!order.isFullyApproved
+			) {
+				orderApprovalLogger.info(
+					`Auto-approving order ${order.orderNumber}: All ${approvedCount}/${totalRequired} approvals completed`,
+				);
+
+				try {
+					await prisma.order.update({
+						where: { id: order.id },
+						data: {
+							status: "APPROVED",
+							isFullyApproved: true,
+							approvedAt: new Date(),
+						},
+					});
+
+					// Refresh order data
+					const updatedOrder = await prisma.order.findUnique({
+						where: { id: order.id },
+					});
+
+					if (updatedOrder) {
+						order.status = updatedOrder.status;
+						order.isFullyApproved = updatedOrder.isFullyApproved;
+						order.approvedAt = updatedOrder.approvedAt;
+					}
+
+					orderApprovalLogger.info(`Order ${order.orderNumber} auto-approved successfully`);
+				} catch (updateError) {
+					orderApprovalLogger.error(
+						`Failed to auto-approve order ${order.orderNumber}:`,
+						updateError,
+					);
+				}
+			}
+
+			const summary = {
+				orderId: order.id,
+				orderNumber: order.orderNumber,
+				orderStatus: order.status,
+				isFullyApproved: order.isFullyApproved,
+				approvedAt: order.approvedAt,
+				workflow: order.workflow
+					? {
+							id: order.workflow.id,
+							name: order.workflow.name,
+						}
+					: null,
+				approvalSummary: {
+					totalRequired: totalRequired,
+					approvedCount: approvedCount,
+					pendingCount: pendingCount,
+					rejectedCount: rejectedCount,
+					progress: `${approvedCount}/${totalRequired}`,
+					percentageComplete: totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0,
+				},
+				approvedApprovers: approvedApprovers,
+				pendingApprovers: pendingApprovers,
+				...(rejectedCount > 0 && { rejectedApprovers: rejectedApprovers }),
+			};
+
+			orderApprovalLogger.info(
+				`Approval summary for order ${order.orderNumber}: ${approvedCount}/${totalRequired} approved`,
+			);
+
+			const successResponse = buildSuccessResponse(
+				"Approval summary retrieved successfully",
+				summary,
+				200,
+			);
+			res.status(200).json(successResponse);
+		} catch (error: any) {
+			orderApprovalLogger.error(`Failed to get approval summary: ${error}`);
+			const errorResponse = buildErrorResponse(
+				error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
+				500,
+			);
+			res.status(500).json(errorResponse);
+		}
+	};
+
+	return { create, getAll, getById, update, remove, approve, reject, getApprovalSummary };
 };

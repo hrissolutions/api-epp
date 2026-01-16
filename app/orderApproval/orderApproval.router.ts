@@ -9,6 +9,7 @@ interface IController {
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 	approve(req: Request, res: Response, next: NextFunction): Promise<void>;
 	reject(req: Request, res: Response, next: NextFunction): Promise<void>;
+	getApprovalSummary(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -266,6 +267,61 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         description: Internal server error
 	 */
 	routes.post("/:id/reject", controller.reject);
+
+	/**
+	 * @openapi
+	 * /api/orderApproval/summary/{orderId}:
+	 *   get:
+	 *     summary: Get approval summary for an order
+	 *     description: Get a summary of all approvals for an order including count of approved approvers and their details
+	 *     tags: [OrderApproval]
+	 *     parameters:
+	 *       - in: path
+	 *         name: orderId
+	 *         required: true
+	 *         schema:
+	 *           type: string
+	 *         description: Order ID to get approval summary for
+	 *     responses:
+	 *       200:
+	 *         description: Approval summary retrieved successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 status:
+	 *                   type: string
+	 *                 data:
+	 *                   type: object
+	 *                   properties:
+	 *                     orderId:
+	 *                       type: string
+	 *                     orderNumber:
+	 *                       type: string
+	 *                     approvalSummary:
+	 *                       type: object
+	 *                       properties:
+	 *                         totalRequired:
+	 *                           type: integer
+	 *                         approvedCount:
+	 *                           type: integer
+	 *                         pendingCount:
+	 *                           type: integer
+	 *                         progress:
+	 *                           type: string
+	 *                         percentageComplete:
+	 *                           type: integer
+	 *                     approvedApprovers:
+	 *                       type: array
+	 *                       items:
+	 *                         type: object
+	 *       404:
+	 *         description: Order not found
+	 *       500:
+	 *         description: Internal server error
+	 */
+	routes.get("/summary/:orderId", controller.getApprovalSummary);
 
 	route.use(path, routes);
 

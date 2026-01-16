@@ -23,6 +23,7 @@ export const mailer = nodemailer.createTransport({
 export const sendApprovalRequestEmail = async (params: {
 	to: string;
 	approverName: string;
+	approverEmail?: string;
 	employeeName: string;
 	orderNumber: string;
 	orderTotal: number;
@@ -31,13 +32,32 @@ export const sendApprovalRequestEmail = async (params: {
 	orderDate: Date;
 	notes?: string;
 	approvalUrl?: string;
+	installments?: Array<{
+		id: string;
+		installmentNumber: number;
+		amount: number;
+		status: string;
+		scheduledDate: Date;
+		cutOffDate: Date;
+	}>;
 }): Promise<void> => {
 	const templatePath = path.join(__dirname, "..", "views", "emails", "approval-request.ejs");
 
 	try {
 		const template = fs.readFileSync(templatePath, "utf-8");
+		
+		// Format installments for email template
+		const formattedInstallments = params.installments?.map((inst) => ({
+			installmentNumber: inst.installmentNumber,
+			amount: inst.amount.toFixed(2),
+			status: inst.status,
+			scheduledDate: inst.scheduledDate.toLocaleDateString(),
+			cutOffDate: inst.cutOffDate.toLocaleDateString(),
+		})) || [];
+
 		const html = ejs.render(template, {
 			approverName: params.approverName,
+			approverEmail: params.approverEmail || params.to,
 			employeeName: params.employeeName,
 			orderNumber: params.orderNumber,
 			orderTotal: params.orderTotal.toFixed(2),
@@ -46,6 +66,8 @@ export const sendApprovalRequestEmail = async (params: {
 			orderDate: params.orderDate.toLocaleDateString(),
 			notes: params.notes || "No additional notes",
 			approvalUrl: params.approvalUrl || "#",
+			installments: formattedInstallments,
+			hasInstallments: formattedInstallments.length > 0,
 		});
 
 		await mailer.sendMail({

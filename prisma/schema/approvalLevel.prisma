@@ -1,21 +1,18 @@
 model ApprovalLevel {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  workflow        ApprovalWorkflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  workflowId      String            @db.ObjectId
-  
-  level           Int               // 1, 2, 3, etc.
+  id              String                  @id @default(auto()) @map("_id") @db.ObjectId
   role            ApproverRole
   description     String?
-  isRequired      Boolean           @default(true)
+  isRequired      Boolean                 @default(true)
   
   // Auto-approval settings
   autoApproveUnder Float?
-  timeoutDays     Int?              // Auto-approve after X days if no response
+  timeoutDays     Int?                    // Auto-approve after X days if no response
   
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  // Many-to-many relation with workflows
+  workflows       WorkflowApprovalLevel[]
+  
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
 
-  @@unique([workflowId, level])
-  @@index([workflowId])
   @@map("approvalLevels")
 }

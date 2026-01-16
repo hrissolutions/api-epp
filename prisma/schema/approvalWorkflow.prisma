@@ -1,20 +1,20 @@
 model ApprovalWorkflow {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  name            String   @unique
+  id              String                  @id @default(auto()) @map("_id") @db.ObjectId
+  name            String                  @unique
   description     String?
-  isActive        Boolean  @default(true)
+  isActive        Boolean                 @default(true)
   
   // Workflow conditions
   minOrderAmount  Float?
   maxOrderAmount  Float?
-  requiresInstallment Boolean @default(false)
+  requiresInstallment Boolean             @default(false)
   
-  // Approval chain
-  levels          ApprovalLevel[]
+  // Many-to-many relation with approval levels through junction table
+  workflowLevels  WorkflowApprovalLevel[]
   orders          Order[]
   
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
 
   @@map("approvalWorkflows")
 }

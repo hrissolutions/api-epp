@@ -98,6 +98,76 @@
             padding-top: 20px;
             border-top: 1px solid #dee2e6;
         }
+        .installment-section {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        .installment-section h3 {
+            margin-top: 0;
+            color: #1976D2;
+            font-size: 18px;
+        }
+        .installment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .installment-table th {
+            background-color: #2196F3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .installment-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .installment-table tr:last-child td {
+            border-bottom: none;
+        }
+        .installment-table tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-pending {
+            background-color: #FFC107;
+            color: #000;
+        }
+        .status-scheduled {
+            background-color: #2196F3;
+            color: white;
+        }
+        .status-deducted {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-failed {
+            background-color: #F44336;
+            color: white;
+        }
+        .approver-email {
+            background-color: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -109,6 +179,12 @@
         <p>Hello <strong><%= approverName %></strong>,</p>
         
         <p>You have a new order approval request that requires your attention.</p>
+
+        <% if (approverEmail) { %>
+        <div class="approver-email">
+            <strong>Approver Email:</strong> <%= approverEmail %>
+        </div>
+        <% } %>
 
         <div class="badge">Level <%= approvalLevel %> - <%= approverRole %></div>
 
@@ -135,6 +211,45 @@
         <div class="note">
             <strong>📝 Order Notes:</strong><br>
             <%= notes %>
+        </div>
+        <% } %>
+
+        <% if (hasInstallments && installments && installments.length > 0) { %>
+        <div class="installment-section">
+            <h3>📅 Installment Payment Plan</h3>
+            <p style="margin-top: 0; color: #666; font-size: 14px;">
+                This order will be paid in <strong><%= installments.length %> installments</strong> via payroll deduction.
+            </p>
+            <table class="installment-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Amount</th>
+                        <th>Scheduled Date</th>
+                        <th>Cut-off Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% installments.forEach(function(inst) { %>
+                    <tr>
+                        <td><strong><%= inst.installmentNumber %></strong></td>
+                        <td><strong>$<%= inst.amount %></strong></td>
+                        <td><%= inst.scheduledDate %></td>
+                        <td><%= inst.cutOffDate %></td>
+                        <td>
+                            <span class="status-badge status-<%= inst.status.toLowerCase() %>">
+                                <%= inst.status %>
+                            </span>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                <strong>Total Installment Amount:</strong> $<%= orderTotal %><br>
+                <em>All installments will be automatically deducted from payroll on their scheduled dates.</em>
+            </p>
         </div>
         <% } %>
 

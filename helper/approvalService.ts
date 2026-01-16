@@ -22,7 +22,12 @@ export const findMatchingWorkflow = async (
 		// Find all active workflows
 		const workflows = await prisma.approvalWorkflow.findMany({
 			where: { isActive: true },
-			include: { levels: { orderBy: { level: "asc" } } },
+			include: {
+				workflowLevels: {
+					include: { approvalLevel: true },
+					orderBy: { level: "asc" },
+				},
+			},
 		});
 
 		// Match workflow based on conditions
@@ -119,6 +124,14 @@ export const createApprovalChain = async (
 	paymentType: string,
 	orderDate: Date,
 	notes?: string,
+	installments?: Array<{
+		id: string;
+		installmentNumber: number;
+		amount: number;
+		status: string;
+		scheduledDate: Date;
+		cutOffDate: Date;
+	}>,
 ) => {
 	try {
 		// Find matching workflow
@@ -129,39 +142,98 @@ export const createApprovalChain = async (
 			return null;
 		}
 
-		if (!workflow.levels || workflow.levels.length === 0) {
+		if (!workflow.workflowLevels || workflow.workflowLevels.length === 0) {
 			approvalLogger.warn(`Workflow ${workflow.name} has no approval levels`);
 			return null;
 		}
 
 		approvalLogger.info(
-			`Creating approval chain for order ${orderNumber} with ${workflow.levels.length} levels`,
+			`Creating approval chain for order ${orderNumber} with ${workflow.workflowLevels.length} levels`,
 		);
 
 		// Create approval records for all levels
+		// IMPORTANT: Approver email is retrieved from workflowApprovalLevel
+		// This allows each workflow to have specific approvers assigned per level
 		const approvals = [];
-		for (const level of workflow.levels) {
-			// Get approver for this role
-			const approver = await getApproverForRole(prisma, level.role, employeeId);
+		for (const workflowLevel of workflow.workflowLevels) {
+			// Priority 1: Use approver from workflowApprovalLevel if email is available
+			// This is the preferred method as it allows workflow-specific approver assignment
+			let approverId: string;
+			let approverName: string;
+			let approverEmail: string;
+			let approverSource: string;
 
-			// Create approval record
+			// Check if approver email is specified in workflowApprovalLevel
+			// Email is the key field - if it exists, use the approver from workflowApprovalLevel
+			if (workflowLevel.approverEmail) {
+				// Use approver from workflowApprovalLevel (has highest priority)
+				// This email comes from the workflowApprovalLevel record you created
+				approverId =
+					workflowLevel.approverId ||
+					`approver_${workflowLevel.approvalLevel.role.toLowerCase()}`;
+				approverName = workflowLevel.approverName || workflowLevel.approvalLevel.role;
+				approverEmail = workflowLevel.approverEmail; // ← This is the email from workflowApprovalLevel
+				approverSource = "workflowApprovalLevel";
+
+				approvalLogger.info(
+					`✓ Using approver from workflowApprovalLevel for level ${workflowLevel.level}: ` +
+						`${approverName} (${approverEmail})`,
+				);
+			} else {
+				// Priority 2: Fallback to getting approver by role (backward compatibility)
+				// Only used if workflowApprovalLevel doesn't have an email
+				const approver = await getApproverForRole(
+					prisma,
+					workflowLevel.approvalLevel.role,
+					employeeId,
+				);
+				approverId = approver.id;
+				approverName = approver.name;
+				approverEmail = approver.email;
+				approverSource = "role-based";
+
+				approvalLogger.warn(
+					`⚠ Using role-based approver for level ${workflowLevel.level}: ${approverEmail} (fallback - no email in workflowApprovalLevel)`,
+				);
+			}
+
+			// Validate email before creating approval
+			if (!approverEmail || !approverEmail.includes("@")) {
+				approvalLogger.warn(
+					`Invalid or missing approver email for level ${workflowLevel.level}. Email: ${approverEmail}`,
+				);
+				// Continue anyway, but log the warning
+			}
+
+			// Create approval record with approver email from workflowApprovalLevel
 			const approval = await prisma.orderApproval.create({
 				data: {
 					orderId: orderId,
-					approvalLevel: level.level,
-					approverRole: level.role,
-					approverId: approver.id,
-					approverName: approver.name,
-					approverEmail: approver.email,
+					approvalLevel: workflowLevel.level,
+					approverRole: workflowLevel.approvalLevel.role,
+					approverId: approverId,
+					approverName: approverName,
+					approverEmail: approverEmail, // Save the email from workflowApprovalLevel
 					status: "PENDING",
 				},
 			});
 
 			approvals.push(approval);
 			approvalLogger.info(
-				`Created approval level ${level.level} (${level.role}) for order ${orderNumber}`,
+				`Created approval level ${workflowLevel.level} (${workflowLevel.approvalLevel.role}) for order ${orderNumber} - ` +
+					`Approver: ${approverName} (${approverEmail}) - Source: ${approverSource}`,
 			);
 		}
+
+		// Save workflowId to order
+		await prisma.order.update({
+			where: { id: orderId },
+			data: {
+				workflowId: workflow.id,
+			},
+		});
+
+		approvalLogger.info(`Saved workflow ${workflow.id} to order ${orderNumber}`);
 
 		// Send email to first level approver
 		if (approvals.length > 0) {
@@ -169,6 +241,7 @@ export const createApprovalChain = async (
 			await sendApprovalRequestEmail({
 				to: firstApproval.approverEmail,
 				approverName: firstApproval.approverName,
+				approverEmail: firstApproval.approverEmail,
 				employeeName: employeeName,
 				orderNumber: orderNumber,
 				orderTotal: orderTotal,
@@ -176,9 +249,13 @@ export const createApprovalChain = async (
 				approverRole: firstApproval.approverRole,
 				orderDate: orderDate,
 				notes: notes,
+				installments: installments,
 			});
 
-			approvalLogger.info(`Sent approval request email to ${firstApproval.approverEmail}`);
+			approvalLogger.info(
+				`Sent approval request email to ${firstApproval.approverEmail} ` +
+					`(from workflowApprovalLevel for order ${orderNumber})`,
+			);
 		}
 
 		return {
@@ -188,6 +265,80 @@ export const createApprovalChain = async (
 	} catch (error) {
 		approvalLogger.error(`Error creating approval chain: ${error}`);
 		throw error;
+	}
+};
+
+/**
+ * Check if all required approvals for an order are completed
+ */
+export const checkAllApprovalsComplete = async (
+	prisma: PrismaClient,
+	orderId: string,
+): Promise<boolean> => {
+	try {
+		// Get the order with workflow
+		const order = await prisma.order.findUnique({
+			where: { id: orderId },
+			include: {
+				workflow: {
+					include: {
+						workflowLevels: {
+							orderBy: { level: "asc" },
+						},
+					},
+				},
+				approvals: {
+					orderBy: { approvalLevel: "asc" },
+				},
+			},
+		});
+
+		if (!order) {
+			approvalLogger.warn(`Order ${orderId} not found when checking approvals`);
+			return false;
+		}
+
+		// Count how many approvals are APPROVED
+		const approvedCount = order.approvals.filter(
+			(approval) => approval.status === "APPROVED",
+		).length;
+
+		// Determine total required approvals
+		let totalRequiredLevels: number;
+		
+		if (order.workflow && order.workflow.workflowLevels.length > 0) {
+			// Use workflow levels if workflow exists
+			totalRequiredLevels = order.workflow.workflowLevels.length;
+		} else {
+			// Fallback: use total number of approval records created for this order
+			// This handles cases where workflow wasn't assigned but approvals exist
+			totalRequiredLevels = order.approvals.length;
+			if (totalRequiredLevels === 0) {
+				approvalLogger.warn(`Order ${orderId} has no approvals and no workflow`);
+				return false;
+			}
+			approvalLogger.info(
+				`Order ${order.orderNumber} has no workflow assigned, using approval count (${totalRequiredLevels}) as total required`,
+			);
+		}
+
+		approvalLogger.info(
+			`Order ${order.orderNumber}: ${approvedCount}/${totalRequiredLevels} approvals completed`,
+		);
+
+		// Check if all required approvals are completed
+		const allApproved = approvedCount >= totalRequiredLevels && totalRequiredLevels > 0;
+
+		if (allApproved) {
+			approvalLogger.info(
+				`All ${totalRequiredLevels} required approvals completed for order ${order.orderNumber}`,
+			);
+		}
+
+		return allApproved;
+	} catch (error) {
+		approvalLogger.error(`Error checking approvals for order ${orderId}: ${error}`);
+		return false;
 	}
 };
 
@@ -257,39 +408,11 @@ export const processApproval = async (
 
 			approvalLogger.info(`Order ${approval.order.orderNumber} rejected`);
 		} else {
-			// Check if there are more levels
-			const nextLevelApproval = await prisma.orderApproval.findFirst({
-				where: {
-					orderId: approval.orderId,
-					approvalLevel: approval.approvalLevel + 1,
-				},
-			});
+			// Approval was approved - check if all approvals are complete
+			const allApprovalsComplete = await checkAllApprovalsComplete(prisma, approval.orderId);
 
-			if (nextLevelApproval) {
-				// There's a next level - send notification
-				await prisma.order.update({
-					where: { id: approval.orderId },
-					data: {
-						currentApprovalLevel: approval.approvalLevel + 1,
-					},
-				});
-
-				await sendNextApprovalNotification({
-					to: nextLevelApproval.approverEmail,
-					approverName: nextLevelApproval.approverName,
-					employeeName: "Employee Name", // TODO: Get from employee record
-					orderNumber: approval.order.orderNumber,
-					orderTotal: approval.order.total,
-					previousApprover: approval.approverName,
-					approvalLevel: nextLevelApproval.approvalLevel,
-					approverRole: nextLevelApproval.approverRole,
-				});
-
-				approvalLogger.info(
-					`Sent next level approval notification for order ${approval.order.orderNumber}`,
-				);
-			} else {
-				// No more levels - order is fully approved
+			if (allApprovalsComplete) {
+				// All required approvals are complete - order is fully approved
 				await prisma.order.update({
 					where: { id: approval.orderId },
 					data: {
@@ -299,6 +422,19 @@ export const processApproval = async (
 					},
 				});
 
+				// Get all approvers who approved for the email
+				const allApprovals = await prisma.orderApproval.findMany({
+					where: {
+						orderId: approval.orderId,
+						status: "APPROVED",
+					},
+					orderBy: { approvalLevel: "asc" },
+				});
+
+				const approversList = allApprovals
+					.map((a) => `${a.approverName} (${a.approverRole})`)
+					.join(", ");
+
 				// Send approval email to employee
 				// TODO: Get employee email from database
 				await sendOrderApprovedEmail({
@@ -306,11 +442,54 @@ export const processApproval = async (
 					employeeName: "Employee Name", // TODO: Get from employee record
 					orderNumber: approval.order.orderNumber,
 					orderTotal: approval.order.total,
-					approvedBy: approval.approverName,
+					approvedBy: approversList,
 					approvedAt: new Date(),
 				});
 
-				approvalLogger.info(`Order ${approval.order.orderNumber} fully approved`);
+				approvalLogger.info(
+					`Order ${approval.order.orderNumber} fully approved by all ${allApprovals.length} required approvers`,
+				);
+			} else {
+				// Not all approvals are complete - check if there's a next level to notify
+				const nextLevelApproval = await prisma.orderApproval.findFirst({
+					where: {
+						orderId: approval.orderId,
+						approvalLevel: approval.approvalLevel + 1,
+						status: "PENDING",
+					},
+				});
+
+				if (nextLevelApproval) {
+					// There's a next level pending - send notification
+					await prisma.order.update({
+						where: { id: approval.orderId },
+						data: {
+							currentApprovalLevel: approval.approvalLevel + 1,
+						},
+					});
+
+					await sendNextApprovalNotification({
+						to: nextLevelApproval.approverEmail,
+						approverName: nextLevelApproval.approverName,
+						employeeName: "Employee Name", // TODO: Get from employee record
+						orderNumber: approval.order.orderNumber,
+						orderTotal: approval.order.total,
+						previousApprover: approval.approverName,
+						approvalLevel: nextLevelApproval.approvalLevel,
+						approverRole: nextLevelApproval.approverRole,
+					});
+
+					approvalLogger.info(
+						`Sent next level approval notification for order ${approval.order.orderNumber}`,
+					);
+				} else {
+					// No next level found, but not all approvals are complete
+					// This might happen if approvals are processed out of order
+					approvalLogger.warn(
+						`Approval ${approvalId} approved, but order ${approval.order.orderNumber} ` +
+							`is not fully approved yet. Waiting for remaining approvals.`,
+					);
+				}
 			}
 		}
 
