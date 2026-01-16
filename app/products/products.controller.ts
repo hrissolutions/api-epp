@@ -259,7 +259,7 @@ export const controller = (prisma: PrismaClient) => {
 			const whereClause: Prisma.ProductWhereInput = {};
 
 			// search fields for products (name, description, category, brand)
-			const searchFields = ["name", "description", "category", "brand"];
+			const searchFields = ["name", "description"];
 			if (query) {
 				const searchConditions = buildSearchConditions("Product", query, searchFields);
 				if (searchConditions.length > 0) {
