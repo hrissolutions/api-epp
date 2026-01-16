@@ -1,11 +1,15 @@
 import { PrismaClient } from "../generated/prisma";
 import * as argon2 from "argon2";
 import { seedTemplates } from "./seeds/templateSeeder";
+import { seedEPP } from "./seeds/eppSeeder";
 const prisma = new PrismaClient();
 
 async function main() {
 	// Seed template data
-	await seedTemplates();
+	// await seedTemplates();
+
+	// Seed EPP data (vendor, categories, products)
+	await seedEPP();
 
 	console.log("Seeding completed successfully!");
 }
