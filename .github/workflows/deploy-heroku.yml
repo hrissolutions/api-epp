@@ -26,17 +26,23 @@ jobs:
             - name: Authenticate with Heroku and Deploy
               env:
                   HEROKU_API_KEY: ${{secrets.HEROKU_API_KEY}}
-                  HEROKU_APP: epp-api-dev
               run: |
-                  # Verify we're on the develop branch
-                  echo "Deploying from branch: ${{ github.ref_name }}"
+                  # Create a custom credential helper script that uses the API key
+                  cat > /tmp/git-credential-helper.sh << EOF
+                  #!/bin/bash
+                  echo "username=1bis.solutions.tech@gmail.com"
+                  echo "password=$HEROKU_API_KEY"
+                  EOF
+                  chmod +x /tmp/git-credential-helper.sh
 
-                  # Heroku CLI automatically uses HEROKU_API_KEY environment variable
-                  # Add Heroku remote using heroku git:remote command
-                  heroku git:remote -a $HEROKU_APP
+                  # Configure git to use the custom credential helper
+                  git config --global credential.helper "/tmp/git-credential-helper.sh"
 
                   # Unshallow the repository (Heroku requires full clone)
                   git fetch --unshallow || git fetch --all
 
-                  # Push to Heroku main branch
+                  # Add Heroku remote manually
+                  git remote add heroku https://git.heroku.com/epp-api-dev.git || git remote set-url heroku https://git.heroku.com/epp-api-dev.git
+
+                  # Push to Heroku main branch (same command we used manually)
                   git push heroku HEAD:main --force
