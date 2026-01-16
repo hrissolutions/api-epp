@@ -27,7 +27,7 @@ jobs:
               env:
                   HEROKU_API_KEY: ${{secrets.HEROKU_API_KEY}}
               run: |
-                  # Create a custom credential helper script that uses the API key dsfsdasd dsdf
+                  # Create a custom credential helper script that uses the API key 
                   cat > /tmp/git-credential-helper.sh << EOF
                   #!/bin/bash
                   echo "username=1bis.solutions.tech@gmail.com"
