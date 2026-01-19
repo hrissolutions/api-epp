@@ -50,6 +50,26 @@ interface ProductUploadedImageInfo {
 	type: ProductImageType;
 }
 
+// Helper function to parse number with comma separators (e.g., "22,995" -> 22995)
+const parseNumberWithCommas = (value: string | number | null | undefined): number | null => {
+	if (value === null || value === undefined) {
+		return null;
+	}
+	
+	if (typeof value === "number") {
+		return value;
+	}
+	
+	if (typeof value === "string") {
+		// Remove commas and whitespace, then parse
+		const cleaned = value.trim().replace(/,/g, "");
+		const parsed = parseFloat(cleaned);
+		return isNaN(parsed) ? null : parsed;
+	}
+	
+	return null;
+};
+
 // Helper function to convert string numbers to actual numbers for form data
 const convertStringNumbers = (obj: any): any => {
 	if (obj === null || obj === undefined) {
@@ -70,8 +90,10 @@ const convertStringNumbers = (obj: any): any => {
 
 	if (typeof obj === "string") {
 		// Check if string is a valid number (including decimals and negative)
-		if (/^-?\d+\.?\d*$/.test(obj.trim()) && obj.trim() !== "") {
-			const num = parseFloat(obj);
+		// Also handle comma-separated numbers
+		const cleaned = obj.trim().replace(/,/g, "");
+		if (/^-?\d+\.?\d*$/.test(cleaned) && cleaned !== "") {
+			const num = parseFloat(cleaned);
 			if (!isNaN(num)) {
 				return num;
 			}
@@ -636,6 +658,28 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
+	// Helper function to generate unique SKU by appending suffix
+	const generateUniqueSKU = async (
+		originalSku: string,
+		existingSkus: Set<string>,
+		importBatchSkus: Map<string, number>,
+	): Promise<string> => {
+		let newSku = originalSku;
+		let counter = 1;
+
+		// Check if SKU exists in database or in current import batch
+		while (
+			existingSkus.has(newSku) ||
+			importBatchSkus.has(newSku)
+		) {
+			// Try appending -1, -2, -3, etc.
+			newSku = `${originalSku}-${counter}`;
+			counter++;
+		}
+
+		return newSku;
+	};
+
 	const importFromCSV = async (req: Request, res: Response, _next: NextFunction) => {
 		try {
 			if (!req.file) {
@@ -651,9 +695,13 @@ export const controller = (prisma: PrismaClient) => {
 
 			const results: any[] = [];
 			const errors: any[] = [];
+			const skuChanges: Array<{ original: string; new: string; row: number }> = [];
 			let processedCount = 0;
 			let successCount = 0;
 			let errorCount = 0;
+
+			// Track SKUs in current import batch to detect duplicates within the file
+			const importBatchSkus = new Map<string, number>(); // Map<sku, count>
 
 			// Parse CSV file
 			const parseCSV = (): Promise<void> => {
@@ -685,6 +733,13 @@ export const controller = (prisma: PrismaClient) => {
 				res.status(400).json(errorResponse);
 				return;
 			}
+
+			// Fetch all existing SKUs from database to check for duplicates
+			const existingProducts = await prisma.product.findMany({
+				select: { sku: true },
+			});
+			const existingSkus = new Set<string>(existingProducts.map((p) => p.sku));
+			productsLogger.info(`Found ${existingSkus.size} existing SKUs in database`);
 
 			// Process each row
 			for (let i = 0; i < results.length; i++) {
@@ -828,19 +883,49 @@ export const controller = (prisma: PrismaClient) => {
 						}
 					}
 
+					// Handle duplicate SKU - generate unique SKU if needed
+					let finalSku = row.sku?.trim() || "";
+					const originalSku = finalSku;
+
+					// Check if SKU is duplicate (in database or in current import batch)
+					if (existingSkus.has(finalSku) || importBatchSkus.has(finalSku)) {
+						// Generate unique SKU
+						finalSku = await generateUniqueSKU(
+							originalSku,
+							existingSkus,
+							importBatchSkus,
+						);
+						
+						// Track the change
+						skuChanges.push({
+							original: originalSku,
+							new: finalSku,
+							row: i + 1,
+						});
+						
+						productsLogger.warn(
+							`Row ${i + 1}: Duplicate SKU "${originalSku}" detected, generated new SKU: "${finalSku}"`,
+						);
+					}
+
+					// Add to import batch tracking
+					importBatchSkus.set(finalSku, (importBatchSkus.get(finalSku) || 0) + 1);
+					// Also add to existing SKUs set to prevent duplicates in same batch
+					existingSkus.add(finalSku);
+
 					// Prepare product data
 					const productData: any = {
-						sku: row.sku,
+						sku: finalSku,
 						name: row.name,
 						description:
 							row.description && row.description.trim() ? row.description : null,
 						categoryId: categoryId,
 						vendorId: vendorId,
 
-						// Pricing - handle multiple price fields
-						retailPrice: parseFloat(row.retailPrice),
-						employeePrice: parseFloat(row.employeePrice),
-						costPrice: row.costPrice ? parseFloat(row.costPrice) : null,
+						// Pricing - handle multiple price fields with comma separators
+						retailPrice: parseNumberWithCommas(row.retailPrice) ?? 0,
+						employeePrice: parseNumberWithCommas(row.employeePrice) ?? 0,
+						costPrice: parseNumberWithCommas(row.costPrice),
 
 						// Inventory
 						stockQuantity: row.stockQuantity ? parseInt(row.stockQuantity) : 0,
@@ -942,16 +1027,23 @@ export const controller = (prisma: PrismaClient) => {
 					processed: processedCount,
 					successful: successCount,
 					failed: errorCount,
+					skuChanges: skuChanges.length,
 				},
+				skuChanges: skuChanges.length > 0 ? skuChanges : undefined,
 				errors: errors.length > 0 ? errors : undefined,
 			};
 
+			const skuChangeMessage =
+				skuChanges.length > 0
+					? `, ${skuChanges.length} SKU(s) auto-generated due to duplicates`
+					: "";
+
 			productsLogger.info(
-				`CSV import completed: ${successCount} successful, ${errorCount} failed out of ${results.length} rows`,
+				`CSV import completed: ${successCount} successful, ${errorCount} failed out of ${results.length} rows${skuChangeMessage}`,
 			);
 
 			const successResponse = buildSuccessResponse(
-				`Products imported successfully: ${successCount} created, ${errorCount} failed`,
+				`Products imported successfully: ${successCount} created, ${errorCount} failed${skuChangeMessage}`,
 				responseData,
 				201,
 			);

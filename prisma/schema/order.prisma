@@ -5,7 +5,8 @@ model Order {
 
   // Order details
   status OrderStatus @default(PENDING_APPROVAL)
-  items  OrderItem[]
+  items  Json? // Embedded array of order items (nullable for backward compatibility)
+  orderItems OrderItem[]
 
   // Pricing
   subtotal     Float
@@ -31,6 +32,7 @@ model Order {
   // Payment
   paymentMethod PaymentMethod @default(PAYROLL_DEDUCTION)
   paymentStatus PaymentStatus @default(PENDING)
+  transaction   Transaction?
 
   // Approval Workflow
   workflow             ApprovalWorkflow? @relation(fields: [workflowId], references: [id])

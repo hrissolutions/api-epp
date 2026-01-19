@@ -21,6 +21,7 @@ import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
 import { createTransactionForOrder } from "../../helper/transactionService";
 import { createApprovalChain } from "../../helper/approvalService";
+import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { z } from "zod";
 
 const logger = getLogger();
@@ -705,6 +706,12 @@ export const controller = (prisma: PrismaClient) => {
 				if (!product.isActive) {
 					reasons.push("Product is inactive");
 				}
+				// Check stock availability
+				if (product.stockQuantity < cartItem.quantity) {
+					reasons.push(
+						`Insufficient stock: Available ${product.stockQuantity}, Requested ${cartItem.quantity}`,
+					);
+				}
 
 				if (reasons.length > 0) {
 					unavailableProducts.push({
@@ -775,10 +782,10 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			// Generate order number
-			const orderNumber = `ORDER-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+			// Generate order number using helper function
+			const orderNumber = await generateOrderNumber(prisma);
 
-			// Create order (no shipping for company internal delivery)
+			// Create order with embedded items array (no shipping for company internal delivery)
 			const order = await prisma.order.create({
 				data: {
 					orderNumber,
@@ -793,9 +800,7 @@ export const controller = (prisma: PrismaClient) => {
 					pointsUsed: pointsUsed || null,
 					notes: notes || null,
 					orderDate: new Date(),
-					items: {
-						create: orderItemsData,
-					},
+					items: orderItemsData, // Embedded items array
 				} as any,
 			});
 
@@ -961,24 +966,30 @@ export const controller = (prisma: PrismaClient) => {
 				description: `Order created from cart: ${order.orderNumber || order.id}`,
 			});
 
-			// Fetch order with items and product details
+			// Fetch order (items are now embedded as JSON)
 			const orderWithItems = await prisma.order.findUnique({
 				where: { id: order.id },
-				include: {
-					items: {
-						include: {
-							product: {
-								select: {
-									id: true,
-									name: true,
-									sku: true,
-									imageUrl: true,
-								},
-							},
-						},
-					},
-				},
 			});
+
+			// Fetch product details for each item in the embedded items array
+			const items = (orderWithItems?.items as any) || [];
+			const itemsWithProducts = await Promise.all(
+				items.map(async (item: any) => {
+					const product = await prisma.product.findUnique({
+						where: { id: item.productId },
+						select: {
+							id: true,
+							name: true,
+							sku: true,
+							imageUrl: true,
+						},
+					});
+					return {
+						...item,
+						product,
+					};
+				})
+			);
 
 			// Calculate total quantity of products
 			const totalQuantity = orderItemsData.reduce((sum, item) => sum + item.quantity, 0);
@@ -1002,7 +1013,10 @@ export const controller = (prisma: PrismaClient) => {
 			const successResponse = buildSuccessResponse(
 				"Order created successfully from cart",
 				{
-					order: orderWithItems || order,
+					order: orderWithItems ? {
+						...orderWithItems,
+						items: itemsWithProducts,
+					} : order,
 					checkoutSummary: {
 						totalProducts: totalProducts,
 						totalQuantity: totalQuantity,

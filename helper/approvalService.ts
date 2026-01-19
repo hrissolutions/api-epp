@@ -6,6 +6,7 @@ import {
 	sendOrderApprovedEmail,
 	sendOrderRejectedEmail,
 } from "./email.helper";
+import { deductStockForOrder, restoreStockForOrder, validateStockForOrder } from "./stockService";
 
 const logger = getLogger();
 const approvalLogger = logger.child({ module: "approvalService" });
@@ -31,23 +32,46 @@ export const findMatchingWorkflow = async (
 		});
 
 		// Match workflow based on conditions
+		approvalLogger.info(
+			`Searching for matching workflow: Order total=${orderTotal}, Payment type=${paymentType}, Active workflows=${workflows.length}`,
+		);
+
 		for (const workflow of workflows) {
+			approvalLogger.debug(
+				`Checking workflow "${workflow.name}": ` +
+				`requiresInstallment=${workflow.requiresInstallment}, ` +
+				`minAmount=${workflow.minOrderAmount}, ` +
+				`maxAmount=${workflow.maxOrderAmount}, ` +
+				`levels=${workflow.workflowLevels.length}`,
+			);
+
 			// Check installment requirement
 			if (workflow.requiresInstallment && paymentType !== "INSTALLMENT") {
+				approvalLogger.debug(
+					`Workflow "${workflow.name}" requires INSTALLMENT but payment type is ${paymentType}`,
+				);
 				continue;
 			}
 
 			// Check amount range
 			if (workflow.minOrderAmount !== null && orderTotal < workflow.minOrderAmount) {
+				approvalLogger.debug(
+					`Workflow "${workflow.name}" requires min ${workflow.minOrderAmount} but order total is ${orderTotal}`,
+				);
 				continue;
 			}
 
 			if (workflow.maxOrderAmount !== null && orderTotal > workflow.maxOrderAmount) {
+				approvalLogger.debug(
+					`Workflow "${workflow.name}" allows max ${workflow.maxOrderAmount} but order total is ${orderTotal}`,
+				);
 				continue;
 			}
 
+			// All conditions matched!
 			approvalLogger.info(
-				`Matched workflow: ${workflow.name} for order total: ${orderTotal}`,
+				`✓ Matched workflow: "${workflow.name}" (${workflow.id}) for order total: ${orderTotal}, ` +
+				`payment type: ${paymentType}, approval levels: ${workflow.workflowLevels.length}`,
 			);
 			return workflow;
 		}
@@ -383,6 +407,10 @@ export const processApproval = async (
 		);
 
 		if (status === "REJECTED") {
+			// Check if order was already approved (stock was deducted)
+			// If so, restore stock when rejecting
+			const wasApproved = approval.order.status === "APPROVED" || approval.order.isFullyApproved;
+
 			// Update order to rejected
 			await prisma.order.update({
 				where: { id: approval.orderId },
@@ -393,6 +421,22 @@ export const processApproval = async (
 					rejectionReason: comments || "Order rejected",
 				},
 			});
+
+			// Restore stock if order was previously approved
+			if (wasApproved) {
+				try {
+					await restoreStockForOrder(prisma, approval.orderId);
+					approvalLogger.info(
+						`Stock restored for order ${approval.order.orderNumber} after rejection`,
+					);
+				} catch (stockError) {
+					approvalLogger.error(
+						`Failed to restore stock for rejected order ${approval.order.orderNumber}:`,
+						stockError,
+					);
+					// Don't fail the rejection if stock restoration fails
+				}
+			}
 
 			// Send rejection email to employee
 			// TODO: Get employee email from database
@@ -412,7 +456,48 @@ export const processApproval = async (
 			const allApprovalsComplete = await checkAllApprovalsComplete(prisma, approval.orderId);
 
 			if (allApprovalsComplete) {
-				// All required approvals are complete - order is fully approved
+				// Validate stock availability before approving
+				const insufficientStock = await validateStockForOrder(prisma, approval.orderId);
+
+				if (insufficientStock.length > 0) {
+					// Stock is insufficient - cannot approve order
+					const stockErrorDetails = insufficientStock.map((item) => ({
+						field: `product.${item.productId}`,
+						message: `${item.productName}: Insufficient stock - Available ${item.availableStock}, Requested ${item.requestedQuantity}, Shortage: ${item.shortage}`,
+					}));
+
+					approvalLogger.error(
+						`Cannot approve order ${approval.order.orderNumber}: Insufficient stock for ${insufficientStock.length} product(s)`,
+					);
+
+					// Revert the approval status back to PENDING
+					await prisma.orderApproval.update({
+						where: { id: approvalId },
+						data: {
+							status: "PENDING",
+							comments:
+								`Approval blocked: Insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Need ${i.shortage} more`).join(", ")}`,
+						},
+					});
+
+					// Update order with stock issue information
+					await prisma.order.update({
+						where: { id: approval.orderId },
+						data: {
+							notes: `Order cannot be approved due to insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
+						},
+					});
+
+					// Throw error with details to prevent approval
+					const error = new Error(
+						`Cannot approve order: Insufficient stock for ${insufficientStock.length} product(s)`,
+					) as any;
+					error.statusCode = 400;
+					error.errors = stockErrorDetails;
+					throw error;
+				}
+
+				// All required approvals are complete and stock is available - order is fully approved
 				await prisma.order.update({
 					where: { id: approval.orderId },
 					data: {
@@ -421,6 +506,20 @@ export const processApproval = async (
 						approvedAt: new Date(),
 					},
 				});
+
+				// Deduct stock for all products in the order
+				try {
+					await deductStockForOrder(prisma, approval.orderId);
+					approvalLogger.info(
+						`Stock deducted for all products in order ${approval.order.orderNumber}`,
+					);
+				} catch (stockError) {
+					approvalLogger.error(
+						`Failed to deduct stock for order ${approval.order.orderNumber}:`,
+						stockError,
+					);
+					// Don't fail the approval if stock deduction fails - log and continue
+				}
 
 				// Get all approvers who approved for the email
 				const allApprovals = await prisma.orderApproval.findMany({

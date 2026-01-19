@@ -29,7 +29,6 @@ model Product {
   status      ProductStatus @default(PENDING)
 
   // Relations
-  orderItems    OrderItem[]
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
   // reviews           ProductReview[]

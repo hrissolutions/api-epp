@@ -4,6 +4,7 @@ model Transaction {
 
   // Link to employee and order
   employeeId String @db.ObjectId
+  order      Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId    String @unique @db.ObjectId // One transaction per order
 
   // Transaction details

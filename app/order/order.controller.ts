@@ -21,6 +21,8 @@ import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
 import { createTransactionForOrder } from "../../helper/transactionService";
 import { createApprovalChain } from "../../helper/approvalService";
+import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
+import { calculateOrderTotals } from "../../helper/calculateOrderTotals.helper";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -86,9 +88,48 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
+			// Generate order number if not provided
+			const orderNumber = validation.data.orderNumber || await generateOrderNumber(prisma);
+			
+			// Calculate order totals from items
+			const totals = await calculateOrderTotals(prisma, validation.data.items);
+			
+			// Prepare order data with embedded items array and calculated totals
+			const orderData = {
+				...validation.data,
+				orderNumber,
+				items: totals.items, // Use calculated items with discount and subtotal
+				subtotal: totals.subtotal,
+				discount: totals.discount,
+				tax: totals.tax,
+				total: totals.total,
+			};
+			
 			// Create the order first
-			const order = await prisma.order.create({ data: validation.data as any });
+			const order = await prisma.order.create({ data: orderData as any });
 			orderLogger.info(`Order created successfully: ${order.id}`);
+
+			// Create OrderItem records for each item
+			let createdOrderItems = [];
+			try {
+				for (const item of totals.items) {
+					const orderItem = await prisma.orderItem.create({
+						data: {
+							orderId: order.id,
+							productId: item.productId,
+							quantity: item.quantity,
+							unitPrice: item.unitPrice,
+							discount: item.discount,
+							subtotal: item.subtotal,
+						},
+					});
+					createdOrderItems.push(orderItem);
+				}
+				orderLogger.info(`Created ${createdOrderItems.length} OrderItem records for order ${order.id}`);
+			} catch (orderItemError) {
+				orderLogger.error(`Failed to create OrderItems for order ${order.id}:`, orderItemError);
+				// Continue with other operations even if OrderItem creation fails
+			}
 
 			// Create transaction ledger for the order
 			let transaction = null;
@@ -108,16 +149,27 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Automatically generate installments if payment type is INSTALLMENT
 			let generatedInstallments = null;
-			if (order.paymentType === "INSTALLMENT" && order.installmentMonths) {
+			if (order.paymentType === "INSTALLMENT") {
+				// Use provided installmentMonths or default to 6 months if not specified
+				const installmentMonths = order.installmentMonths || 6;
+				
+				// Update order with installmentMonths if it wasn't provided
+				if (!order.installmentMonths) {
+					await prisma.order.update({
+						where: { id: order.id },
+						data: { installmentMonths },
+					});
+					orderLogger.info(`Set default installmentMonths to ${installmentMonths} for order ${order.id}`);
+				}
 				try {
 					orderLogger.info(
-						`Generating installments for order ${order.id}: ${order.installmentMonths} months`
+						`Generating installments for order ${order.id}: ${installmentMonths} months`
 					);
 					
 					generatedInstallments = await generateInstallments(
 						prisma,
 						order.id,
-						order.installmentMonths,
+						installmentMonths,
 						order.total,
 						order.orderDate || new Date()
 					);
@@ -145,6 +197,8 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			// Automatically create approval chain for the order
+			// This finds the matching workflow based on order amount and payment type,
+			// then creates OrderApproval records for each approver in the workflow
 			let approvalChain = null;
 			try {
 				orderLogger.info(
@@ -153,6 +207,18 @@ export const controller = (prisma: PrismaClient) => {
 				
 				// Get employee name (TODO: fetch from Person/User database)
 				const employeeName = "Employee Name"; // You should fetch this from your employee database
+				
+				// Prepare installments data for approval email (if available)
+				const installmentsForApproval = generatedInstallments
+					? generatedInstallments.map((inst: any) => ({
+							id: inst.id,
+							installmentNumber: inst.installmentNumber,
+							amount: inst.amount,
+							status: inst.status,
+							scheduledDate: inst.scheduledDate,
+							cutOffDate: inst.cutOffDate,
+						}))
+					: undefined;
 				
 				approvalChain = await createApprovalChain(
 					prisma,
@@ -163,24 +229,38 @@ export const controller = (prisma: PrismaClient) => {
 					order.total,
 					order.paymentType,
 					order.orderDate || new Date(),
-					order.notes || undefined
+					order.notes || undefined,
+					installmentsForApproval
 				);
 				
 				if (approvalChain) {
 					orderLogger.info(
-						`Successfully created approval chain for order ${order.id}: ` +
-						`Workflow=${approvalChain.workflow.name}, Levels=${approvalChain.approvals.length}`
+						`✓ Successfully created approval chain for order ${order.id}: ` +
+						`Workflow="${approvalChain.workflow.name}" (${approvalChain.workflow.id}), ` +
+						`${approvalChain.approvals.length} approval level(s) created`
 					);
+					
+					// Log each approval level created
+					approvalChain.approvals.forEach((approval: any) => {
+						orderLogger.info(
+							`  - Level ${approval.approvalLevel}: ${approval.approverRole} → ${approval.approverName} (${approval.approverEmail})`
+						);
+					});
 				} else {
-					orderLogger.warn(`No approval workflow matched for order ${order.id}`);
+					orderLogger.warn(
+						`⚠ No approval workflow matched for order ${order.id}. ` +
+						`Order total: ${order.total}, Payment type: ${order.paymentType}. ` +
+						`Please ensure a workflow exists that matches these criteria.`
+					);
 				}
-			} catch (approvalError) {
+			} catch (approvalError: any) {
 				orderLogger.error(
-					`Failed to create approval chain for order ${order.id}:`,
+					`✗ Failed to create approval chain for order ${order.id}:`,
 					approvalError
 				);
 				// Note: Order is still created even if approval chain creation fails
 				// This allows manual intervention if needed
+				// However, the order will remain in PENDING_APPROVAL status
 			}
 
 			logActivity(req, {
@@ -229,6 +309,7 @@ export const controller = (prisma: PrismaClient) => {
 				config.SUCCESS.ORDER.CREATED,
 				{
 					order,
+					orderItems: createdOrderItems.length > 0 ? createdOrderItems : undefined,
 					transaction: transaction ? {
 						transactionNumber: transaction.transactionNumber,
 						totalAmount: transaction.totalAmount,
@@ -247,13 +328,17 @@ export const controller = (prisma: PrismaClient) => {
 					}),
 					...(approvalChain && {
 						approvalWorkflow: {
-							name: approvalChain.workflow.name,
+							workflowId: approvalChain.workflow.id,
+							workflowName: approvalChain.workflow.name,
 							totalLevels: approvalChain.approvals.length,
 							currentLevel: 1,
-							approvalChain: approvalChain.approvals.map(a => ({
+							approvalChain: approvalChain.approvals.map((a: any) => ({
+								approvalId: a.id,
 								level: a.approvalLevel,
 								role: a.approverRole,
+								approverId: a.approverId,
 								approverName: a.approverName,
+								approverEmail: a.approverEmail,
 								status: a.status,
 							})),
 						}
@@ -324,9 +409,15 @@ export const controller = (prisma: PrismaClient) => {
 				count ? prisma.order.count({ where: whereClause }) : 0,
 			]);
 
+			// Normalize null items to empty array for backward compatibility
+			const normalizedOrders = orders.map((order: any) => ({
+				...order,
+				items: order.items || [],
+			}));
+
 			orderLogger.info(`Retrieved ${orders.length} orders`);
 			const processedData =
-				groupBy && document ? groupDataByField(orders, groupBy as string) : orders;
+				groupBy && document ? groupDataByField(normalizedOrders, groupBy as string) : normalizedOrders;
 
 			const responseData: Record<string, any> = {
 				...(document && { orders: processedData }),
@@ -415,10 +506,16 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
+			// Normalize null items to empty array for backward compatibility
+			const normalizedOrder = {
+				...order,
+				items: (order as any).items || [],
+			};
+
 			orderLogger.info(`${config.SUCCESS.ORDER.RETRIEVED}: ${(order as any).id}`);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.ORDER.RETRIEVED,
-				order,
+				normalizedOrder,
 				200,
 			);
 			res.status(200).json(successResponse);
@@ -492,6 +589,21 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			const prismaData = { ...validatedData };
+
+			// Handle stock restoration if order is being cancelled and was previously approved
+			if (
+				validatedData.status === "CANCELLED" &&
+				(existingOrder.status === "APPROVED" || existingOrder.isFullyApproved)
+			) {
+				try {
+					const { restoreStockForOrder } = await import("../../helper/stockService");
+					await restoreStockForOrder(prisma, id);
+					orderLogger.info(`Stock restored for cancelled order ${id}`);
+				} catch (stockError) {
+					orderLogger.error(`Failed to restore stock for cancelled order ${id}:`, stockError);
+					// Continue with order cancellation even if stock restoration fails
+				}
+			}
 
 			const updatedOrder = await prisma.order.update({
 				where: { id },

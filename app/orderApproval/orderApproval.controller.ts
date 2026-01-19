@@ -445,11 +445,17 @@ export const controller = (prisma: PrismaClient) => {
 			res.status(200).json(successResponse);
 		} catch (error: any) {
 			orderApprovalLogger.error(`Failed to approve order approval: ${error}`);
+			
+			// Handle stock validation errors with proper status code
+			const statusCode = error.statusCode || 500;
+			const errorDetails = error.errors || [];
+
 			const errorResponse = buildErrorResponse(
 				error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
-				500,
+				statusCode,
+				errorDetails.length > 0 ? errorDetails : undefined,
 			);
-			res.status(500).json(errorResponse);
+			res.status(statusCode).json(errorResponse);
 		}
 	};
 
@@ -598,27 +604,65 @@ export const controller = (prisma: PrismaClient) => {
 				);
 
 				try {
-					await prisma.order.update({
-						where: { id: order.id },
-						data: {
-							status: "APPROVED",
-							isFullyApproved: true,
-							approvedAt: new Date(),
-						},
-					});
+					// Validate stock availability before auto-approving
+					const { validateStockForOrder, deductStockForOrder } = await import(
+						"../../helper/stockService"
+					);
+					const insufficientStock = await validateStockForOrder(prisma, order.id);
 
-					// Refresh order data
-					const updatedOrder = await prisma.order.findUnique({
-						where: { id: order.id },
-					});
+					if (insufficientStock.length > 0) {
+						// Stock is insufficient - cannot auto-approve
+						orderApprovalLogger.warn(
+							`Cannot auto-approve order ${order.orderNumber}: Insufficient stock for ${insufficientStock.length} product(s)`,
+						);
 
-					if (updatedOrder) {
-						order.status = updatedOrder.status;
-						order.isFullyApproved = updatedOrder.isFullyApproved;
-						order.approvedAt = updatedOrder.approvedAt;
+						// Update order notes with stock issue
+						await prisma.order.update({
+							where: { id: order.id },
+							data: {
+								notes: `Order cannot be auto-approved due to insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
+							},
+						});
+
+						// Don't approve, but continue to return summary
+					} else {
+						// Stock is available - proceed with approval
+						await prisma.order.update({
+							where: { id: order.id },
+							data: {
+								status: "APPROVED",
+								isFullyApproved: true,
+								approvedAt: new Date(),
+							},
+						});
+
+						// Deduct stock for all products in the order
+						try {
+							await deductStockForOrder(prisma, order.id);
+							orderApprovalLogger.info(
+								`Stock deducted for all products in auto-approved order ${order.orderNumber}`,
+							);
+						} catch (stockError) {
+							orderApprovalLogger.error(
+								`Failed to deduct stock for auto-approved order ${order.orderNumber}:`,
+								stockError,
+							);
+							// Don't fail the approval if stock deduction fails
+						}
+
+						// Refresh order data
+						const updatedOrder = await prisma.order.findUnique({
+							where: { id: order.id },
+						});
+
+						if (updatedOrder) {
+							order.status = updatedOrder.status;
+							order.isFullyApproved = updatedOrder.isFullyApproved;
+							order.approvedAt = updatedOrder.approvedAt;
+						}
+
+						orderApprovalLogger.info(`Order ${order.orderNumber} auto-approved successfully`);
 					}
-
-					orderApprovalLogger.info(`Order ${order.orderNumber} auto-approved successfully`);
 				} catch (updateError) {
 					orderApprovalLogger.error(
 						`Failed to auto-approve order ${order.orderNumber}:`,
