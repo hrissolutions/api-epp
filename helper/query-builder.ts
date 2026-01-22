@@ -22,7 +22,20 @@ export const buildFindManyQuery = <T extends any | undefined>(
 			: { id: order as Prisma.SortOrder },
 	};
 
-	query.select = getNestedFields(fields);
+	// Normalize fields: replace "product" with "item" for backward compatibility
+	const normalizedFields = fields
+		? fields
+				.split(",")
+				.map((f) =>
+					f
+						.trim()
+						.replace(/^product\./g, "item.")
+						.replace(/^product$/g, "item"),
+				)
+				.join(",")
+		: fields;
+
+	query.select = getNestedFields(normalizedFields);
 
 	return query;
 };

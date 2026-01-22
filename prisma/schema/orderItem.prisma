@@ -2,8 +2,8 @@ model OrderItem {
   id        String  @id @default(auto()) @map("_id") @db.ObjectId
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String  @db.ObjectId
-  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productId String  @db.ObjectId
+  item      Item    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  itemId    String  @db.ObjectId
 
   quantity  Int
   unitPrice Float
@@ -13,6 +13,6 @@ model OrderItem {
   createdAt DateTime @default(now())
 
   @@index([orderId])
-  @@index([productId])
+  @@index([itemId])
   @@map("orderItems")
 }

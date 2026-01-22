@@ -49,19 +49,19 @@ const decimalSchema = z
 
 // Order Item Schema (embedded in order) - for input (discount and subtotal are optional, will be calculated)
 export const OrderItemInputSchema = z.object({
-	productId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid productId ObjectId format",
+	itemId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid itemId ObjectId format",
 	}),
 	quantity: z.number().int().min(1, "Quantity must be at least 1"),
-	unitPrice: decimalSchema.optional(), // Optional, will be fetched from product.sellingPrice if not provided
-	discount: decimalSchema.optional(), // Optional, will be calculated from product if not provided
+	unitPrice: decimalSchema.optional(), // Optional, will be fetched from item.sellingPrice if not provided
+	discount: decimalSchema.optional(), // Optional, will be calculated from item if not provided
 	subtotal: decimalSchema.optional(), // Optional, will be calculated
 });
 
 // Order Item Schema (for output/validation after calculation)
 export const OrderItemSchema = z.object({
-	productId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid productId ObjectId format",
+	itemId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid itemId ObjectId format",
 	}),
 	quantity: z.number().int().min(1, "Quantity must be at least 1"),
 	unitPrice: decimalSchema,

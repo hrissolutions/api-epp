@@ -40,7 +40,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const template = require("./app/template")(prisma);
-const products = require("./app/products")(prisma);
+const items = require("./app/item")(prisma);
 const purchase = require("./app/purchase")(prisma);
 const category = require("./app/category")(prisma);
 const wishlistitem = require("./app/wishlistItem")(prisma);
@@ -132,12 +132,12 @@ if (process.env.NODE_ENV !== "production") {
 // Apply authentication-specific security middleware
 app.use(`${config.baseApiPath}/auth`, authSecurityMiddleware);
 
-// Apply middleware for protected routes, excluding /docs, /auth, /products, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, /transaction, /orderApproval, /approvalWorkflow, /approvalLevel, and /workflowApprovalLevel
+// Apply middleware for protected routes, excluding /docs, /auth, /items, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, /transaction, /orderApproval, /approvalWorkflow, /approvalLevel, and /workflowApprovalLevel
 app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) => {
 	if (
 		req.path.startsWith("/docs") ||
 		req.path.startsWith("/auth") ||
-		req.path.startsWith("/products") ||
+		req.path.startsWith("/items") ||
 		req.path.startsWith("/purchase") ||
 		req.path.startsWith("/category") ||
 		req.path.startsWith("/wishlistItem") ||
@@ -154,7 +154,7 @@ app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) =>
 		req.path.startsWith("/approvalLevel") ||
 		req.path.startsWith("/workflowApprovalLevel")
 	) {
-		// Skip middleware for the docs, auth, products, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, and workflowApprovalLevel routes
+		// Skip middleware for the docs, auth, items, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, and workflowApprovalLevel routes
 		return next();
 	}
 	verifyToken(req, res, () => {
@@ -163,7 +163,7 @@ app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) =>
 });
 
 app.use(config.baseApiPath, template);
-app.use(config.baseApiPath, products);
+app.use(config.baseApiPath, items);
 app.use(config.baseApiPath, purchase);
 app.use(config.baseApiPath, category);
 app.use(config.baseApiPath, wishlistitem);

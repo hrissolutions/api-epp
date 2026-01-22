@@ -23,6 +23,10 @@
 		"apply-indexes": "ts-node scripts/apply-indexes.ts",
 		"copy-codebase": "ts-node scripts/copy-codebase.ts",
 		"generate": "ts-node scripts/generate-and-export.ts",
+		"migrate:items-itemtype": "ts-node scripts/migrate-items-add-itemtype.ts",
+		"migrate:items-itemtype:dry-run": "ts-node scripts/migrate-items-add-itemtype.ts --dry-run",
+		"update:items-itemtype": "ts-node scripts/update-all-items-itemtype.ts",
+		"update:items-itemtype:dry-run": "ts-node scripts/update-all-items-itemtype.ts --dry-run",
 		"api-list": "curl -X GET 'http://localhost:3000/api/docs/api-list?format=json' | jq",
 		"zod-generate": "node scripts/zod-generate.js"
 	},

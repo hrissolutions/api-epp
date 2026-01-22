@@ -107,7 +107,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesAfter: {
 					id: purchase.id,
 					employeeId: purchase.employeeId,
-					productId: purchase.productId,
+					itemId: purchase.itemId,
 					purchaseType: purchase.purchaseType,
 					totalAmount: purchase.totalAmount,
 					status: purchase.status,

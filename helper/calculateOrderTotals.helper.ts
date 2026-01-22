@@ -5,15 +5,15 @@ const logger = getLogger();
 const calculateTotalsLogger = logger.child({ module: "calculateOrderTotals" });
 
 interface OrderItemInput {
-	productId: string;
+	itemId: string;
 	quantity: number;
-	unitPrice?: number; // Optional - will be fetched from product if not provided
+	unitPrice?: number; // Optional - will be fetched from item if not provided
 	discount?: number;
 	subtotal?: number;
 }
 
 interface CalculatedOrderItem {
-	productId: string;
+	itemId: string;
 	quantity: number;
 	unitPrice: number;
 	discount: number;
@@ -35,13 +35,13 @@ const DEFAULT_TAX_RATE = 0.1; // 10%
 
 /**
  * Calculates order totals from items
- * - Fetches product prices (sellingPrice) if unitPrice is not provided in items
- * - Fetches product details to get discount (if available from product)
+ * - Fetches item prices (sellingPrice) if unitPrice is not provided in items
+ * - Fetches item details to get discount (if available from item)
  * - Calculates item-level subtotals
  * - Calculates order-level totals
  *
  * @param prisma - Prisma client instance
- * @param items - Array of order items (unitPrice is optional - will be fetched from product if not provided)
+ * @param items - Array of order items (unitPrice is optional - will be fetched from item if not provided)
  * @param taxRate - Optional tax rate (defaults to 10%)
  * @returns Promise<OrderTotals> - Calculated order totals
  */
@@ -57,36 +57,41 @@ export const calculateOrderTotals = async (
 
 		// Process each item
 		for (const item of items) {
-			// Fetch product to get price (if unitPrice not provided) and discount
+			// Fetch item to get price (if unitPrice not provided) and discount
 			let unitPrice = item.unitPrice;
 
 			if (!unitPrice) {
-				// Fetch product to get sellingPrice
-				const product = await prisma.product.findFirst({
-					where: { id: item.productId },
+				// Fetch item to get sellingPrice
+				const dbItem = await prisma.item.findFirst({
+					where: { id: item.itemId },
 					select: { sellingPrice: true, retailPrice: true },
 				});
 
-				if (!product) {
-					throw new Error(`Product not found with id: ${item.productId}`);
+				if (!dbItem) {
+					throw new Error(`Item not found with id: ${item.itemId}`);
 				}
 
 				// Use sellingPrice if available, otherwise fall back to retailPrice
-				unitPrice = product.sellingPrice ?? product.retailPrice ?? 0;
+				unitPrice = dbItem.sellingPrice ?? dbItem.retailPrice ?? 0;
 
 				if (unitPrice === 0) {
 					throw new Error(
-						`Product ${item.productId} has no valid price (sellingPrice or retailPrice)`,
+						`Item ${item.itemId} has no valid price (sellingPrice or retailPrice)`,
 					);
 				}
 
 				calculateTotalsLogger.info(
-					`Fetched price from product ${item.productId}: ${unitPrice} (sellingPrice: ${product.sellingPrice}, retailPrice: ${product.retailPrice})`,
+					`Fetched price from item ${item.itemId}: ${unitPrice} (sellingPrice: ${dbItem.sellingPrice}, retailPrice: ${dbItem.retailPrice})`,
 				);
 			}
 
 			// If discount is provided in the item, use it; otherwise default to 0
 			const itemDiscount = item.discount ?? 0;
+
+			// Ensure unitPrice is defined
+			if (unitPrice === undefined || unitPrice === null) {
+				throw new Error(`Unit price is required for item ${item.itemId}`);
+			}
 
 			// Calculate item subtotal: (quantity * unitPrice) - discount
 			const itemSubtotal = item.quantity * unitPrice - itemDiscount;
@@ -95,7 +100,7 @@ export const calculateOrderTotals = async (
 			const finalSubtotal = Math.max(0, itemSubtotal);
 
 			calculatedItems.push({
-				productId: item.productId,
+				itemId: item.itemId,
 				quantity: item.quantity,
 				unitPrice: unitPrice,
 				discount: itemDiscount,
@@ -106,7 +111,7 @@ export const calculateOrderTotals = async (
 			orderDiscount += itemDiscount;
 
 			calculateTotalsLogger.debug(
-				`Item ${item.productId}: qty=${item.quantity}, price=${unitPrice}, discount=${itemDiscount}, subtotal=${finalSubtotal}`,
+				`Item ${item.itemId}: qty=${item.quantity}, price=${unitPrice}, discount=${itemDiscount}, subtotal=${finalSubtotal}`,
 			);
 		}
 

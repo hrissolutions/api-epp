@@ -8,7 +8,7 @@ model Vendor {
   phone       String?
   website     String?
   isActive    Boolean   @default(true)
-  products    Product[]
+  items       Item[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

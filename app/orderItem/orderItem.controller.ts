@@ -107,7 +107,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesAfter: {
 					id: orderItem.id,
 					orderId: orderItem.orderId,
-					productId: orderItem.productId,
+					itemId: orderItem.itemId,
 					quantity: orderItem.quantity,
 					subtotal: orderItem.subtotal,
 					createdAt: orderItem.createdAt,

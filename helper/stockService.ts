@@ -5,7 +5,7 @@ const logger = getLogger();
 const stockLogger = logger.child({ module: "stockService" });
 
 /**
- * Deduct stock for products in an order
+ * Deduct stock for items in an order
  */
 export const deductStockForOrder = async (prisma: PrismaClient, orderId: string): Promise<void> => {
 	try {
@@ -25,33 +25,33 @@ export const deductStockForOrder = async (prisma: PrismaClient, orderId: string)
 		}
 
 		for (const item of items) {
-			const product = await prisma.product.findFirst({
-				where: { id: item.productId },
+			const dbItem = await prisma.item.findFirst({
+				where: { id: item.itemId },
 			});
 
-			if (!product) {
-				stockLogger.warn(`Product ${item.productId} not found for order ${orderId}`);
+			if (!dbItem) {
+				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
-			const currentStock = product.stockQuantity;
+			const currentStock = dbItem.stockQuantity;
 			const quantityOrdered = item.quantity;
 			const newStock = Math.max(0, currentStock - quantityOrdered);
 
-			await prisma.product.update({
-				where: { id: item.productId },
+			await prisma.item.update({
+				where: { id: item.itemId },
 				data: {
 					stockQuantity: newStock,
 				},
 			});
 
 			stockLogger.info(
-				`Stock deducted for product ${item.productId} (${product.name}): ` +
+				`Stock deducted for item ${item.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (ordered: ${quantityOrdered})`,
 			);
 		}
 
-		stockLogger.info(`Stock deducted for all products in order ${orderId}`);
+		stockLogger.info(`Stock deducted for all items in order ${orderId}`);
 	} catch (error) {
 		stockLogger.error(`Failed to deduct stock for order ${orderId}:`, error);
 		throw error;
@@ -59,16 +59,16 @@ export const deductStockForOrder = async (prisma: PrismaClient, orderId: string)
 };
 
 /**
- * Validate stock availability for all products in an order
- * Returns array of products with insufficient stock
+ * Validate stock availability for all items in an order
+ * Returns array of items with insufficient stock
  */
 export const validateStockForOrder = async (
 	prisma: PrismaClient,
 	orderId: string,
 ): Promise<
 	Array<{
-		productId: string;
-		productName: string;
+		itemId: string;
+		itemName: string;
 		requestedQuantity: number;
 		availableStock: number;
 		shortage: number;
@@ -90,37 +90,37 @@ export const validateStockForOrder = async (
 		}
 
 		const insufficientStock: Array<{
-			productId: string;
-			productName: string;
+			itemId: string;
+			itemName: string;
 			requestedQuantity: number;
 			availableStock: number;
 			shortage: number;
 		}> = [];
 
 		for (const item of items) {
-			const product = await prisma.product.findFirst({
-				where: { id: item.productId },
+			const dbItem = await prisma.item.findFirst({
+				where: { id: item.itemId },
 			});
 
-			if (!product) {
-				stockLogger.warn(`Product ${item.productId} not found for order ${orderId}`);
+			if (!dbItem) {
+				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
-			const availableStock = product.stockQuantity;
+			const availableStock = dbItem.stockQuantity;
 			const requestedQuantity = item.quantity;
 
 			if (availableStock < requestedQuantity) {
 				insufficientStock.push({
-					productId: item.productId,
-					productName: product.name || "Unknown Product",
+					itemId: item.itemId,
+					itemName: dbItem.name || "Unknown Item",
 					requestedQuantity: requestedQuantity,
 					availableStock: availableStock,
 					shortage: requestedQuantity - availableStock,
 				});
 
 				stockLogger.warn(
-					`Insufficient stock for product ${item.productId} (${product.name}): ` +
+					`Insufficient stock for item ${item.itemId} (${dbItem.name}): ` +
 						`Available: ${availableStock}, Requested: ${requestedQuantity}, Shortage: ${requestedQuantity - availableStock}`,
 				);
 			}
@@ -128,7 +128,7 @@ export const validateStockForOrder = async (
 
 		if (insufficientStock.length > 0) {
 			stockLogger.warn(
-				`Order ${orderId} has ${insufficientStock.length} products with insufficient stock`,
+				`Order ${orderId} has ${insufficientStock.length} items with insufficient stock`,
 			);
 		}
 
@@ -140,7 +140,7 @@ export const validateStockForOrder = async (
 };
 
 /**
- * Restore stock for products in an order (when order is cancelled/rejected after approval)
+ * Restore stock for items in an order (when order is cancelled/rejected after approval)
  */
 export const restoreStockForOrder = async (
 	prisma: PrismaClient,
@@ -163,33 +163,33 @@ export const restoreStockForOrder = async (
 		}
 
 		for (const item of items) {
-			const product = await prisma.product.findFirst({
-				where: { id: item.productId },
+			const dbItem = await prisma.item.findFirst({
+				where: { id: item.itemId },
 			});
 
-			if (!product) {
-				stockLogger.warn(`Product ${item.productId} not found for order ${orderId}`);
+			if (!dbItem) {
+				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
-			const currentStock = product.stockQuantity;
+			const currentStock = dbItem.stockQuantity;
 			const quantityToRestore = item.quantity;
 			const newStock = currentStock + quantityToRestore;
 
-			await prisma.product.update({
-				where: { id: item.productId },
+			await prisma.item.update({
+				where: { id: item.itemId },
 				data: {
 					stockQuantity: newStock,
 				},
 			});
 
 			stockLogger.info(
-				`Stock restored for product ${item.productId} (${product.name}): ` +
+				`Stock restored for item ${item.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (restored: ${quantityToRestore})`,
 			);
 		}
 
-		stockLogger.info(`Stock restored for all products in order ${orderId}`);
+		stockLogger.info(`Stock restored for all items in order ${orderId}`);
 	} catch (error) {
 		stockLogger.error(`Failed to restore stock for order ${orderId}:`, error);
 		throw error;
