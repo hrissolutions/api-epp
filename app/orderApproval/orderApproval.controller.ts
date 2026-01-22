@@ -648,7 +648,7 @@ export const controller = (prisma: PrismaClient) => {
 						await prisma.order.update({
 							where: { id: order.id },
 							data: {
-								notes: `Order cannot be auto-approved due to insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
+								notes: `Order cannot be auto-approved due to insufficient stock. ${insufficientStock.map((i) => `${i.itemName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
 							},
 						});
 

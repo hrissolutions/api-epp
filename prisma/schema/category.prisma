@@ -6,7 +6,7 @@ model Category {
   parentId    String?    @db.ObjectId
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children    Category[] @relation("CategoryHierarchy")
-  products    Product[]
+  items       Item[]
   isActive    Boolean    @default(true)
 
   createdAt DateTime @default(now())

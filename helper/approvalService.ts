@@ -463,12 +463,12 @@ export const processApproval = async (
 				if (insufficientStock.length > 0) {
 					// Stock is insufficient - cannot approve order
 					const stockErrorDetails = insufficientStock.map((item) => ({
-						field: `product.${item.productId}`,
-						message: `${item.productName}: Insufficient stock - Available ${item.availableStock}, Requested ${item.requestedQuantity}, Shortage: ${item.shortage}`,
+						field: `item.${item.itemId}`,
+						message: `${item.itemName}: Insufficient stock - Available ${item.availableStock}, Requested ${item.requestedQuantity}, Shortage: ${item.shortage}`,
 					}));
 
 					approvalLogger.error(
-						`Cannot approve order ${approval.order.orderNumber}: Insufficient stock for ${insufficientStock.length} product(s)`,
+						`Cannot approve order ${approval.order.orderNumber}: Insufficient stock for ${insufficientStock.length} item(s)`,
 					);
 
 					// Revert the approval status back to PENDING
@@ -476,7 +476,7 @@ export const processApproval = async (
 						where: { id: approvalId },
 						data: {
 							status: "PENDING",
-							comments: `Approval blocked: Insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Need ${i.shortage} more`).join(", ")}`,
+							comments: `Approval blocked: Insufficient stock. ${insufficientStock.map((i) => `${i.itemName}: Need ${i.shortage} more`).join(", ")}`,
 						},
 					});
 
@@ -484,13 +484,13 @@ export const processApproval = async (
 					await prisma.order.update({
 						where: { id: approval.orderId },
 						data: {
-							notes: `Order cannot be approved due to insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
+							notes: `Order cannot be approved due to insufficient stock. ${insufficientStock.map((i) => `${i.itemName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
 						},
 					});
 
 					// Throw error with details to prevent approval
 					const error = new Error(
-						`Cannot approve order: Insufficient stock for ${insufficientStock.length} product(s)`,
+						`Cannot approve order: Insufficient stock for ${insufficientStock.length} item(s)`,
 					) as any;
 					error.statusCode = 400;
 					error.errors = stockErrorDetails;

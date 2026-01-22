@@ -88,16 +88,16 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const { employeeId, productId, quantity = 1 } = validation.data;
+			const { employeeId, itemId, quantity = 1 } = validation.data;
 
 			// Ensure quantity is at least 1
 			const quantityToAdd = quantity || 1;
 
-			// Check if cart item already exists for this employee and product
+			// Check if cart item already exists for this employee and item
 			const existingCartItem = await prisma.cartItem.findFirst({
 				where: {
 					employeeId: employeeId,
-					productId: productId,
+					itemId: itemId,
 				},
 			});
 
@@ -124,7 +124,7 @@ export const controller = (prisma: PrismaClient) => {
 				cartItem = await prisma.cartItem.create({
 					data: {
 						employeeId: employeeId,
-						productId: productId,
+						itemId: itemId,
 						quantity: quantityToAdd,
 					} as any,
 				});
@@ -158,14 +158,14 @@ export const controller = (prisma: PrismaClient) => {
 					? {
 							id: existingCartItem!.id,
 							employeeId: existingCartItem!.employeeId,
-							productId: existingCartItem!.productId,
+							itemId: existingCartItem!.itemId,
 							quantity: existingCartItem!.quantity,
 						}
 					: null,
 				changesAfter: {
 					id: cartItem.id,
 					employeeId: cartItem.employeeId,
-					productId: cartItem.productId,
+					itemId: cartItem.itemId,
 					quantity: cartItem.quantity,
 					createdAt: cartItem.createdAt,
 					updatedAt: cartItem.updatedAt,
@@ -201,18 +201,18 @@ export const controller = (prisma: PrismaClient) => {
 			cartItemLogger.error(`${config.ERROR.CARTITEM.CREATE_FAILED}: ${error}`);
 
 			// Handle unique constraint error specifically
-			if (error.code === "P2002" && error.meta?.target?.includes("employeeId_productId")) {
+			if (error.code === "P2002" && error.meta?.target?.includes("employeeId_itemId")) {
 				// This shouldn't happen now, but handle it gracefully
 				cartItemLogger.warn(
-					`Duplicate cart item detected for employee ${validation.data.employeeId} and product ${validation.data.productId}, attempting update`,
+					`Duplicate cart item detected for employee ${validation.data.employeeId} and item ${validation.data.itemId}, attempting update`,
 				);
 				const errorResponse = buildErrorResponse(
-					"This product is already in your cart. Quantity will be updated.",
+					"This item is already in your cart. Quantity will be updated.",
 					409,
 					[
 						{
-							field: "productId",
-							message: "Product already exists in cart",
+							field: "itemId",
+							message: "Item already exists in cart",
 						},
 					],
 				);
@@ -258,8 +258,8 @@ export const controller = (prisma: PrismaClient) => {
 			// Base where clause
 			const whereClause: Prisma.CartItemWhereInput = {};
 
-			// search fields for cart items (employeeId, productId)
-			const searchFields = ["employeeId", "productId"];
+			// search fields for cart items (employeeId, itemId)
+			const searchFields = ["employeeId", "itemId"];
 			if (query) {
 				const searchConditions = buildSearchConditions("CartItem", query, searchFields);
 				if (searchConditions.length > 0) {
@@ -559,7 +559,7 @@ export const controller = (prisma: PrismaClient) => {
 
 		// Validate checkout request
 		const CheckoutItemSchema = z.object({
-			productId: z.string().min(1, "Product ID is required"),
+			itemId: z.string().min(1, "Item ID is required"),
 			quantity: z.number().int().min(1, "Quantity must be at least 1"),
 		});
 
@@ -618,10 +618,44 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			// Get all cart items for the employee (without product relation to avoid null errors)
-			const allCartItems = await prisma.cartItem.findMany({
-				where: { employeeId },
-			});
+			// Get all cart items for the employee
+			// Note: If there are cart items with null itemId (from old data), they will cause an error
+			// These need to be cleaned up from the database
+			let allCartItems: any[] = [];
+			try {
+				allCartItems = await prisma.cartItem.findMany({
+					where: { employeeId },
+				});
+				// Filter out any items with null itemId (safety check)
+				allCartItems = allCartItems.filter((item) => item.itemId != null);
+			} catch (prismaError: any) {
+				// If Prisma error due to null itemId in database, provide helpful error message
+				if (
+					prismaError.message?.includes("itemId") &&
+					(prismaError.message?.includes("null") ||
+						prismaError.message?.includes("incompatible value"))
+				) {
+					cartItemLogger.error(
+						`Cart contains invalid items with null itemId. These need to be cleaned up from the database.`,
+					);
+					const errorResponse = buildErrorResponse(
+						"Cart contains invalid items. Please contact support to clean up corrupted cart data, or try removing and re-adding items to your cart.",
+						400,
+						[
+							{
+								field: "cart",
+								message:
+									"Cart contains invalid items. Please clear your cart and try again.",
+							},
+						],
+					);
+					res.status(400).json(errorResponse);
+					return;
+				} else {
+					// Re-throw other errors
+					throw prismaError;
+				}
+			}
 
 			if (allCartItems.length === 0) {
 				cartItemLogger.error(`No cart items found for employee ${employeeId}`);
@@ -634,10 +668,10 @@ export const controller = (prisma: PrismaClient) => {
 
 			// If items are specified, filter cart items to only those requested
 			let cartItemsToProcess = allCartItems;
-			// Create a map of requested items by productId (if items were provided)
+			// Create a map of requested items by itemId (if items were provided)
 			const requestedItemsMap =
 				requestedItems && requestedItems.length > 0
-					? new Map(requestedItems.map((item) => [item.productId, item.quantity]))
+					? new Map(requestedItems.map((item) => [item.itemId, item.quantity]))
 					: null;
 
 			if (requestedItems && requestedItems.length > 0) {
@@ -648,7 +682,7 @@ export const controller = (prisma: PrismaClient) => {
 				// Filter cart items to only those requested
 				if (requestedItemsMap) {
 					cartItemsToProcess = allCartItems.filter((cartItem) =>
-						requestedItemsMap.has(cartItem.productId),
+						requestedItemsMap.has(cartItem.itemId),
 					);
 				}
 
@@ -672,17 +706,17 @@ export const controller = (prisma: PrismaClient) => {
 
 				// Validate quantities match cart items
 				const quantityMismatches: Array<{
-					productId: string;
+					itemId: string;
 					requested: number;
 					inCart: number;
 				}> = [];
 
 				if (requestedItemsMap) {
 					for (const cartItem of cartItemsToProcess) {
-						const requestedQuantity = requestedItemsMap.get(cartItem.productId);
+						const requestedQuantity = requestedItemsMap.get(cartItem.itemId);
 						if (requestedQuantity && requestedQuantity > cartItem.quantity) {
 							quantityMismatches.push({
-								productId: cartItem.productId,
+								itemId: cartItem.itemId,
 								requested: requestedQuantity,
 								inCart: cartItem.quantity,
 							});
@@ -695,7 +729,7 @@ export const controller = (prisma: PrismaClient) => {
 						`Quantity mismatches found: ${JSON.stringify(quantityMismatches)}`,
 					);
 					const errorMessages = quantityMismatches.map((mismatch) => ({
-						field: `items.${mismatch.productId}`,
+						field: `items.${mismatch.itemId}`,
 						message: `Requested quantity ${mismatch.requested} exceeds cart quantity ${mismatch.inCart}`,
 					}));
 					const errorResponse = buildErrorResponse(
@@ -711,30 +745,30 @@ export const controller = (prisma: PrismaClient) => {
 				// Note: We'll use the requested quantity for order creation, but keep original for cart updates
 			}
 
-			// Get all product IDs from cart items to process
-			const productIds = [...new Set(cartItemsToProcess.map((item) => item.productId))];
+			// Get all item IDs from cart items to process
+			const itemIds = [...new Set(cartItemsToProcess.map((item) => item.itemId))];
 
-			// Fetch products separately to handle missing products gracefully
-			const products = await prisma.product.findMany({
+			// Fetch items separately to handle missing items gracefully
+			const items = await prisma.item.findMany({
 				where: {
-					id: { in: productIds },
+					id: { in: itemIds },
 				},
 			});
 
-			// Create a map of products by ID for quick lookup
-			const productMap = new Map(products.map((p) => [p.id, p]));
+			// Create a map of items by ID for quick lookup
+			const itemMap = new Map(items.map((i) => [i.id, i]));
 
 			// Separate valid and invalid cart items
 			const validCartItems: Array<{
 				cartItem: (typeof cartItemsToProcess)[0];
-				product: (typeof products)[0];
+				item: (typeof items)[0];
 			}> = [];
 			const invalidCartItemIds: string[] = [];
 
 			for (const cartItem of cartItemsToProcess) {
-				const product = productMap.get(cartItem.productId);
-				if (product) {
-					validCartItems.push({ cartItem, product });
+				const item = itemMap.get(cartItem.itemId);
+				if (item) {
+					validCartItems.push({ cartItem, item });
 				} else {
 					invalidCartItemIds.push(cartItem.id);
 				}
@@ -743,7 +777,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Remove invalid cart items from database
 			if (invalidCartItemIds.length > 0) {
 				cartItemLogger.warn(
-					`Found ${invalidCartItemIds.length} cart items with missing products for employee ${employeeId}`,
+					`Found ${invalidCartItemIds.length} cart items with missing items for employee ${employeeId}`,
 				);
 				try {
 					await prisma.cartItem.deleteMany({
@@ -762,7 +796,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Check if there are any valid cart items after filtering
 			if (validCartItems.length === 0) {
 				cartItemLogger.error(
-					`No valid cart items found for employee ${employeeId} (all products are missing)`,
+					`No valid cart items found for employee ${employeeId} (all items are missing)`,
 				);
 				const errorResponse = buildErrorResponse(
 					"Cart contains invalid items. Please remove items with unavailable products and try again.",
@@ -770,7 +804,7 @@ export const controller = (prisma: PrismaClient) => {
 					[
 						{
 							field: "cart",
-							message: "All cart items reference products that no longer exist",
+							message: "All cart items reference items that no longer exist",
 						},
 					],
 				);
@@ -781,56 +815,56 @@ export const controller = (prisma: PrismaClient) => {
 			// Calculate order totals
 			let subtotal = 0;
 			const orderItemsData: any[] = [];
-			const unavailableProducts: Array<{
-				productId: string;
-				productName: string;
+			const unavailableItems: Array<{
+				itemId: string;
+				itemName: string;
 				reasons: string[];
 			}> = [];
 
-			for (const { cartItem, product } of validCartItems) {
+			for (const { cartItem, item } of validCartItems) {
 				// Determine the quantity to use for this item
 				// If items were specified in request, use that quantity; otherwise use cart quantity
 				const quantityToCheckout = requestedItemsMap
-					? requestedItemsMap.get(product.id) || cartItem.quantity
+					? requestedItemsMap.get(item.id) || cartItem.quantity
 					: cartItem.quantity;
 
-				// Check if product is available and approved
+				// Check if item is available and approved
 				const reasons: string[] = [];
-				if (product.status !== "APPROVED") {
-					reasons.push(`Status is ${product.status} (must be APPROVED)`);
+				if (item.status !== "APPROVED") {
+					reasons.push(`Status is ${item.status} (must be APPROVED)`);
 				}
-				if (!product.isAvailable) {
-					reasons.push("Product is marked as not available");
+				if (!item.isAvailable) {
+					reasons.push("Item is marked as not available");
 				}
-				if (!product.isActive) {
-					reasons.push("Product is inactive");
+				if (!item.isActive) {
+					reasons.push("Item is inactive");
 				}
 				// Check stock availability
-				if (product.stockQuantity < quantityToCheckout) {
+				if (item.stockQuantity < quantityToCheckout) {
 					reasons.push(
-						`Insufficient stock: Available ${product.stockQuantity}, Requested ${quantityToCheckout}`,
+						`Insufficient stock: Available ${item.stockQuantity}, Requested ${quantityToCheckout}`,
 					);
 				}
 
 				if (reasons.length > 0) {
-					unavailableProducts.push({
-						productId: product.id,
-						productName: product.name || "Unknown",
+					unavailableItems.push({
+						itemId: item.id,
+						itemName: item.name || "Unknown",
 						reasons,
 					});
 					cartItemLogger.warn(
-						`Product ${product.id} (${product.name}) is not available for checkout: ${reasons.join(", ")}`,
+						`Item ${item.id} (${item.name}) is not available for checkout: ${reasons.join(", ")}`,
 					);
 					continue;
 				}
 
 				// Use sellingPrice if available, otherwise retailPrice
-				const unitPrice = product.sellingPrice || product.retailPrice;
+				const unitPrice = item.sellingPrice || item.retailPrice;
 				const itemSubtotal = unitPrice * quantityToCheckout;
 				subtotal += itemSubtotal;
 
 				orderItemsData.push({
-					productId: product.id,
+					itemId: item.id,
 					quantity: quantityToCheckout,
 					unitPrice: unitPrice,
 					discount: 0,
@@ -846,16 +880,16 @@ export const controller = (prisma: PrismaClient) => {
 				const errorMessages: Array<{ field: string; message: string }> = [
 					{
 						field: "cart",
-						message: "No available products in cart for checkout",
+						message: "No available items in cart for checkout",
 					},
 				];
 
-				// Add detailed information about unavailable products
-				if (unavailableProducts.length > 0) {
-					unavailableProducts.forEach((unavailable) => {
+				// Add detailed information about unavailable items
+				if (unavailableItems.length > 0) {
+					unavailableItems.forEach((unavailable) => {
 						errorMessages.push({
-							field: `product.${unavailable.productId}`,
-							message: `${unavailable.productName}: ${unavailable.reasons.join(", ")}`,
+							field: `item.${unavailable.itemId}`,
+							message: `${unavailable.itemName}: ${unavailable.reasons.join(", ")}`,
 						});
 					});
 				}
@@ -1000,15 +1034,15 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Clear cart items after successful order creation (only checked-out items)
 			try {
-				const productIdsUsed = new Set(orderItemsData.map((item) => item.productId));
+				const itemIdsUsed = new Set(orderItemsData.map((item) => item.itemId));
 				const cartItemIdsToDelete: string[] = [];
 				const cartItemsToUpdate: Array<{ id: string; newQuantity: number }> = [];
 
 				// Process each cart item that was used in the order
-				for (const { cartItem, product } of validCartItems) {
-					if (productIdsUsed.has(product.id)) {
+				for (const { cartItem, item } of validCartItems) {
+					if (itemIdsUsed.has(item.id)) {
 						const orderItem = orderItemsData.find(
-							(item) => item.productId === product.id,
+							(orderItem) => orderItem.itemId === item.id,
 						);
 						if (orderItem) {
 							// Get the original cart quantity (before any modifications)
@@ -1019,7 +1053,7 @@ export const controller = (prisma: PrismaClient) => {
 							// If requested items were provided, use requested quantity
 							// Otherwise, use the order quantity
 							const checkedOutQuantity = requestedItemsMap
-								? requestedItemsMap.get(product.id) || orderItem.quantity
+								? requestedItemsMap.get(item.id) || orderItem.quantity
 								: orderItem.quantity;
 
 							if (originalCartQuantity === checkedOutQuantity) {
@@ -1120,12 +1154,12 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id: order.id },
 			});
 
-			// Fetch product details for each item in the embedded items array
-			const items = (orderWithItems?.items as any) || [];
-			const itemsWithProducts = await Promise.all(
-				items.map(async (item: any) => {
-					const product = await prisma.product.findUnique({
-						where: { id: item.productId },
+			// Fetch item details for each item in the embedded items array
+			const orderItems = (orderWithItems?.items as any) || [];
+			const itemsWithDetails = await Promise.all(
+				orderItems.map(async (orderItem: any) => {
+					const item = await prisma.item.findUnique({
+						where: { id: orderItem.itemId },
 						select: {
 							id: true,
 							name: true,
@@ -1134,28 +1168,26 @@ export const controller = (prisma: PrismaClient) => {
 						},
 					});
 					return {
-						...item,
-						product,
+						...orderItem,
+						item,
 					};
 				}),
 			);
 
-			// Calculate total quantity of products
+			// Calculate total quantity of items
 			const totalQuantity = orderItemsData.reduce((sum, item) => sum + item.quantity, 0);
-			const totalProducts = orderItemsData.length;
+			const totalItems = orderItemsData.length;
 
-			// Prepare product summary
-			const productsSummary = orderItemsData.map((item) => {
-				const product = validCartItems.find(
-					({ product: p }) => p.id === item.productId,
-				)?.product;
+			// Prepare item summary
+			const itemsSummary = orderItemsData.map((orderItem) => {
+				const item = validCartItems.find(({ item: i }) => i.id === orderItem.itemId)?.item;
 				return {
-					productId: item.productId,
-					productName: product?.name || "Unknown Product",
-					productSku: product?.sku || "N/A",
-					quantity: item.quantity,
-					unitPrice: item.unitPrice,
-					subtotal: item.subtotal,
+					itemId: orderItem.itemId,
+					itemName: item?.name || "Unknown Item",
+					itemSku: item?.sku || "N/A",
+					quantity: orderItem.quantity,
+					unitPrice: orderItem.unitPrice,
+					subtotal: orderItem.subtotal,
 				};
 			});
 
@@ -1165,13 +1197,13 @@ export const controller = (prisma: PrismaClient) => {
 					order: orderWithItems
 						? {
 								...orderWithItems,
-								items: itemsWithProducts,
+								items: itemsWithDetails,
 							}
 						: order,
 					checkoutSummary: {
-						totalProducts: totalProducts,
+						totalItems: totalItems,
 						totalQuantity: totalQuantity,
-						products: productsSummary,
+						items: itemsSummary,
 						cartItemsProcessed: validCartItems.length,
 						cartItemsRemoved: invalidCartItemIds.length,
 					},

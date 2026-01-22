@@ -63,8 +63,8 @@ export const uploadCSV = multer({
 	},
 }).single("file");
 
-// Upload configuration for product images (supports multiple image types)
-export const uploadProductImages = upload.fields([
+// Upload configuration for item images (supports multiple image types)
+export const uploadItemImages = upload.fields([
 	{ name: "coverImages", maxCount: 5 },
 	{ name: "featuredImages", maxCount: 10 },
 	{ name: "galleryImages", maxCount: 20 },
@@ -76,6 +76,9 @@ export const uploadProductImages = upload.fields([
 	{ name: "instructionImages", maxCount: 10 },
 	{ name: "images", maxCount: 20 }, // fallback for generic images
 ]);
+
+// For backward compatibility
+export const uploadProductImages = uploadItemImages;
 
 // Flexible upload for submissions - accepts any field name
 export const uploadSubmissionFiles = upload.any();

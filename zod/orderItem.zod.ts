@@ -19,8 +19,8 @@ export const OrderItemSchema = z.object({
 	orderId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid orderId ObjectId format",
 	}),
-	productId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid productId ObjectId format",
+	itemId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid itemId ObjectId format",
 	}),
 	quantity: z.number().int().min(1, "Quantity must be at least 1"),
 	unitPrice: decimalSchema,

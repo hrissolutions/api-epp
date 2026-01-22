@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { cache, cacheShort, cacheMedium, cacheUser } from "../../middleware/cache";
-import { uploadProductImages, uploadCSV } from "../../middleware/upload";
+import { uploadItemImages, uploadCSV } from "../../middleware/upload";
 
 interface IController {
 	getById(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -13,15 +13,15 @@ interface IController {
 
 export const router = (route: Router, controller: IController): Router => {
 	const routes = Router();
-	const path = "/products";
+	const path = "/items";
 
 	/**
 	 * @openapi
-	 * /api/products/{id}:
+	 * /api/items/{id}:
 	 *   get:
-	 *     summary: Get products by ID
-	 *     description: Retrieve a specific products by its unique identifier with optional field selection
-	 *     tags: [Products]
+	 *     summary: Get items by ID
+	 *     description: Retrieve a specific item by its unique identifier with optional field selection
+	 *     tags: [Items]
 	 *     parameters:
 	 *       - in: path
 	 *         name: id
@@ -29,7 +29,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         schema:
 	 *           type: string
 	 *           pattern: '^[0-9a-fA-F]{24}$'
-	 *         description: Products ID (MongoDB ObjectId format)
+	 *         description: Item ID (MongoDB ObjectId format)
 	 *         example: "507f1f77bcf86cd799439011"
 	 *       - in: query
 	 *         name: fields
@@ -40,7 +40,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         example: "id,name,description,type"
 	 *     responses:
 	 *       200:
-	 *         description: Products retrieved successfully
+	 *         description: Item retrieved successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -51,8 +51,8 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                     data:
 	 *                       type: object
 	 *                       properties:
-	 *                         products:
-	 *                           $ref: '#/components/schemas/Products'
+	 *                         item:
+	 *                           $ref: '#/components/schemas/Item'
 	 *       400:
 	 *         $ref: '#/components/responses/BadRequest'
 	 *       404:
@@ -60,14 +60,14 @@ export const router = (route: Router, controller: IController): Router => {
 	 *       500:
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
-	// Cache individual products with predictable key for invalidation
+	// Cache individual items with predictable key for invalidation
 	routes.get(
 		"/:id",
 		cache({
 			ttl: 90,
 			keyGenerator: (req: Request) => {
 				const fields = (req.query as any).fields || "full";
-				return `cache:products:byId:${req.params.id}:${fields}`;
+				return `cache:items:byId:${req.params.id}:${fields}`;
 			},
 		}),
 		controller.getById,
@@ -75,11 +75,11 @@ export const router = (route: Router, controller: IController): Router => {
 
 	/**
 	 * @openapi
-	 * /api/products:
+	 * /api/items:
 	 *   get:
-	 *     summary: Get all productss
-	 *     description: Retrieve productss with advanced filtering, pagination, sorting, field selection, and optional grouping
-	 *     tags: [Products]
+	 *     summary: Get all items
+	 *     description: Retrieve items with advanced filtering, pagination, sorting, field selection, and optional grouping
+	 *     tags: [Items]
 	 *     parameters:
 	 *       - in: query
 	 *         name: page
@@ -150,7 +150,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         schema:
 	 *           type: string
 	 *           enum: ["true"]
-	 *         description: Include products documents in response
+	 *         description: Include items documents in response
 	 *       - in: query
 	 *         name: pagination
 	 *         required: false
@@ -178,17 +178,17 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                     data:
 	 *                       type: object
 	 *                       properties:
-	 *                         productss:
+	 *                         items:
 	 *                           type: array
 	 *                           items:
-	 *                             $ref: '#/components/schemas/Products'
+	 *                             $ref: '#/components/schemas/Item'
 	 *                           description: Present when document="true" and no groupBy
 	 *                         groups:
 	 *                           type: object
 	 *                           additionalProperties:
 	 *                             type: array
 	 *                             items:
-	 *                               $ref: '#/components/schemas/Products'
+	 *                               $ref: '#/components/schemas/Item'
 	 *                           description: Present when groupBy is used and document="true"
 	 *                         count:
 	 *                           type: integer
@@ -201,14 +201,14 @@ export const router = (route: Router, controller: IController): Router => {
 	 *       500:
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
-	// Cache products list with predictable key for invalidation
+	// Cache items list with predictable key for invalidation
 	routes.get(
 		"/",
 		cache({
 			ttl: 60,
 			keyGenerator: (req: Request) => {
 				const queryKey = Buffer.from(JSON.stringify(req.query || {})).toString("base64");
-				return `cache:products:list:${queryKey}`;
+				return `cache:items:list:${queryKey}`;
 			},
 		}),
 		controller.getAll,
@@ -216,11 +216,11 @@ export const router = (route: Router, controller: IController): Router => {
 
 	/**
 	 * @openapi
-	 * /api/products/import:
+	 * /api/items/import:
 	 *   post:
-	 *     summary: Import products from CSV
-	 *     description: Bulk import products from a CSV file
-	 *     tags: [Products]
+	 *     summary: Import items from CSV
+	 *     description: Bulk import items from a CSV file
+	 *     tags: [Items]
 	 *     requestBody:
 	 *       required: true
 	 *       content:
@@ -233,10 +233,10 @@ export const router = (route: Router, controller: IController): Router => {
 	 *               file:
 	 *                 type: string
 	 *                 format: binary
-	 *                 description: CSV file containing product data
+	 *                 description: CSV file containing item data
 	 *     responses:
 	 *       201:
-	 *         description: Products imported successfully
+	 *         description: Items imported successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -271,11 +271,11 @@ export const router = (route: Router, controller: IController): Router => {
 
 	/**
 	 * @openapi
-	 * /api/products:
+	 * /api/items:
 	 *   post:
-	 *     summary: Create new products
-	 *     description: Create a new products with the provided data
-	 *     tags: [Products]
+	 *     summary: Create new item
+	 *     description: Create a new item with the provided data
+	 *     tags: [Items]
 	 *     requestBody:
 	 *       required: true
 	 *       content:
@@ -288,21 +288,17 @@ export const router = (route: Router, controller: IController): Router => {
 	 *               name:
 	 *                 type: string
 	 *                 minLength: 1
-	 *                 description: Products name
-	 *                 example: "Email Welcome Products"
+	 *                 description: Item name
+	 *                 example: "Sample Item"
 	 *               description:
 	 *                 type: string
-	 *                 description: Products description
-	 *                 example: "Welcome email products for new users"
-	 *               type:
+	 *                 description: Item description
+	 *                 example: "Description for the item"
+	 *               itemType:
 	 *                 type: string
-	 *                 enum: ["email", "sms", "push", "form"]
-	 *                 description: Products type for categorization
-	 *                 example: "email"
-	 *               isDeleted:
-	 *                 type: boolean
-	 *                 description: Soft delete flag
-	 *                 default: false
+	 *                 enum: ["PRODUCT", "LOAN"]
+	 *                 description: Item type
+	 *                 example: "PRODUCT"
 	 *         application/x-www-form-urlencoded:
 	 *           schema:
 	 *             type: object
@@ -335,7 +331,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                 type: boolean
 	 *     responses:
 	 *       201:
-	 *         description: Products created successfully
+	 *         description: Item created successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -346,22 +342,22 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                     data:
 	 *                       type: object
 	 *                       properties:
-	 *                         products:
-	 *                           $ref: '#/components/schemas/Products'
+	 *                         item:
+	 *                           $ref: '#/components/schemas/Item'
 	 *       400:
 	 *         $ref: '#/components/responses/BadRequest'
 	 *       500:
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
-	routes.post("/", uploadProductImages, controller.create);
+	routes.post("/", uploadItemImages, controller.create);
 
 	/**
 	 * @openapi
-	 * /api/products/{id}:
+	 * /api/items/{id}:
 	 *   patch:
-	 *     summary: Update products
-	 *     description: Update products data by ID (partial update)
-	 *     tags: [Products]
+	 *     summary: Update item
+	 *     description: Update item data by ID (partial update)
+	 *     tags: [Items]
 	 *     parameters:
 	 *       - in: path
 	 *         name: id
@@ -369,7 +365,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         schema:
 	 *           type: string
 	 *           pattern: '^[0-9a-fA-F]{24}$'
-	 *         description: Products ID (MongoDB ObjectId format)
+	 *         description: Item ID (MongoDB ObjectId format)
 	 *         example: "507f1f77bcf86cd799439011"
 	 *     requestBody:
 	 *       required: true
@@ -382,24 +378,20 @@ export const router = (route: Router, controller: IController): Router => {
 	 *               name:
 	 *                 type: string
 	 *                 minLength: 1
-	 *                 description: Products name
-	 *                 example: "Updated Email Products"
+	 *                 description: Item name
+	 *                 example: "Updated Item"
 	 *               description:
 	 *                 type: string
-	 *                 description: Products description
-	 *                 example: "Updated description for the products"
-	 *               type:
+	 *                 description: Item description
+	 *                 example: "Updated description for the item"
+	 *               itemType:
 	 *                 type: string
-	 *                 enum: ["email", "sms", "push", "form"]
-	 *                 description: Products type for categorization
-	 *                 example: "email"
-	 *               isDeleted:
-	 *                 type: boolean
-	 *                 description: Soft delete flag
-	 *                 example: false
+	 *                 enum: ["PRODUCT", "LOAN"]
+	 *                 description: Item type
+	 *                 example: "PRODUCT"
 	 *     responses:
 	 *       200:
-	 *         description: Products updated successfully
+	 *         description: Item updated successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -410,8 +402,8 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                     data:
 	 *                       type: object
 	 *                       properties:
-	 *                         products:
-	 *                           $ref: '#/components/schemas/Products'
+	 *                         item:
+	 *                           $ref: '#/components/schemas/Item'
 	 *       400:
 	 *         $ref: '#/components/responses/BadRequest'
 	 *       404:
@@ -419,15 +411,15 @@ export const router = (route: Router, controller: IController): Router => {
 	 *       500:
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
-	routes.patch("/:id", uploadProductImages, controller.update);
+	routes.patch("/:id", uploadItemImages, controller.update);
 
 	/**
 	 * @openapi
-	 * /api/products/{id}:
+	 * /api/items/{id}:
 	 *   delete:
-	 *     summary: Delete products
-	 *     description: Permanently delete a products by ID
-	 *     tags: [Products]
+	 *     summary: Delete item
+	 *     description: Permanently delete an item by ID
+	 *     tags: [Items]
 	 *     parameters:
 	 *       - in: path
 	 *         name: id
@@ -435,11 +427,11 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         schema:
 	 *           type: string
 	 *           pattern: '^[0-9a-fA-F]{24}$'
-	 *         description: Products ID (MongoDB ObjectId format)
+	 *         description: Item ID (MongoDB ObjectId format)
 	 *         example: "507f1f77bcf86cd799439011"
 	 *     responses:
 	 *       200:
-	 *         description: Products deleted successfully
+	 *         description: Item deleted successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:

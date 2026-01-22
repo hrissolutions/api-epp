@@ -9,8 +9,8 @@ export const CartItemSchema = z.object({
 	employeeId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid employeeId ObjectId format",
 	}),
-	productId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid productId ObjectId format",
+	itemId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid itemId ObjectId format",
 	}),
 	quantity: z.number().int().min(1).default(1),
 	createdAt: z.coerce.date(),

@@ -1,4 +1,4 @@
-model Product {
+model Item {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   sku         String   @unique
   name        String
@@ -7,6 +7,9 @@ model Product {
   categoryId  String   @db.ObjectId
   vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   vendorId    String   @db.ObjectId
+
+  // Item type
+  itemType    ItemType @default(PRODUCT)
 
   // Pricing
   retailPrice   Float
@@ -17,21 +20,21 @@ model Product {
   stockQuantity     Int @default(0)
   lowStockThreshold Int @default(10)
 
-  // Product details
+  // Item details
   imageUrl       String?
-  images         Json? // Array of ProductImage (structured images with type, name, url)
+  images         Json? // Array of ItemImage (structured images with type, name, url)
   specifications Json?
 
   // Status
   isActive    Boolean @default(true)
   isFeatured  Boolean @default(false)
   isAvailable Boolean @default(true)
-  status      ProductStatus @default(PENDING)
+  status      ItemStatus @default(PENDING)
 
   // Relations
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
-  // reviews           ProductReview[]
+  // reviews           ItemReview[]
   purchases     Purchase[]
   orderItems    OrderItem[]
 
@@ -40,21 +43,27 @@ model Product {
 
   @@index([categoryId])
   @@index([vendorId])
-  @@map("products")
+  @@index([itemType])
+  @@map("items")
 }
 
-enum ProductStatus {
+enum ItemType {
+  PRODUCT
+  LOAN
+}
+
+enum ItemStatus {
   PENDING   // Created by vendor, awaiting approval
-  APPROVED  // Approved and visible in product listings
+  APPROVED  // Approved and visible in item listings
   REJECTED  // Rejected and not visible to normal users
 }
 
-enum ProductImageType {
+enum ItemImageType {
   COVER // Main cover/hero image
   FEATURED // Featured images
   GALLERY // Gallery images
   THUMBNAIL // Thumbnail/preview image
-  PACKAGING // Product packaging image
+  PACKAGING // Item packaging image
   DETAIL // Detail/close-up images
   LIFESTYLE // Lifestyle/usage images
   SIZE_CHART // Size chart image

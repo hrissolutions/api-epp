@@ -12,7 +12,7 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import { CreateProductSchema, UpdateProductSchema, ProductImageType } from "../../zod/products.zod";
+import { CreateItemSchema, UpdateItemSchema, ItemImageType } from "../../zod/items.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
@@ -27,10 +27,10 @@ import { Readable } from "stream";
 import * as fs from "fs";
 
 const logger = getLogger();
-const productsLogger = logger.child({ module: "products" });
+const itemsLogger = logger.child({ module: "items" });
 
-// Product Image Type Mapping
-const PRODUCT_IMAGE_TYPE_MAP: Record<string, ProductImageType> = {
+// Item Image Type Mapping
+const ITEM_IMAGE_TYPE_MAP: Record<string, ItemImageType> = {
 	coverImages: "COVER",
 	featuredImages: "FEATURED",
 	galleryImages: "GALLERY",
@@ -43,11 +43,11 @@ const PRODUCT_IMAGE_TYPE_MAP: Record<string, ProductImageType> = {
 	images: "GALLERY", // fallback for generic images
 };
 
-// Structure for uploaded image info for Product
-interface ProductUploadedImageInfo {
+// Structure for uploaded image info for Item
+interface ItemUploadedImageInfo {
 	name: string;
 	url: string;
-	type: ProductImageType;
+	type: ItemImageType;
 }
 
 // Helper function to parse number with comma separators (e.g., "22,995" -> 22995)
@@ -113,39 +113,39 @@ export const controller = (prisma: PrismaClient) => {
 			contentType.includes("application/x-www-form-urlencoded") ||
 			contentType.includes("multipart/form-data")
 		) {
-			productsLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
+			itemsLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
 			requestData = transformFormDataToObject(req.body);
 			// Convert string numbers to actual numbers
 			requestData = convertStringNumbers(requestData);
-			productsLogger.info(
+			itemsLogger.info(
 				"Transformed form data to object structure:",
 				JSON.stringify(requestData, null, 2),
 			);
 		}
 
 		// Handle image uploads if files are present (multipart/form-data)
-		let productImages: ProductUploadedImageInfo[] = [];
+		let itemImages: ItemUploadedImageInfo[] = [];
 		if (req.files && Object.keys(req.files as any).length > 0) {
 			try {
 				const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
 				// Count total images for logging
 				let totalImages = 0;
-				for (const fieldName of Object.keys(PRODUCT_IMAGE_TYPE_MAP)) {
+				for (const fieldName of Object.keys(ITEM_IMAGE_TYPE_MAP)) {
 					const fieldFiles = files[fieldName] || [];
 					totalImages += fieldFiles.length;
 				}
 
-				productsLogger.info(`Processing ${totalImages} uploaded product images`);
+				itemsLogger.info(`Processing ${totalImages} uploaded item images`);
 
 				// Process each image type field
-				for (const [fieldName, imageType] of Object.entries(PRODUCT_IMAGE_TYPE_MAP)) {
+				for (const [fieldName, imageType] of Object.entries(ITEM_IMAGE_TYPE_MAP)) {
 					const fieldFiles = files[fieldName] || [];
 					if (fieldFiles.length === 0) continue;
 
-					const productId = requestData.sku || requestData.name || "default";
+					const itemId = requestData.sku || requestData.name || "default";
 					const uploadResults = await uploadMultipleToCloudinary(fieldFiles, {
-						folder: `products/${productId}/${imageType.toLowerCase()}`,
+						folder: `items/${itemId}/${imageType.toLowerCase()}`,
 					});
 
 					for (let index = 0; index < uploadResults.length; index++) {
@@ -156,7 +156,7 @@ export const controller = (prisma: PrismaClient) => {
 								`${imageType.toLowerCase()}-${index + 1}`;
 							const nameWithoutExtension = originalName.replace(/\.[^/.]+$/, "");
 
-							productImages.push({
+							itemImages.push({
 								name: nameWithoutExtension,
 								url: result.secureUrl,
 								type: imageType,
@@ -164,12 +164,12 @@ export const controller = (prisma: PrismaClient) => {
 						}
 					}
 
-					productsLogger.info(
-						`Successfully uploaded ${productImages.length} product images (so far) to Cloudinary`,
+					itemsLogger.info(
+						`Successfully uploaded ${itemImages.length} item images (so far) to Cloudinary`,
 					);
 				}
 			} catch (uploadError: any) {
-				productsLogger.error(`Error uploading product images: ${uploadError.message}`);
+				itemsLogger.error(`Error uploading item images: ${uploadError.message}`);
 				const errorResponse = buildErrorResponse("Failed to upload images", 500, [
 					{ field: "images", message: uploadError.message },
 				]);
@@ -178,28 +178,28 @@ export const controller = (prisma: PrismaClient) => {
 			}
 		}
 
-		const validation = CreateProductSchema.safeParse(requestData);
+		const validation = CreateItemSchema.safeParse(requestData);
 		if (!validation.success) {
 			const formattedErrors = formatZodErrors(validation.error.format());
-			productsLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+			itemsLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 			const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 			res.status(400).json(errorResponse);
 			return;
 		}
 
 		try {
-			const product = await prisma.product.create({
+			const item = await prisma.item.create({
 				data: {
 					...validation.data,
-					images: productImages.length > 0 ? productImages : undefined,
+					images: itemImages.length > 0 ? itemImages : undefined,
 				} as any,
 			});
-			productsLogger.info(`Product created successfully: ${product.id}`);
+			itemsLogger.info(`Item created successfully: ${item.id}`);
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
 				action: config.ACTIVITY_LOG.PRODUCTS.ACTIONS.CREATE_PRODUCTS,
-				description: `${config.ACTIVITY_LOG.PRODUCTS.DESCRIPTIONS.PRODUCTS_CREATED}: ${product.name || product.id}`,
+				description: `${config.ACTIVITY_LOG.PRODUCTS.DESCRIPTIONS.PRODUCTS_CREATED}: ${item.name || item.id}`,
 				page: {
 					url: req.originalUrl,
 					title: config.ACTIVITY_LOG.PRODUCTS.PAGES.PRODUCTS_CREATION,
@@ -212,36 +212,33 @@ export const controller = (prisma: PrismaClient) => {
 				resource: config.AUDIT_LOG.RESOURCES.PRODUCTS,
 				severity: config.AUDIT_LOG.SEVERITY.LOW,
 				entityType: config.AUDIT_LOG.ENTITY_TYPES.PRODUCTS,
-				entityId: product.id,
+				entityId: item.id,
 				changesBefore: null,
 				changesAfter: {
-					id: product.id,
-					name: product.name,
-					description: product.description,
-					createdAt: product.createdAt,
-					updatedAt: product.updatedAt,
+					id: item.id,
+					name: item.name,
+					description: item.description,
+					createdAt: item.createdAt,
+					updatedAt: item.updatedAt,
 				},
-				description: `${config.AUDIT_LOG.PRODUCTS.DESCRIPTIONS.PRODUCTS_CREATED}: ${product.name || product.id}`,
+				description: `${config.AUDIT_LOG.PRODUCTS.DESCRIPTIONS.PRODUCTS_CREATED}: ${item.name || item.id}`,
 			});
 
 			try {
-				await invalidateCache.byPattern("cache:products:list:*");
-				productsLogger.info("Products list cache invalidated after creation");
+				await invalidateCache.byPattern("cache:items:list:*");
+				itemsLogger.info("Items list cache invalidated after creation");
 			} catch (cacheError) {
-				productsLogger.warn(
-					"Failed to invalidate cache after products creation:",
-					cacheError,
-				);
+				itemsLogger.warn("Failed to invalidate cache after items creation:", cacheError);
 			}
 
-			const successResponse = buildSuccessResponse(
-				config.SUCCESS.PRODUCTS.CREATED,
-				product,
-				201,
-			);
+			// Create dynamic success message with itemType
+			const itemTypeLabel = item.itemType === "LOAN" ? "Loan" : "Product";
+			const successMessage = `Item (${itemTypeLabel}) created successfully`;
+
+			const successResponse = buildSuccessResponse(successMessage, item, 201);
 			res.status(201).json(successResponse);
 		} catch (error) {
-			productsLogger.error(`${config.ERROR.PRODUCTS.CREATE_FAILED}: ${error}`);
+			itemsLogger.error(`Error creating item: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -250,7 +247,7 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 	const getAll = async (req: Request, res: Response, _next: NextFunction) => {
-		const validationResult = validateQueryParams(req, productsLogger);
+		const validationResult = validateQueryParams(req, itemsLogger);
 
 		if (!validationResult.isValid) {
 			res.status(400).json(validationResult.errorResponse);
@@ -272,18 +269,18 @@ export const controller = (prisma: PrismaClient) => {
 			groupBy,
 		} = validationResult.validatedParams!;
 
-		productsLogger.info(
-			`Getting productss, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
+		itemsLogger.info(
+			`Getting items, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
 		);
 
 		try {
 			// Base where clause
-			const whereClause: Prisma.ProductWhereInput = {};
+			const whereClause: Prisma.ItemWhereInput = {};
 
-			// search fields for products (name, description, category, brand)
+			// search fields for items (name, description, category, brand)
 			const searchFields = ["name", "description"];
 			if (query) {
-				const searchConditions = buildSearchConditions("Product", query, searchFields);
+				const searchConditions = buildSearchConditions("Item", query, searchFields);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
@@ -295,7 +292,7 @@ export const controller = (prisma: PrismaClient) => {
 			let hasIsActiveFilter = false;
 
 			if (filter) {
-				const filterConditions = buildFilterConditions("Product", filter);
+				const filterConditions = buildFilterConditions("Item", filter);
 				if (filterConditions.length > 0) {
 					whereClause.AND = filterConditions;
 					// Check if user explicitly filtered by these fields
@@ -306,7 +303,7 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			}
 
-			// Only show approved and available products by default
+			// Only show approved and available items by default
 			// Admin/internal endpoints can still override this via explicit filters if needed
 			// const statusVisibilityFilter: any = {
 			// 	status: "APPROVED",
@@ -317,34 +314,34 @@ export const controller = (prisma: PrismaClient) => {
 			// if (whereClause.AND) {
 			// 	(whereClause as any).AND = [
 			// 		statusVisibilityFilter,
-			// 		...((whereClause.AND as Prisma.ProductWhereInput[]) || []),
+			// 		...((whereClause.AND as Prisma.ItemWhereInput[]) || []),
 			// 	];
 			// } else {
 			// 	(whereClause as any).AND = [statusVisibilityFilter];
 			// }
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
-			const [products, total] = await Promise.all([
-				document ? prisma.product.findMany(findManyQuery) : [],
-				count ? prisma.product.count({ where: whereClause }) : 0,
+			const [items, total] = await Promise.all([
+				document ? prisma.item.findMany(findManyQuery) : [],
+				count ? prisma.item.count({ where: whereClause }) : 0,
 			]);
 
-			productsLogger.info(`Retrieved ${products.length} products`);
+			itemsLogger.info(`Retrieved ${items.length} items`);
 			const processedData =
-				groupBy && document ? groupDataByField(products, groupBy as string) : products;
+				groupBy && document ? groupDataByField(items, groupBy as string) : items;
 
 			const responseData: Record<string, any> = {
-				...(document && { products: processedData }),
+				...(document && { items: processedData }),
 				...(count && { count: total }),
 				...(pagination && { pagination: buildPagination(total, page, limit) }),
 				...(groupBy && { groupedBy: groupBy }),
 			};
 
 			res.status(200).json(
-				buildSuccessResponse(config.SUCCESS.PRODUCTS.RETRIEVED_ALL, responseData, 200),
+				buildSuccessResponse("Items retrieved successfully", responseData, 200),
 			);
 		} catch (error) {
-			productsLogger.error(`${config.ERROR.PRODUCTS.GET_ALL_FAILED}: ${error}`);
+			itemsLogger.error(`Error getting items: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
@@ -356,9 +353,9 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			// Validate ObjectId format
-			const idValidation = validateObjectId(rawId, "Product ID");
+			const idValidation = validateObjectId(rawId, "Item ID");
 			if (!idValidation.isValid) {
-				productsLogger.error(`Invalid product ID: ${rawId}`);
+				itemsLogger.error(`Invalid item ID: ${rawId}`);
 				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
@@ -367,7 +364,7 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				productsLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				itemsLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -376,24 +373,24 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			productsLogger.info(`${config.SUCCESS.PRODUCTS.GETTING_BY_ID}: ${id}`);
+			itemsLogger.info(`Getting item by ID: ${id}`);
 
-			const cacheKey = `cache:products:byId:${id}:${fields || "full"}`;
-			let product = null;
+			const cacheKey = `cache:items:byId:${id}:${fields || "full"}`;
+			let item = null;
 
 			try {
 				if (redisClient.isClientConnected()) {
-					product = await redisClient.getJSON(cacheKey);
-					if (product) {
-						productsLogger.info(`Product ${id} retrieved from direct Redis cache`);
+					item = await redisClient.getJSON(cacheKey);
+					if (item) {
+						itemsLogger.info(`Item ${id} retrieved from direct Redis cache`);
 					}
 				}
 			} catch (cacheError) {
-				productsLogger.warn(`Redis cache retrieval failed for product ${id}:`, cacheError);
+				itemsLogger.warn(`Redis cache retrieval failed for item ${id}:`, cacheError);
 			}
 
-			if (!product) {
-				const query: Prisma.ProductFindFirstArgs = {
+			if (!item) {
+				const query: Prisma.ItemFindFirstArgs = {
 					where: {
 						id,
 					} as any,
@@ -401,37 +398,30 @@ export const controller = (prisma: PrismaClient) => {
 
 				query.select = getNestedFields(fields);
 
-				product = await prisma.product.findFirst(query);
+				item = await prisma.item.findFirst(query);
 
-				if (product && redisClient.isClientConnected()) {
+				if (item && redisClient.isClientConnected()) {
 					try {
-						await redisClient.setJSON(cacheKey, product, 3600);
-						productsLogger.info(`Product ${id} stored in direct Redis cache`);
+						await redisClient.setJSON(cacheKey, item, 3600);
+						itemsLogger.info(`Item ${id} stored in direct Redis cache`);
 					} catch (cacheError) {
-						productsLogger.warn(
-							`Failed to store product ${id} in Redis cache:`,
-							cacheError,
-						);
+						itemsLogger.warn(`Failed to store item ${id} in Redis cache:`, cacheError);
 					}
 				}
 			}
 
-			if (!product) {
-				productsLogger.error(`${config.ERROR.PRODUCTS.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.PRODUCTS.NOT_FOUND, 404);
+			if (!item) {
+				itemsLogger.error(`Item not found: ${id}`);
+				const errorResponse = buildErrorResponse("Item not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			productsLogger.info(`${config.SUCCESS.PRODUCTS.RETRIEVED}: ${(product as any).id}`);
-			const successResponse = buildSuccessResponse(
-				config.SUCCESS.PRODUCTS.RETRIEVED,
-				product,
-				200,
-			);
+			itemsLogger.info(`Item retrieved: ${(item as any).id}`);
+			const successResponse = buildSuccessResponse("Item retrieved successfully", item, 200);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			productsLogger.error(`${config.ERROR.PRODUCTS.ERROR_GETTING}: ${error}`);
+			itemsLogger.error(`Error getting item: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -445,9 +435,9 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			// Validate ObjectId format
-			const idValidation = validateObjectId(rawId, "Product ID");
+			const idValidation = validateObjectId(rawId, "Item ID");
 			if (!idValidation.isValid) {
-				productsLogger.error(`Invalid product ID: ${rawId}`);
+				itemsLogger.error(`Invalid item ID: ${rawId}`);
 				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
@@ -468,18 +458,18 @@ export const controller = (prisma: PrismaClient) => {
 				requestData = convertStringNumbers(requestData);
 			}
 
-			const validationResult = UpdateProductSchema.safeParse(requestData);
+			const validationResult = UpdateItemSchema.safeParse(requestData);
 
 			if (!validationResult.success) {
 				const formattedErrors = formatZodErrors(validationResult.error.format());
-				productsLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+				itemsLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 				const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
 			if (Object.keys(requestData).length === 0) {
-				productsLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
+				itemsLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
 				const errorResponse = buildErrorResponse(config.ERROR.COMMON.NO_UPDATE_FIELDS, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -487,45 +477,43 @@ export const controller = (prisma: PrismaClient) => {
 
 			const validatedData = validationResult.data;
 
-			productsLogger.info(`Updating product: ${id}`);
+			itemsLogger.info(`Updating item: ${id}`);
 
-			const existingProduct = await prisma.product.findFirst({
+			const existingItem = await prisma.item.findFirst({
 				where: { id },
 			});
 
-			if (!existingProduct) {
-				productsLogger.error(`${config.ERROR.PRODUCTS.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.PRODUCTS.NOT_FOUND, 404);
+			if (!existingItem) {
+				itemsLogger.error(`Item not found: ${id}`);
+				const errorResponse = buildErrorResponse("Item not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
 			// Handle image uploads if files are present
-			let productImages: ProductUploadedImageInfo[] = [];
+			let itemImages: ItemUploadedImageInfo[] = [];
 			const existingImages =
-				(existingProduct.images as unknown as ProductUploadedImageInfo[]) || [];
+				(existingItem.images as unknown as ItemUploadedImageInfo[]) || [];
 
 			if (req.files && Object.keys(req.files as any).length > 0) {
 				try {
 					const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
 					let totalImages = 0;
-					for (const fieldName of Object.keys(PRODUCT_IMAGE_TYPE_MAP)) {
+					for (const fieldName of Object.keys(ITEM_IMAGE_TYPE_MAP)) {
 						const fieldFiles = files[fieldName] || [];
 						totalImages += fieldFiles.length;
 					}
 
-					productsLogger.info(
-						`Processing ${totalImages} uploaded product images for update`,
-					);
+					itemsLogger.info(`Processing ${totalImages} uploaded item images for update`);
 
-					for (const [fieldName, imageType] of Object.entries(PRODUCT_IMAGE_TYPE_MAP)) {
+					for (const [fieldName, imageType] of Object.entries(ITEM_IMAGE_TYPE_MAP)) {
 						const fieldFiles = files[fieldName] || [];
 						if (fieldFiles.length === 0) continue;
 
-						const productId = id;
+						const itemId = id;
 						const uploadResults = await uploadMultipleToCloudinary(fieldFiles, {
-							folder: `products/${productId}/${imageType.toLowerCase()}`,
+							folder: `items/${itemId}/${imageType.toLowerCase()}`,
 						});
 
 						for (let index = 0; index < uploadResults.length; index++) {
@@ -536,7 +524,7 @@ export const controller = (prisma: PrismaClient) => {
 									`${imageType.toLowerCase()}-${index + 1}`;
 								const nameWithoutExtension = originalName.replace(/\.[^/.]+$/, "");
 
-								productImages.push({
+								itemImages.push({
 									name: nameWithoutExtension,
 									url: result.secureUrl,
 									type: imageType,
@@ -545,11 +533,11 @@ export const controller = (prisma: PrismaClient) => {
 						}
 					}
 
-					productsLogger.info(
-						`Successfully uploaded ${productImages.length} new product images to Cloudinary`,
+					itemsLogger.info(
+						`Successfully uploaded ${itemImages.length} new item images to Cloudinary`,
 					);
 				} catch (uploadError: any) {
-					productsLogger.error(`Error uploading product images: ${uploadError.message}`);
+					itemsLogger.error(`Error uploading item images: ${uploadError.message}`);
 					const errorResponse = buildErrorResponse("Failed to upload images", 500, [
 						{ field: "images", message: uploadError.message },
 					]);
@@ -560,14 +548,14 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Merge images: if images array provided in body, use it (allows deletion)
 			// Otherwise, merge new uploads with existing images
-			let finalImages: ProductUploadedImageInfo[] = existingImages;
+			let finalImages: ItemUploadedImageInfo[] = existingImages;
 			if (validatedData.images !== undefined) {
 				// If images array is explicitly provided, use it (replacement)
-				finalImages = validatedData.images as ProductUploadedImageInfo[];
+				finalImages = validatedData.images as ItemUploadedImageInfo[];
 			}
 			// Merge new uploads with final images
-			if (productImages.length > 0) {
-				finalImages = [...finalImages, ...productImages];
+			if (itemImages.length > 0) {
+				finalImages = [...finalImages, ...itemImages];
 			}
 
 			const prismaData = {
@@ -575,28 +563,32 @@ export const controller = (prisma: PrismaClient) => {
 				images: finalImages.length > 0 ? finalImages : undefined,
 			};
 
-			const updatedProduct = await prisma.product.update({
+			const updatedItem = await prisma.item.update({
 				where: { id },
 				data: prismaData as any,
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:products:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:products:list:*");
-				productsLogger.info(`Cache invalidated after product ${id} update`);
+				await invalidateCache.byPattern(`cache:items:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:items:list:*");
+				itemsLogger.info(`Cache invalidated after item ${id} update`);
 			} catch (cacheError) {
-				productsLogger.warn("Failed to invalidate cache after product update:", cacheError);
+				itemsLogger.warn("Failed to invalidate cache after item update:", cacheError);
 			}
 
-			productsLogger.info(`${config.SUCCESS.PRODUCTS.UPDATED}: ${updatedProduct.id}`);
+			itemsLogger.info(`${config.SUCCESS.PRODUCTS.UPDATED}: ${updatedItem.id}`);
+			// Create dynamic success message with itemType
+			const itemTypeLabel = updatedItem.itemType === "LOAN" ? "Loan" : "Product";
+			const successMessage = `Item (${itemTypeLabel}) updated successfully`;
+
 			const successResponse = buildSuccessResponse(
-				config.SUCCESS.PRODUCTS.UPDATED,
-				{ product: updatedProduct },
+				successMessage,
+				{ item: updatedItem },
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			productsLogger.error(`${config.ERROR.PRODUCTS.ERROR_UPDATING}: ${error}`);
+			itemsLogger.error(`${config.ERROR.PRODUCTS.ERROR_UPDATING}: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -610,9 +602,9 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			// Validate ObjectId format
-			const idValidation = validateObjectId(rawId, "Product ID");
+			const idValidation = validateObjectId(rawId, "Item ID");
 			if (!idValidation.isValid) {
-				productsLogger.error(`Invalid product ID: ${rawId}`);
+				itemsLogger.error(`Invalid item ID: ${rawId}`);
 				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
@@ -620,39 +612,42 @@ export const controller = (prisma: PrismaClient) => {
 			// Ensure id is a string
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-			productsLogger.info(`${config.SUCCESS.PRODUCTS.DELETED}: ${id}`);
+			itemsLogger.info(`Item deleted: ${id}`);
 
-			const existingProduct = await prisma.product.findFirst({
+			const existingItem = await prisma.item.findFirst({
 				where: { id },
 			});
 
-			if (!existingProduct) {
-				productsLogger.error(`${config.ERROR.PRODUCTS.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.PRODUCTS.NOT_FOUND, 404);
+			if (!existingItem) {
+				itemsLogger.error(`Item not found: ${id}`);
+				const errorResponse = buildErrorResponse("Item not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			await prisma.product.delete({
+			// Get itemType before deletion for the success message
+			const itemType = existingItem.itemType || "PRODUCT";
+			const itemTypeLabel = itemType === "LOAN" ? "Loan" : "Product";
+
+			await prisma.item.delete({
 				where: { id },
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:products:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:products:list:*");
-				productsLogger.info(`Cache invalidated after products ${id} deletion`);
+				await invalidateCache.byPattern(`cache:items:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:items:list:*");
+				itemsLogger.info(`Cache invalidated after items ${id} deletion`);
 			} catch (cacheError) {
-				productsLogger.warn(
-					"Failed to invalidate cache after product deletion:",
-					cacheError,
-				);
+				itemsLogger.warn("Failed to invalidate cache after item deletion:", cacheError);
 			}
 
-			productsLogger.info(`${config.SUCCESS.PRODUCTS.DELETED}: ${id}`);
-			const successResponse = buildSuccessResponse(config.SUCCESS.PRODUCTS.DELETED, {}, 200);
+			// Create dynamic success message with itemType
+			const successMessage = `Item (${itemTypeLabel}) deleted successfully`;
+			itemsLogger.info(`${successMessage}: ${id}`);
+			const successResponse = buildSuccessResponse(successMessage, {}, 200);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			productsLogger.error(`${config.ERROR.PRODUCTS.DELETE_FAILED}: ${error}`);
+			itemsLogger.error(`Error deleting item: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -683,7 +678,7 @@ export const controller = (prisma: PrismaClient) => {
 	const importFromCSV = async (req: Request, res: Response, _next: NextFunction) => {
 		try {
 			if (!req.file) {
-				productsLogger.error("No CSV file uploaded");
+				itemsLogger.error("No CSV file uploaded");
 				const errorResponse = buildErrorResponse("CSV file is required", 400, [
 					{ field: "file", message: "Please upload a CSV file" },
 				]);
@@ -691,7 +686,7 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			productsLogger.info(`Starting CSV import from file: ${req.file.originalname}`);
+			itemsLogger.info(`Starting CSV import from file: ${req.file.originalname}`);
 
 			const results: any[] = [];
 			const errors: any[] = [];
@@ -724,9 +719,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			try {
 				await parseCSV();
-				productsLogger.info(`CSV parsed successfully, found ${results.length} rows`);
+				itemsLogger.info(`CSV parsed successfully, found ${results.length} rows`);
 			} catch (parseError: any) {
-				productsLogger.error(`CSV parsing error: ${parseError.message}`);
+				itemsLogger.error(`CSV parsing error: ${parseError.message}`);
 				const errorResponse = buildErrorResponse("Failed to parse CSV file", 400, [
 					{ field: "file", message: parseError.message },
 				]);
@@ -735,11 +730,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			// Fetch all existing SKUs from database to check for duplicates
-			const existingProducts = await prisma.product.findMany({
+			const existingItems = await prisma.item.findMany({
 				select: { sku: true },
 			});
-			const existingSkus = new Set<string>(existingProducts.map((p) => p.sku));
-			productsLogger.info(`Found ${existingSkus.size} existing SKUs in database`);
+			const existingSkus = new Set<string>(existingItems.map((i) => i.sku));
+			itemsLogger.info(`Found ${existingSkus.size} existing SKUs in database`);
 
 			// Process each row
 			for (let i = 0; i < results.length; i++) {
@@ -762,7 +757,7 @@ export const controller = (prisma: PrismaClient) => {
 								error: `Category not found with slug: ${row.category}`,
 							});
 							errorCount++;
-							productsLogger.warn(
+							itemsLogger.warn(
 								`Row ${i + 1} (SKU: ${row.sku}): Category not found with slug: ${row.category}`,
 							);
 							continue;
@@ -776,7 +771,7 @@ export const controller = (prisma: PrismaClient) => {
 							error: "Category slug is required",
 						});
 						errorCount++;
-						productsLogger.warn(
+						itemsLogger.warn(
 							`Row ${i + 1} (SKU: ${row.sku}): Category slug is missing`,
 						);
 						continue;
@@ -797,7 +792,7 @@ export const controller = (prisma: PrismaClient) => {
 								error: `Vendor not found with code: ${row.vendor}`,
 							});
 							errorCount++;
-							productsLogger.warn(
+							itemsLogger.warn(
 								`Row ${i + 1} (SKU: ${row.sku}): Vendor not found with code: ${row.vendor}`,
 							);
 							continue;
@@ -811,14 +806,12 @@ export const controller = (prisma: PrismaClient) => {
 							error: "Vendor code is required",
 						});
 						errorCount++;
-						productsLogger.warn(
-							`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`,
-						);
+						itemsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`);
 						continue;
 					}
 
 					// Parse images from comma-separated string
-					let images: ProductUploadedImageInfo[] = [];
+					let images: ItemUploadedImageInfo[] = [];
 					if (row.images && row.images.trim()) {
 						const imageUrls = row.images
 							.split(",")
@@ -828,7 +821,7 @@ export const controller = (prisma: PrismaClient) => {
 						images = imageUrls.map((url: string, index: number) => ({
 							name: `image-${index + 1}`,
 							url: url,
-							type: "FEATURED" as ProductImageType,
+							type: "FEATURED" as ItemImageType,
 						}));
 					}
 
@@ -841,13 +834,13 @@ export const controller = (prisma: PrismaClient) => {
 							.filter((detail: string) => detail);
 					}
 
-					// Parse metadata (additional product information)
+					// Parse metadata (additional item information)
 					let metadata: any = {};
 					if (row.metadata && row.metadata.trim()) {
 						try {
 							metadata = JSON.parse(row.metadata);
 						} catch (jsonError) {
-							productsLogger.warn(
+							itemsLogger.warn(
 								`Row ${i + 1}: Invalid JSON in metadata field, skipping`,
 							);
 						}
@@ -877,7 +870,7 @@ export const controller = (prisma: PrismaClient) => {
 								...additionalSpecs,
 							};
 						} catch (jsonError) {
-							productsLogger.warn(
+							itemsLogger.warn(
 								`Row ${i + 1}: Invalid JSON in specifications field, skipping`,
 							);
 						}
@@ -903,7 +896,7 @@ export const controller = (prisma: PrismaClient) => {
 							row: i + 1,
 						});
 
-						productsLogger.warn(
+						itemsLogger.warn(
 							`Row ${i + 1}: Duplicate SKU "${originalSku}" detected, generated new SKU: "${finalSku}"`,
 						);
 					}
@@ -913,14 +906,30 @@ export const controller = (prisma: PrismaClient) => {
 					// Also add to existing SKUs set to prevent duplicates in same batch
 					existingSkus.add(finalSku);
 
-					// Prepare product data
-					const productData: any = {
+					// Parse itemType - default to PRODUCT if not provided
+					let itemType: "PRODUCT" | "LOAN" = "PRODUCT";
+					if (row.itemType && row.itemType.trim()) {
+						const itemTypeValue = row.itemType.trim().toUpperCase();
+						if (itemTypeValue === "PRODUCT" || itemTypeValue === "LOAN") {
+							itemType = itemTypeValue as "PRODUCT" | "LOAN";
+						} else {
+							itemsLogger.warn(
+								`Row ${i + 1} (SKU: ${row.sku}): Invalid itemType "${row.itemType}", defaulting to PRODUCT`,
+							);
+						}
+					}
+
+					// Prepare item data
+					const itemData: any = {
 						sku: finalSku,
 						name: row.name,
 						description:
 							row.description && row.description.trim() ? row.description : null,
 						categoryId: categoryId,
 						vendorId: vendorId,
+
+						// Item type
+						itemType: itemType,
 
 						// Pricing - handle multiple price fields with comma separators
 						retailPrice: parseNumberWithCommas(row.retailPrice) ?? 0,
@@ -936,7 +945,7 @@ export const controller = (prisma: PrismaClient) => {
 							? parseInt(row.lowStockThreshold)
 							: 10,
 
-						// Product details
+						// Item details
 						imageUrl: row.imageUrl || null,
 						images: images.length > 0 ? images : null,
 						specifications: specifications,
@@ -967,7 +976,7 @@ export const controller = (prisma: PrismaClient) => {
 					};
 
 					// Validate using Zod schema
-					const validation = CreateProductSchema.safeParse(productData);
+					const validation = CreateItemSchema.safeParse(itemData);
 
 					if (!validation.success) {
 						const formattedErrors = formatZodErrors(validation.error.format());
@@ -977,20 +986,20 @@ export const controller = (prisma: PrismaClient) => {
 							errors: formattedErrors,
 						});
 						errorCount++;
-						productsLogger.warn(
+						itemsLogger.warn(
 							`Row ${i + 1} (SKU: ${row.sku}): Validation failed - ${JSON.stringify(formattedErrors)}`,
 						);
 						continue;
 					}
 
-					// Create product in database
-					const product = await prisma.product.create({
+					// Create item in database
+					const item = await prisma.item.create({
 						data: validation.data as any,
 					});
 
 					successCount++;
-					productsLogger.info(
-						`Row ${i + 1}: Product created successfully (SKU: ${product.sku}, ID: ${product.id})`,
+					itemsLogger.info(
+						`Row ${i + 1}: Item created successfully (SKU: ${item.sku}, ID: ${item.id})`,
 					);
 				} catch (error: any) {
 					errorCount++;
@@ -999,28 +1008,28 @@ export const controller = (prisma: PrismaClient) => {
 						sku: row.sku,
 						error: error.message,
 					});
-					productsLogger.error(
-						`Row ${i + 1} (SKU: ${row.sku}): Failed to create product - ${error.message}`,
+					itemsLogger.error(
+						`Row ${i + 1} (SKU: ${row.sku}): Failed to create item - ${error.message}`,
 					);
 				}
 			}
 
 			// Invalidate cache after bulk import
 			try {
-				await invalidateCache.byPattern("cache:products:list:*");
-				productsLogger.info("Products list cache invalidated after CSV import");
+				await invalidateCache.byPattern("cache:items:list:*");
+				itemsLogger.info("Items list cache invalidated after CSV import");
 			} catch (cacheError) {
-				productsLogger.warn("Failed to invalidate cache after CSV import:", cacheError);
+				itemsLogger.warn("Failed to invalidate cache after CSV import:", cacheError);
 			}
 
 			// Log activity
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
-				action: "IMPORT_PRODUCTS_CSV",
-				description: `Imported ${successCount} products from CSV (${errorCount} errors)`,
+				action: "IMPORT_ITEMS_CSV",
+				description: `Imported ${successCount} items from CSV (${errorCount} errors)`,
 				page: {
 					url: req.originalUrl,
-					title: "Products CSV Import",
+					title: "Items CSV Import",
 				},
 			});
 
@@ -1041,18 +1050,18 @@ export const controller = (prisma: PrismaClient) => {
 					? `, ${skuChanges.length} SKU(s) auto-generated due to duplicates`
 					: "";
 
-			productsLogger.info(
+			itemsLogger.info(
 				`CSV import completed: ${successCount} successful, ${errorCount} failed out of ${results.length} rows${skuChangeMessage}`,
 			);
 
 			const successResponse = buildSuccessResponse(
-				`Products imported successfully: ${successCount} created, ${errorCount} failed${skuChangeMessage}`,
+				`Items imported successfully: ${successCount} created, ${errorCount} failed${skuChangeMessage}`,
 				responseData,
 				201,
 			);
 			res.status(201).json(successResponse);
 		} catch (error) {
-			productsLogger.error(`CSV import failed: ${error}`);
+			itemsLogger.error(`CSV import failed: ${error}`);
 			const errorResponse = buildErrorResponse("CSV import failed", 500);
 			res.status(500).json(errorResponse);
 		}

@@ -24,8 +24,8 @@ export const PurchaseSchema = z.object({
 	employeeId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid employeeId ObjectId format",
 	}),
-	productId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid productId ObjectId format",
+	itemId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid itemId ObjectId format",
 	}),
 	purchaseType: PurchaseTypeEnum,
 	totalAmount: z.number().positive("Total amount must be positive"),

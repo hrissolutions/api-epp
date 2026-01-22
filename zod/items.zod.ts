@@ -2,7 +2,10 @@ import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
 // Enums
-export const ProductImageTypeEnum = z.enum([
+export const ItemTypeEnum = z.enum(["PRODUCT", "LOAN"]);
+export type ItemType = z.infer<typeof ItemTypeEnum>;
+
+export const ItemImageTypeEnum = z.enum([
 	"COVER",
 	"FEATURED",
 	"GALLERY",
@@ -15,16 +18,16 @@ export const ProductImageTypeEnum = z.enum([
 	"OTHER",
 ]);
 
-export type ProductImageType = z.infer<typeof ProductImageTypeEnum>;
+export type ItemImageType = z.infer<typeof ItemImageTypeEnum>;
 
-// ProductImage schema - Keep same format (url, type, name)
-export const ProductImageSchema = z.object({
+// ItemImage schema - Keep same format (url, type, name)
+export const ItemImageSchema = z.object({
 	name: z.string().optional().nullable(),
 	url: z.string().url().optional().nullable(),
-	type: ProductImageTypeEnum.optional().nullable(),
+	type: ItemImageTypeEnum.optional().nullable(),
 });
 
-export type ProductImage = z.infer<typeof ProductImageSchema>;
+export type ItemImage = z.infer<typeof ItemImageSchema>;
 
 // Decimal schema helper (for Prisma Decimal type)
 const decimalSchema = z
@@ -36,13 +39,13 @@ const decimalSchema = z
 		return val;
 	});
 
-// Product Schema (full, including ID)
-export const ProductSchema = z.object({
+// Item Schema (full, including ID)
+export const ItemSchema = z.object({
 	id: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid ObjectId format",
 	}),
 	sku: z.string().min(1, "SKU is required"),
-	name: z.string().min(1, "Product name is required"),
+	name: z.string().min(1, "Item name is required"),
 	description: z.string().optional().nullable(),
 	categoryId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid categoryId ObjectId format",
@@ -50,6 +53,9 @@ export const ProductSchema = z.object({
 	vendorId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid vendorId ObjectId format",
 	}),
+
+	// Item type
+	itemType: ItemTypeEnum.default("PRODUCT"),
 
 	// Pricing
 	retailPrice: decimalSchema,
@@ -60,9 +66,9 @@ export const ProductSchema = z.object({
 	stockQuantity: z.number().int().min(0).default(0),
 	lowStockThreshold: z.number().int().min(0).default(10),
 
-	// Product details
+	// Item details
 	imageUrl: z.string().url().optional().nullable(),
-	images: z.array(ProductImageSchema).optional().nullable(),
+	images: z.array(ItemImageSchema).optional().nullable(),
 	specifications: z.record(z.any()).optional().nullable(),
 
 	// Status
@@ -75,10 +81,10 @@ export const ProductSchema = z.object({
 	updatedAt: z.coerce.date(),
 });
 
-export type Product = z.infer<typeof ProductSchema>;
+export type Item = z.infer<typeof ItemSchema>;
 
-// Create Product Schema (excluding ID, createdAt, updatedAt)
-export const CreateProductSchema = ProductSchema.omit({
+// Create Item Schema (excluding ID, createdAt, updatedAt)
+export const CreateItemSchema = ItemSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
@@ -93,15 +99,16 @@ export const CreateProductSchema = ProductSchema.omit({
 	isActive: true,
 	isFeatured: true,
 	isAvailable: true,
+	itemType: true,
 });
 
-export type CreateProduct = z.infer<typeof CreateProductSchema>;
+export type CreateItem = z.infer<typeof CreateItemSchema>;
 
-// Update Product Schema (partial, excluding immutable fields)
-export const UpdateProductSchema = ProductSchema.omit({
+// Update Item Schema (partial, excluding immutable fields)
+export const UpdateItemSchema = ItemSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
 }).partial();
 
-export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
+export type UpdateItem = z.infer<typeof UpdateItemSchema>;

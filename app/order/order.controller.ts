@@ -116,7 +116,7 @@ export const controller = (prisma: PrismaClient) => {
 					const orderItem = await prisma.orderItem.create({
 						data: {
 							orderId: order.id,
-							productId: item.productId,
+							itemId: item.itemId,
 							quantity: item.quantity,
 							unitPrice: item.unitPrice,
 							discount: item.discount,

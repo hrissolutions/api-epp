@@ -107,7 +107,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesAfter: {
 					id: wishlistItem.id,
 					employeeId: wishlistItem.employeeId,
-					productId: wishlistItem.productId,
+					itemId: wishlistItem.itemId,
 					createdAt: wishlistItem.createdAt,
 				},
 				description: `${config.AUDIT_LOG.WISHLISTITEM.DESCRIPTIONS.WISHLISTITEM_CREATED}: ${wishlistItem.id}`,
