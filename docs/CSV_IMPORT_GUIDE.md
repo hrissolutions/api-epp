@@ -10,7 +10,7 @@ This guide explains how to import products from a CSV file.
 - `category` - Category slug (string, e.g., "electronics", "home-appliances")
 - `vendor` - Vendor code (string, e.g., "TECH-001", "VENDOR-ABC")
 - `retailPrice` - Retail price (number)
-- `employeePrice` - Employee price (number)
+- `sellingPrice` - Selling price (number)
 
 ### Optional Fields
 - `description` - Product description/summary (string, optional)
@@ -188,7 +188,7 @@ Example vendors:
 ## Example CSV Row
 
 ```csv
-sku,name,description,category,vendor,retailPrice,employeePrice,costPrice,stockQuantity,lowStockThreshold,imageUrl,images,details,metadata,specifications,weight,dimensions,isActive,isFeatured,isAvailable
+sku,name,description,category,vendor,retailPrice,sellingPrice,costPrice,stockQuantity,lowStockThreshold,imageUrl,images,details,metadata,specifications,weight,dimensions,isActive,isFeatured,isAvailable
 ABC-123,Product Name,Optional short description,electronics,TECH-001,99.99,89.99,75.00,100,10,https://example.com/main.jpg,"https://example.com/img1.jpg,https://example.com/img2.jpg","Feature 1,Feature 2,Feature 3","{""brand"":""BrandName"",""model"":""ABC-123"",""color"":""Blue""}","{""warranty"":""2 years""}",2.5,10x20x5cm,true,false,true
 ```
 

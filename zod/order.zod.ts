@@ -53,7 +53,7 @@ export const OrderItemInputSchema = z.object({
 		message: "Invalid productId ObjectId format",
 	}),
 	quantity: z.number().int().min(1, "Quantity must be at least 1"),
-	unitPrice: decimalSchema.optional(), // Optional, will be fetched from product.employeePrice if not provided
+	unitPrice: decimalSchema.optional(), // Optional, will be fetched from product.sellingPrice if not provided
 	discount: decimalSchema.optional(), // Optional, will be calculated from product if not provided
 	subtotal: decimalSchema.optional(), // Optional, will be calculated
 });

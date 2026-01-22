@@ -8,7 +8,7 @@ A complete CSV import functionality for bulk product creation with support for:
 
 1. **Multiple Price Fields**
    - `retailPrice` (required)
-   - `employeePrice` (required)
+   - `sellingPrice` (required)
    - `costPrice` (optional)
 
 2. **Image Handling**
@@ -104,7 +104,7 @@ curl -X POST http://localhost:3000/api/products/import \
 ## CSV Format Example
 
 ```csv
-sku,name,description,category,vendor,retailPrice,employeePrice,costPrice,images,details,metadata
+sku,name,description,category,vendor,retailPrice,sellingPrice,costPrice,images,details,metadata
 ABC-123,Product Name,,electronics,TECH-001,99.99,89.99,75.00,"https://img1.jpg,https://img2.jpg","Feature 1,Feature 2,Feature 3","{""brand"":""Samsung"",""model"":""ABC-123""}"
 ```
 

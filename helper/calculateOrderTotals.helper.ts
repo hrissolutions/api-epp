@@ -35,7 +35,7 @@ const DEFAULT_TAX_RATE = 0.10; // 10%
 
 /**
  * Calculates order totals from items
- * - Fetches product prices (employeePrice) if unitPrice is not provided in items
+ * - Fetches product prices (sellingPrice) if unitPrice is not provided in items
  * - Fetches product details to get discount (if available from product)
  * - Calculates item-level subtotals
  * - Calculates order-level totals
@@ -61,27 +61,27 @@ export const calculateOrderTotals = async (
 			let unitPrice = item.unitPrice;
 			
 			if (!unitPrice) {
-				// Fetch product to get employeePrice
+				// Fetch product to get sellingPrice
 				const product = await prisma.product.findFirst({
 					where: { id: item.productId },
-					select: { employeePrice: true, retailPrice: true },
+					select: { sellingPrice: true, retailPrice: true },
 				});
 
 				if (!product) {
 					throw new Error(`Product not found with id: ${item.productId}`);
 				}
 
-				// Use employeePrice if available, otherwise fall back to retailPrice
-				unitPrice = product.employeePrice ?? product.retailPrice ?? 0;
+				// Use sellingPrice if available, otherwise fall back to retailPrice
+				unitPrice = product.sellingPrice ?? product.retailPrice ?? 0;
 
 				if (unitPrice === 0) {
 					throw new Error(
-						`Product ${item.productId} has no valid price (employeePrice or retailPrice)`,
+						`Product ${item.productId} has no valid price (sellingPrice or retailPrice)`,
 					);
 				}
 
 				calculateTotalsLogger.info(
-					`Fetched price from product ${item.productId}: ${unitPrice} (employeePrice: ${product.employeePrice}, retailPrice: ${product.retailPrice})`,
+					`Fetched price from product ${item.productId}: ${unitPrice} (sellingPrice: ${product.sellingPrice}, retailPrice: ${product.retailPrice})`,
 				);
 			}
 

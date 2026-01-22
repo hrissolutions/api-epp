@@ -53,7 +53,7 @@ specifications: "{""warranty"":""1 year"",""energyRating"":""5 star"",""voltageR
 
 ### CSV Format
 ```csv
-sku,name,description,category,vendor,retailPrice,employeePrice,costPrice,images,details,metadata,specifications
+sku,name,description,category,vendor,retailPrice,sellingPrice,costPrice,images,details,metadata,specifications
 011700162641,Kolin K4G-100WCINV 1.0 HP,,electronics,TECH-001,25495,22995,20000,"url1.jpg,url2.jpg","Feature 1,Feature 2,Feature 3","{""brand"":""Kolin""}","{""warranty"":""1 year""}"
 ```
 

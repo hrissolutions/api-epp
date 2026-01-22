@@ -725,8 +725,8 @@ export const controller = (prisma: PrismaClient) => {
 					continue;
 				}
 
-				// Use employeePrice if available, otherwise retailPrice
-				const unitPrice = product.employeePrice || product.retailPrice;
+				// Use sellingPrice if available, otherwise retailPrice
+				const unitPrice = product.sellingPrice || product.retailPrice;
 				const itemSubtotal = unitPrice * cartItem.quantity;
 				subtotal += itemSubtotal;
 

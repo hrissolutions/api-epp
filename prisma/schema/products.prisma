@@ -10,7 +10,7 @@ model Product {
 
   // Pricing
   retailPrice   Float
-  employeePrice Float
+  sellingPrice Float
   costPrice     Float?
 
   // Inventory

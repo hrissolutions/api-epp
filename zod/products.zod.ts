@@ -54,7 +54,7 @@ export const ProductSchema = z.object({
 
 	// Pricing
 	retailPrice: decimalSchema,
-	employeePrice: decimalSchema,
+	sellingPrice: decimalSchema,
 	costPrice: decimalSchema.optional().nullable(),
 
 	// Inventory

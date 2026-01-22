@@ -69,7 +69,7 @@ The import now accepts **all** of these values (case-insensitive):
 
 ### Test CSV
 ```csv
-sku,name,category,vendor,retailPrice,employeePrice,isActive,isFeatured,isAvailable
+sku,name,category,vendor,retailPrice,sellingPrice,isActive,isFeatured,isAvailable
 TEST-001,Test Product,electronics,TECH-001,100,90,TRUE,TRUE,TRUE
 TEST-002,Test Product 2,electronics,TECH-001,100,90,true,true,true
 TEST-003,Test Product 3,electronics,TECH-001,100,90,1,1,1
