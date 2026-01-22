@@ -33,6 +33,7 @@ model Product {
   wishlistItems WishlistItem[]
   // reviews           ProductReview[]
   purchases     Purchase[]
+  orderItems    OrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
