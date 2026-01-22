@@ -22,6 +22,22 @@ import { invalidateCache } from "../../middleware/cache";
 const logger = getLogger();
 const orderItemLogger = logger.child({ module: "orderItem" });
 
+/** Normalize field names for OrderItem: `items` → `item`, `product` → `item` (relation is `item`). */
+const normalizeOrderItemFields = (fields?: string): string | undefined => {
+	if (!fields || typeof fields !== "string") return fields;
+	return fields
+		.split(",")
+		.map((f) =>
+			f
+				.trim()
+				.replace(/^product\./g, "item.")
+				.replace(/^product$/g, "item")
+				.replace(/^items\./g, "item.")
+				.replace(/^items$/g, "item"),
+		)
+		.join(",");
+};
+
 // Helper function to convert string numbers to actual numbers for form data
 const convertStringNumbers = (obj: any): any => {
 	if (obj === null || obj === undefined) {
@@ -186,7 +202,15 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
-			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
+			const normalizedFields = normalizeOrderItemFields(fields);
+			const findManyQuery = buildFindManyQuery(
+				whereClause,
+				skip,
+				limit,
+				order,
+				sort,
+				normalizedFields,
+			);
 
 			const [orderItems, total] = await Promise.all([
 				document ? prisma.orderItem.findMany(findManyQuery) : [],
@@ -263,7 +287,8 @@ export const controller = (prisma: PrismaClient) => {
 					where: { id },
 				};
 
-				query.select = getNestedFields(fields);
+				const normalizedFields = normalizeOrderItemFields(fields);
+				query.select = getNestedFields(normalizedFields);
 
 				orderItem = await prisma.orderItem.findFirst(query);
 
