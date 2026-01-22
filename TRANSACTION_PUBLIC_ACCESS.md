@@ -11,34 +11,40 @@ The transaction endpoints have been made **publicly accessible** (no authenticat
 ### 1. **Main Server File** (`index.ts`)
 
 #### Added Transaction Module Import
+
 ```typescript
 const transaction = require("./app/transaction")(prisma);
 ```
 
 #### Added `/transaction` to Public Routes
+
 Updated the authentication middleware to skip authentication for transaction routes:
 
 ```typescript
 // Line 132-134
-if (req.path.startsWith("/docs") || 
-    req.path.startsWith("/auth") || 
-    req.path.startsWith("/products") || 
-    req.path.startsWith("/purchase") || 
-    req.path.startsWith("/category") || 
-    req.path.startsWith("/wishlistItem") || 
-    req.path.startsWith("/wishlist") || 
-    req.path.startsWith("/cartItem") || 
-    req.path.startsWith("/cart") || 
-    req.path.startsWith("/order") || 
-    req.path.startsWith("/orderItem") || 
-    req.path.startsWith("/vendor") || 
-    req.path.startsWith("/installment") ||
-    req.path.startsWith("/transaction")) {  // ← Added this
-    return next();
+if (
+	req.path.startsWith("/docs") ||
+	req.path.startsWith("/auth") ||
+	req.path.startsWith("/products") ||
+	req.path.startsWith("/purchase") ||
+	req.path.startsWith("/category") ||
+	req.path.startsWith("/wishlistItem") ||
+	req.path.startsWith("/wishlist") ||
+	req.path.startsWith("/cartItem") ||
+	req.path.startsWith("/cart") ||
+	req.path.startsWith("/order") ||
+	req.path.startsWith("/orderItem") ||
+	req.path.startsWith("/vendor") ||
+	req.path.startsWith("/installment") ||
+	req.path.startsWith("/transaction")
+) {
+	// ← Added this
+	return next();
 }
 ```
 
 #### Registered Transaction Routes
+
 ```typescript
 app.use(config.baseApiPath, transaction);
 ```
@@ -54,7 +60,7 @@ import { router } from "./transaction.router";
 import { PrismaClient } from "../../generated/prisma";
 
 export const transactionModule = (prisma: PrismaClient): Router => {
-    return router(express.Router(), controller(prisma));
+	return router(express.Router(), controller(prisma));
 };
 
 module.exports = transactionModule;
@@ -66,18 +72,18 @@ module.exports = transactionModule;
 
 All transaction endpoints are now **publicly accessible** without authentication:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/transaction` | Create transaction |
-| GET | `/api/transaction` | Get all transactions |
-| GET | `/api/transaction/:id` | Get specific transaction |
-| PATCH | `/api/transaction/:id` | Update transaction |
-| DELETE | `/api/transaction/:id` | Delete transaction |
-| POST | `/api/transaction/:id/process` | Process transaction |
-| POST | `/api/transaction/:id/reconcile` | Reconcile transaction |
-| GET | `/api/transaction/order/:orderId` | Get by order |
-| GET | `/api/transaction/employee/:employeeId` | Get by employee |
-| GET | `/api/transaction/unreconciled` | Get unreconciled |
+| Method | Endpoint                                | Description              |
+| ------ | --------------------------------------- | ------------------------ |
+| POST   | `/api/transaction`                      | Create transaction       |
+| GET    | `/api/transaction`                      | Get all transactions     |
+| GET    | `/api/transaction/:id`                  | Get specific transaction |
+| PATCH  | `/api/transaction/:id`                  | Update transaction       |
+| DELETE | `/api/transaction/:id`                  | Delete transaction       |
+| POST   | `/api/transaction/:id/process`          | Process transaction      |
+| POST   | `/api/transaction/:id/reconcile`        | Reconcile transaction    |
+| GET    | `/api/transaction/order/:orderId`       | Get by order             |
+| GET    | `/api/transaction/employee/:employeeId` | Get by employee          |
+| GET    | `/api/transaction/unreconciled`         | Get unreconciled         |
 
 ---
 
@@ -101,6 +107,7 @@ Content-Type: application/json
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -136,14 +143,14 @@ Content-Type: application/json
 If you want to add rate limiting:
 
 ```typescript
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
 const transactionLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100, // limit each IP to 100 requests per windowMs
 });
 
-app.use('/api/transaction', transactionLimiter);
+app.use("/api/transaction", transactionLimiter);
 ```
 
 ---

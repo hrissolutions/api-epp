@@ -171,17 +171,14 @@ This creates:
     ```
 
 2. **Test Authentication**:
-
     - Use "Auth Login (Seeded User)" to login with the default user
     - This will set the authentication cookie
 
 3. **Test Current User**:
-
     - Use "Get Current User" to verify the authentication works
     - Should return the logged-in user's information
 
 4. **Test Registration**:
-
     - Use "Auth Register" to create a new user
     - Modify the email and other details as needed
 

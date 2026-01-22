@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaClient, Prisma } from "../../generated/prisma";
 import { getLogger } from "../../helper/logger";
 import { transformFormDataToObject } from "../../helper/transformObject";
-import { validateQueryParams } from "../../helper/validation-helper";
+import { validateQueryParams, validateObjectId } from "../../helper/validation-helper";
 import {
 	buildFilterConditions,
 	buildFindManyQuery,
@@ -55,18 +55,18 @@ const parseNumberWithCommas = (value: string | number | null | undefined): numbe
 	if (value === null || value === undefined) {
 		return null;
 	}
-	
+
 	if (typeof value === "number") {
 		return value;
 	}
-	
+
 	if (typeof value === "string") {
 		// Remove commas and whitespace, then parse
 		const cleaned = value.trim().replace(/,/g, "");
 		const parsed = parseFloat(cleaned);
 		return isNaN(parsed) ? null : parsed;
 	}
-	
+
 	return null;
 };
 
@@ -355,10 +355,11 @@ export const controller = (prisma: PrismaClient) => {
 		const { fields } = req.query;
 
 		try {
-			if (!rawId) {
-				productsLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
-				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
-				res.status(400).json(errorResponse);
+			// Validate ObjectId format
+			const idValidation = validateObjectId(rawId, "Product ID");
+			if (!idValidation.isValid) {
+				productsLogger.error(`Invalid product ID: ${rawId}`);
+				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
 
@@ -443,10 +444,11 @@ export const controller = (prisma: PrismaClient) => {
 		const { id: rawId } = req.params;
 
 		try {
-			if (!rawId) {
-				productsLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
-				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
-				res.status(400).json(errorResponse);
+			// Validate ObjectId format
+			const idValidation = validateObjectId(rawId, "Product ID");
+			if (!idValidation.isValid) {
+				productsLogger.error(`Invalid product ID: ${rawId}`);
+				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
 
@@ -607,10 +609,11 @@ export const controller = (prisma: PrismaClient) => {
 		const { id: rawId } = req.params;
 
 		try {
-			if (!rawId) {
-				productsLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
-				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
-				res.status(400).json(errorResponse);
+			// Validate ObjectId format
+			const idValidation = validateObjectId(rawId, "Product ID");
+			if (!idValidation.isValid) {
+				productsLogger.error(`Invalid product ID: ${rawId}`);
+				res.status(400).json(idValidation.errorResponse);
 				return;
 			}
 
@@ -668,10 +671,7 @@ export const controller = (prisma: PrismaClient) => {
 		let counter = 1;
 
 		// Check if SKU exists in database or in current import batch
-		while (
-			existingSkus.has(newSku) ||
-			importBatchSkus.has(newSku)
-		) {
+		while (existingSkus.has(newSku) || importBatchSkus.has(newSku)) {
 			// Try appending -1, -2, -3, etc.
 			newSku = `${originalSku}-${counter}`;
 			counter++;
@@ -895,14 +895,14 @@ export const controller = (prisma: PrismaClient) => {
 							existingSkus,
 							importBatchSkus,
 						);
-						
+
 						// Track the change
 						skuChanges.push({
 							original: originalSku,
 							new: finalSku,
 							row: i + 1,
 						});
-						
+
 						productsLogger.warn(
 							`Row ${i + 1}: Duplicate SKU "${originalSku}" detected, generated new SKU: "${finalSku}"`,
 						);
@@ -924,7 +924,10 @@ export const controller = (prisma: PrismaClient) => {
 
 						// Pricing - handle multiple price fields with comma separators
 						retailPrice: parseNumberWithCommas(row.retailPrice) ?? 0,
-						sellingPrice: parseNumberWithCommas(row.sellingPrice) ?? parseNumberWithCommas(row.employeePrice) ?? 0, // Support both old and new field names
+						sellingPrice:
+							parseNumberWithCommas(row.sellingPrice) ??
+							parseNumberWithCommas(row.employeePrice) ??
+							0, // Support both old and new field names
 						costPrice: parseNumberWithCommas(row.costPrice),
 
 						// Inventory

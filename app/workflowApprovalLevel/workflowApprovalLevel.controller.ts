@@ -12,7 +12,10 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import { CreateWorkflowApprovalLevelSchema, UpdateWorkflowApprovalLevelSchema } from "../../zod/workflowApprovalLevel.zod";
+import {
+	CreateWorkflowApprovalLevelSchema,
+	UpdateWorkflowApprovalLevelSchema,
+} from "../../zod/workflowApprovalLevel.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
@@ -62,7 +65,10 @@ export const controller = (prisma: PrismaClient) => {
 			contentType.includes("application/x-www-form-urlencoded") ||
 			contentType.includes("multipart/form-data")
 		) {
-			workflowApprovalLevelLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
+			workflowApprovalLevelLogger.info(
+				"Original form data:",
+				JSON.stringify(req.body, null, 2),
+			);
 			requestData = transformFormDataToObject(req.body);
 			requestData = convertStringNumbers(requestData);
 			workflowApprovalLevelLogger.info(
@@ -74,15 +80,21 @@ export const controller = (prisma: PrismaClient) => {
 		const validation = CreateWorkflowApprovalLevelSchema.safeParse(requestData);
 		if (!validation.success) {
 			const formattedErrors = formatZodErrors(validation.error.format());
-			workflowApprovalLevelLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+			workflowApprovalLevelLogger.error(
+				`Validation failed: ${JSON.stringify(formattedErrors)}`,
+			);
 			const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 			res.status(400).json(errorResponse);
 			return;
 		}
 
 		try {
-			const workflowApprovalLevel = await prisma.workflowApprovalLevel.create({ data: validation.data as any });
-			workflowApprovalLevelLogger.info(`WorkflowApprovalLevel created successfully: ${workflowApprovalLevel.id}`);
+			const workflowApprovalLevel = await prisma.workflowApprovalLevel.create({
+				data: validation.data as any,
+			});
+			workflowApprovalLevelLogger.info(
+				`WorkflowApprovalLevel created successfully: ${workflowApprovalLevel.id}`,
+			);
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
@@ -108,9 +120,15 @@ export const controller = (prisma: PrismaClient) => {
 
 			try {
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byWorkflowId:${workflowApprovalLevel.workflowId}:*`);
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byApprovalLevelId:${workflowApprovalLevel.approvalLevelId}:*`);
-				workflowApprovalLevelLogger.info("WorkflowApprovalLevel cache invalidated after creation");
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byWorkflowId:${workflowApprovalLevel.workflowId}:*`,
+				);
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byApprovalLevelId:${workflowApprovalLevel.approvalLevelId}:*`,
+				);
+				workflowApprovalLevelLogger.info(
+					"WorkflowApprovalLevel cache invalidated after creation",
+				);
 			} catch (cacheError) {
 				workflowApprovalLevelLogger.warn(
 					"Failed to invalidate cache after workflowApprovalLevel creation:",
@@ -166,7 +184,11 @@ export const controller = (prisma: PrismaClient) => {
 
 			const searchFields = ["workflowId", "approvalLevelId", "approverName", "approverEmail"];
 			if (query) {
-				const searchConditions = buildSearchConditions("WorkflowApprovalLevel", query, searchFields);
+				const searchConditions = buildSearchConditions(
+					"WorkflowApprovalLevel",
+					query,
+					searchFields,
+				);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
@@ -186,9 +208,13 @@ export const controller = (prisma: PrismaClient) => {
 				count ? prisma.workflowApprovalLevel.count({ where: whereClause }) : 0,
 			]);
 
-			workflowApprovalLevelLogger.info(`Retrieved ${workflowApprovalLevels.length} workflow approval levels`);
+			workflowApprovalLevelLogger.info(
+				`Retrieved ${workflowApprovalLevels.length} workflow approval levels`,
+			);
 			const processedData =
-				groupBy && document ? groupDataByField(workflowApprovalLevels, groupBy as string) : workflowApprovalLevels;
+				groupBy && document
+					? groupDataByField(workflowApprovalLevels, groupBy as string)
+					: workflowApprovalLevels;
 
 			const responseData: Record<string, any> = {
 				...(document && { workflowApprovalLevels: processedData }),
@@ -198,7 +224,11 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			res.status(200).json(
-				buildSuccessResponse("Workflow approval levels retrieved successfully", responseData, 200),
+				buildSuccessResponse(
+					"Workflow approval levels retrieved successfully",
+					responseData,
+					200,
+				),
 			);
 		} catch (error) {
 			workflowApprovalLevelLogger.error(`Failed to get workflow approval levels: ${error}`);
@@ -223,7 +253,9 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				workflowApprovalLevelLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				workflowApprovalLevelLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -241,11 +273,16 @@ export const controller = (prisma: PrismaClient) => {
 				if (redisClient.isClientConnected()) {
 					workflowApprovalLevel = await redisClient.getJSON(cacheKey);
 					if (workflowApprovalLevel) {
-						workflowApprovalLevelLogger.info(`WorkflowApprovalLevel ${id} retrieved from cache`);
+						workflowApprovalLevelLogger.info(
+							`WorkflowApprovalLevel ${id} retrieved from cache`,
+						);
 					}
 				}
 			} catch (cacheError) {
-				workflowApprovalLevelLogger.warn(`Redis cache retrieval failed for workflowApprovalLevel ${id}:`, cacheError);
+				workflowApprovalLevelLogger.warn(
+					`Redis cache retrieval failed for workflowApprovalLevel ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!workflowApprovalLevel) {
@@ -260,7 +297,9 @@ export const controller = (prisma: PrismaClient) => {
 				if (workflowApprovalLevel && redisClient.isClientConnected()) {
 					try {
 						await redisClient.setJSON(cacheKey, workflowApprovalLevel, 3600);
-						workflowApprovalLevelLogger.info(`WorkflowApprovalLevel ${id} stored in cache`);
+						workflowApprovalLevelLogger.info(
+							`WorkflowApprovalLevel ${id} stored in cache`,
+						);
 					} catch (cacheError) {
 						workflowApprovalLevelLogger.warn(
 							`Failed to store workflowApprovalLevel ${id} in cache:`,
@@ -277,7 +316,9 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			workflowApprovalLevelLogger.info(`Workflow approval level retrieved: ${(workflowApprovalLevel as any).id}`);
+			workflowApprovalLevelLogger.info(
+				`Workflow approval level retrieved: ${(workflowApprovalLevel as any).id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				"Workflow approval level retrieved successfully",
 				workflowApprovalLevel,
@@ -322,7 +363,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			if (!validationResult.success) {
 				const formattedErrors = formatZodErrors(validationResult.error.format());
-				workflowApprovalLevelLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+				workflowApprovalLevelLogger.error(
+					`Validation failed: ${JSON.stringify(formattedErrors)}`,
+				);
 				const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 				res.status(400).json(errorResponse);
 				return;
@@ -360,9 +403,15 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byWorkflowId:${updatedWorkflowApprovalLevel.workflowId}:*`);
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byApprovalLevelId:${updatedWorkflowApprovalLevel.approvalLevelId}:*`);
-				workflowApprovalLevelLogger.info(`Cache invalidated after workflowApprovalLevel ${id} update`);
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byWorkflowId:${updatedWorkflowApprovalLevel.workflowId}:*`,
+				);
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byApprovalLevelId:${updatedWorkflowApprovalLevel.approvalLevelId}:*`,
+				);
+				workflowApprovalLevelLogger.info(
+					`Cache invalidated after workflowApprovalLevel ${id} update`,
+				);
 			} catch (cacheError) {
 				workflowApprovalLevelLogger.warn(
 					"Failed to invalidate cache after workflowApprovalLevel update:",
@@ -370,7 +419,9 @@ export const controller = (prisma: PrismaClient) => {
 				);
 			}
 
-			workflowApprovalLevelLogger.info(`Workflow approval level updated: ${updatedWorkflowApprovalLevel.id}`);
+			workflowApprovalLevelLogger.info(
+				`Workflow approval level updated: ${updatedWorkflowApprovalLevel.id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				"Workflow approval level updated successfully",
 				{ workflowApprovalLevel: updatedWorkflowApprovalLevel },
@@ -420,9 +471,15 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byWorkflowId:${existingWorkflowApprovalLevel.workflowId}:*`);
-				await invalidateCache.byPattern(`cache:workflowApprovalLevel:byApprovalLevelId:${existingWorkflowApprovalLevel.approvalLevelId}:*`);
-				workflowApprovalLevelLogger.info(`Cache invalidated after workflowApprovalLevel ${id} deletion`);
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byWorkflowId:${existingWorkflowApprovalLevel.workflowId}:*`,
+				);
+				await invalidateCache.byPattern(
+					`cache:workflowApprovalLevel:byApprovalLevelId:${existingWorkflowApprovalLevel.approvalLevelId}:*`,
+				);
+				workflowApprovalLevelLogger.info(
+					`Cache invalidated after workflowApprovalLevel ${id} deletion`,
+				);
 			} catch (cacheError) {
 				workflowApprovalLevelLogger.warn(
 					"Failed to invalidate cache after workflowApprovalLevel deletion:",
@@ -431,7 +488,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			workflowApprovalLevelLogger.info(`Workflow approval level deleted: ${id}`);
-			const successResponse = buildSuccessResponse("Workflow approval level deleted successfully", {}, 200);
+			const successResponse = buildSuccessResponse(
+				"Workflow approval level deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			workflowApprovalLevelLogger.error(`Failed to delete workflow approval level: ${error}`);

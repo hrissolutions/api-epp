@@ -193,7 +193,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			wishlistItemLogger.info(`Retrieved ${wishlistItems.length} wishlistItems`);
 			const processedData =
-				groupBy && document ? groupDataByField(wishlistItems, groupBy as string) : wishlistItems;
+				groupBy && document
+					? groupDataByField(wishlistItems, groupBy as string)
+					: wishlistItems;
 
 			const responseData: Record<string, any> = {
 				...(document && { wishlistItems: processedData }),
@@ -228,7 +230,9 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				wishlistItemLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				wishlistItemLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -246,11 +250,16 @@ export const controller = (prisma: PrismaClient) => {
 				if (redisClient.isClientConnected()) {
 					wishlistItem = await redisClient.getJSON(cacheKey);
 					if (wishlistItem) {
-						wishlistItemLogger.info(`WishlistItem ${id} retrieved from direct Redis cache`);
+						wishlistItemLogger.info(
+							`WishlistItem ${id} retrieved from direct Redis cache`,
+						);
 					}
 				}
 			} catch (cacheError) {
-				wishlistItemLogger.warn(`Redis cache retrieval failed for wishlistItem ${id}:`, cacheError);
+				wishlistItemLogger.warn(
+					`Redis cache retrieval failed for wishlistItem ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!wishlistItem) {
@@ -282,7 +291,9 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			wishlistItemLogger.info(`${config.SUCCESS.WISHLISTITEM.RETRIEVED}: ${(wishlistItem as any).id}`);
+			wishlistItemLogger.info(
+				`${config.SUCCESS.WISHLISTITEM.RETRIEVED}: ${(wishlistItem as any).id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.WISHLISTITEM.RETRIEVED,
 				wishlistItem,
@@ -376,7 +387,9 @@ export const controller = (prisma: PrismaClient) => {
 				);
 			}
 
-			wishlistItemLogger.info(`${config.SUCCESS.WISHLISTITEM.UPDATED}: ${updatedWishlistItem.id}`);
+			wishlistItemLogger.info(
+				`${config.SUCCESS.WISHLISTITEM.UPDATED}: ${updatedWishlistItem.id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.WISHLISTITEM.UPDATED,
 				{ wishlistItem: updatedWishlistItem },
@@ -436,7 +449,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			wishlistItemLogger.info(`${config.SUCCESS.WISHLISTITEM.DELETED}: ${id}`);
-			const successResponse = buildSuccessResponse(config.SUCCESS.WISHLISTITEM.DELETED, {}, 200);
+			const successResponse = buildSuccessResponse(
+				config.SUCCESS.WISHLISTITEM.DELETED,
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			wishlistItemLogger.error(`${config.ERROR.WISHLISTITEM.DELETE_FAILED}: ${error}`);

@@ -199,7 +199,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			transactionLogger.info(`Retrieved ${transactions.length} transactions`);
 			const processedData =
-				groupBy && document ? groupDataByField(transactions, groupBy as string) : transactions;
+				groupBy && document
+					? groupDataByField(transactions, groupBy as string)
+					: transactions;
 
 			const responseData: Record<string, any> = {
 				...(document && { transactions: processedData }),
@@ -256,7 +258,10 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				transactionLogger.warn(`Redis cache retrieval failed for transaction ${id}:`, cacheError);
+				transactionLogger.warn(
+					`Redis cache retrieval failed for transaction ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!transaction) {
@@ -438,7 +443,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			transactionLogger.info(`Transaction deleted: ${id}`);
-			const successResponse = buildSuccessResponse("Transaction deleted successfully", {}, 200);
+			const successResponse = buildSuccessResponse(
+				"Transaction deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			transactionLogger.error(`Failed to delete transaction: ${error}`);
@@ -568,7 +577,7 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			transactionLogger.info(
-				`Retrieved ${transactions.length} transactions for order ${orderId}`
+				`Retrieved ${transactions.length} transactions for order ${orderId}`,
 			);
 
 			const successResponse = buildSuccessResponse(
@@ -620,7 +629,8 @@ export const controller = (prisma: PrismaClient) => {
 				byType: {
 					PURCHASE: transactions.filter((t) => t.type === "PURCHASE").length,
 					INSTALLMENT: transactions.filter((t) => t.type === "INSTALLMENT").length,
-					POINTS_REDEMPTION: transactions.filter((t) => t.type === "POINTS_REDEMPTION").length,
+					POINTS_REDEMPTION: transactions.filter((t) => t.type === "POINTS_REDEMPTION")
+						.length,
 					REFUND: transactions.filter((t) => t.type === "REFUND").length,
 					ADJUSTMENT: transactions.filter((t) => t.type === "ADJUSTMENT").length,
 				},
@@ -628,7 +638,7 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			transactionLogger.info(
-				`Retrieved ${transactions.length} transactions for employee ${employeeId}`
+				`Retrieved ${transactions.length} transactions for employee ${employeeId}`,
 			);
 
 			const successResponse = buildSuccessResponse(
@@ -670,16 +680,16 @@ export const controller = (prisma: PrismaClient) => {
 				totalBalance: transactions.reduce((sum, t) => sum + Number(t.balance), 0),
 				byPaymentMethod: {
 					CASH: transactions.filter((t) => t.paymentMethod === "CASH").length,
-					PAYROLL_DEDUCTION: transactions.filter((t) => t.paymentMethod === "PAYROLL_DEDUCTION").length,
+					PAYROLL_DEDUCTION: transactions.filter(
+						(t) => t.paymentMethod === "PAYROLL_DEDUCTION",
+					).length,
 					POINTS: transactions.filter((t) => t.paymentMethod === "POINTS").length,
 					MIXED: transactions.filter((t) => t.paymentMethod === "MIXED").length,
 				},
 				transactions,
 			};
 
-			transactionLogger.info(
-				`Retrieved ${transactions.length} unreconciled transactions`
-			);
+			transactionLogger.info(`Retrieved ${transactions.length} unreconciled transactions`);
 
 			const successResponse = buildSuccessResponse(
 				"Unreconciled transactions retrieved successfully",

@@ -3,7 +3,6 @@ import { isValidObjectId } from "mongoose";
 
 import type { Person } from "./person.zod";
 
-
 // Status Enum
 export const Status = z.enum(["active", "inactive", "suspended", "archived"]);
 

@@ -2,15 +2,14 @@ import { z } from "zod";
 import { ApproverRoleEnum } from "./orderApproval.zod";
 
 // Number schema helper
-const numberSchema = z.union([
-	z.string().regex(/^\d+\.?\d*$/, "Invalid number format"),
-	z.number(),
-]).transform((val) => {
-	if (typeof val === "string") {
-		return parseFloat(val);
-	}
-	return val;
-});
+const numberSchema = z
+	.union([z.string().regex(/^\d+\.?\d*$/, "Invalid number format"), z.number()])
+	.transform((val) => {
+		if (typeof val === "string") {
+			return parseFloat(val);
+		}
+		return val;
+	});
 
 // ApprovalLevel Schema (full, including ID)
 // Note: workflowId and level are now in WorkflowApprovalLevel junction table

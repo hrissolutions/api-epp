@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
-
 // Template Schema (full, including ID)
 export const TemplateSchema = z.object({
 	id: z.string().refine((val) => isValidObjectId(val)),

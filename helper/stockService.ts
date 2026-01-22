@@ -7,10 +7,7 @@ const stockLogger = logger.child({ module: "stockService" });
 /**
  * Deduct stock for products in an order
  */
-export const deductStockForOrder = async (
-	prisma: PrismaClient,
-	orderId: string,
-): Promise<void> => {
+export const deductStockForOrder = async (prisma: PrismaClient, orderId: string): Promise<void> => {
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
@@ -68,13 +65,15 @@ export const deductStockForOrder = async (
 export const validateStockForOrder = async (
 	prisma: PrismaClient,
 	orderId: string,
-): Promise<Array<{
-	productId: string;
-	productName: string;
-	requestedQuantity: number;
-	availableStock: number;
-	shortage: number;
-}>> => {
+): Promise<
+	Array<{
+		productId: string;
+		productName: string;
+		requestedQuantity: number;
+		availableStock: number;
+		shortage: number;
+	}>
+> => {
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },

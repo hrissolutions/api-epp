@@ -45,15 +45,16 @@ export const sendApprovalRequestEmail = async (params: {
 
 	try {
 		const template = fs.readFileSync(templatePath, "utf-8");
-		
+
 		// Format installments for email template
-		const formattedInstallments = params.installments?.map((inst) => ({
-			installmentNumber: inst.installmentNumber,
-			amount: inst.amount.toFixed(2),
-			status: inst.status,
-			scheduledDate: inst.scheduledDate.toLocaleDateString(),
-			cutOffDate: inst.cutOffDate.toLocaleDateString(),
-		})) || [];
+		const formattedInstallments =
+			params.installments?.map((inst) => ({
+				installmentNumber: inst.installmentNumber,
+				amount: inst.amount.toFixed(2),
+				status: inst.status,
+				scheduledDate: inst.scheduledDate.toLocaleDateString(),
+				cutOffDate: inst.cutOffDate.toLocaleDateString(),
+			})) || [];
 
 		const html = ejs.render(template, {
 			approverName: params.approverName,

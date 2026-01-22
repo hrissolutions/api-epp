@@ -275,13 +275,11 @@ Use consistent, hierarchical key naming:
 ### Common Issues
 
 1. **Redis Connection Failed**
-
     - Check if Redis service is running
     - Verify connection parameters
     - Check network connectivity
 
 2. **High Memory Usage**
-
     - Review TTL settings
     - Check for keys without expiration
     - Monitor key patterns

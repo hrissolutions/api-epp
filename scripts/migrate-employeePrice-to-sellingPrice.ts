@@ -1,18 +1,18 @@
 /**
  * Migration script to rename employeePrice to sellingPrice in the products collection
- * 
+ *
  * This script:
  * 1. Finds all products with employeePrice field using raw MongoDB query
  * 2. Copies employeePrice value to sellingPrice
  * 3. Removes the old employeePrice field
- * 
+ *
  * Usage:
  *   npx ts-node scripts/migrate-employeePrice-to-sellingPrice.ts
- * 
+ *
  * Or compile and run:
  *   npx tsc scripts/migrate-employeePrice-to-sellingPrice.ts
  *   node scripts/migrate-employeePrice-to-sellingPrice.js
- * 
+ *
  * Note: Make sure to run this AFTER updating the Prisma schema to use sellingPrice
  * and regenerate the Prisma client.
  */
@@ -35,7 +35,7 @@ async function migrateEmployeePriceToSellingPrice() {
 		console.log("🔍 Finding products with employeePrice field...\n");
 
 		// Use aggregate to find products with employeePrice
-		const products = await prisma.$runCommandRaw({
+		const products = (await prisma.$runCommandRaw({
 			aggregate: "products",
 			pipeline: [
 				{
@@ -54,12 +54,14 @@ async function migrateEmployeePriceToSellingPrice() {
 				},
 			],
 			cursor: {},
-		}) as any;
+		})) as any;
 
 		const productList = products.cursor?.firstBatch || [];
 
 		if (productList.length === 0) {
-			console.log("✅ No products with employeePrice field found. Migration may have already been completed.\n");
+			console.log(
+				"✅ No products with employeePrice field found. Migration may have already been completed.\n",
+			);
 			return;
 		}
 
@@ -70,7 +72,13 @@ async function migrateEmployeePriceToSellingPrice() {
 
 		let totalUpdated = 0;
 		let totalSkipped = 0;
-		const updates: Array<{ id: string; sku: string; name: string; oldValue: number; newValue: number }> = [];
+		const updates: Array<{
+			id: string;
+			sku: string;
+			name: string;
+			oldValue: number;
+			newValue: number;
+		}> = [];
 
 		for (const product of productList) {
 			const productId = product._id;
@@ -79,14 +87,18 @@ async function migrateEmployeePriceToSellingPrice() {
 
 			// Skip if sellingPrice already exists and employeePrice is the same
 			if (existingSellingPrice !== undefined && existingSellingPrice === employeePrice) {
-				console.log(`   ⏭️  Skipped: ${product.name || 'Unknown'} (${product.sku || 'N/A'}) - sellingPrice already set\n`);
+				console.log(
+					`   ⏭️  Skipped: ${product.name || "Unknown"} (${product.sku || "N/A"}) - sellingPrice already set\n`,
+				);
 				totalSkipped++;
 				continue;
 			}
 
 			// Skip if employeePrice is null or undefined
 			if (employeePrice === null || employeePrice === undefined) {
-				console.log(`   ⏭️  Skipped: ${product.name || 'Unknown'} (${product.sku || 'N/A'}) - employeePrice is null\n`);
+				console.log(
+					`   ⏭️  Skipped: ${product.name || "Unknown"} (${product.sku || "N/A"}) - employeePrice is null\n`,
+				);
 				totalSkipped++;
 				continue;
 			}
@@ -94,8 +106,9 @@ async function migrateEmployeePriceToSellingPrice() {
 			try {
 				// Use updateMany with raw MongoDB query
 				// Convert ObjectId to proper format
-				const objectId = typeof productId === 'string' ? new ObjectId(productId) : productId;
-				
+				const objectId =
+					typeof productId === "string" ? new ObjectId(productId) : productId;
+
 				// Use updateOne command
 				await prisma.$runCommandRaw({
 					update: "products",
@@ -114,15 +127,19 @@ async function migrateEmployeePriceToSellingPrice() {
 
 				updates.push({
 					id: objectId.toString(),
-					sku: product.sku || 'N/A',
-					name: product.name || 'Unknown',
+					sku: product.sku || "N/A",
+					name: product.name || "Unknown",
 					oldValue: employeePrice,
 					newValue: employeePrice,
 				});
 
 				totalUpdated++;
-				console.log(`   ✅ Updated: ${product.name || 'Unknown'} (${product.sku || 'N/A'})`);
-				console.log(`      employeePrice: ${employeePrice} → sellingPrice: ${employeePrice}\n`);
+				console.log(
+					`   ✅ Updated: ${product.name || "Unknown"} (${product.sku || "N/A"})`,
+				);
+				console.log(
+					`      employeePrice: ${employeePrice} → sellingPrice: ${employeePrice}\n`,
+				);
 			} catch (error: any) {
 				console.error(`   ❌ Failed to update product ${productId}: ${error.message}\n`);
 			}
@@ -131,7 +148,7 @@ async function migrateEmployeePriceToSellingPrice() {
 		// Step 3: Verify migration
 		console.log("\n🔍 Verifying migration...\n");
 
-		const remaining = await prisma.$runCommandRaw({
+		const remaining = (await prisma.$runCommandRaw({
 			aggregate: "products",
 			pipeline: [
 				{
@@ -144,7 +161,7 @@ async function migrateEmployeePriceToSellingPrice() {
 				},
 			],
 			cursor: {},
-		}) as any;
+		})) as any;
 
 		const remainingCount = remaining.cursor?.firstBatch?.[0]?.count || 0;
 
@@ -169,8 +186,12 @@ async function migrateEmployeePriceToSellingPrice() {
 		}
 
 		if (remainingCount > 0) {
-			console.log(`\n⚠️  Warning: ${remainingCount} product(s) still have employeePrice field.`);
-			console.log("   You may need to run this script again or manually update these products.");
+			console.log(
+				`\n⚠️  Warning: ${remainingCount} product(s) still have employeePrice field.`,
+			);
+			console.log(
+				"   You may need to run this script again or manually update these products.",
+			);
 		} else {
 			console.log("\n✅ Migration completed successfully!");
 			console.log("   All products have been migrated from employeePrice to sellingPrice.\n");

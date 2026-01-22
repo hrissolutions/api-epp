@@ -11,6 +11,7 @@ Your comprehensive transaction tracking system is fully implemented and ready to
 ### 1. **Transaction Model** (`prisma/schema/transaction.prisma`)
 
 Tracks all payment transactions with:
+
 - Transaction details (number, type, status, amount)
 - Employee and order links
 - Payment method tracking
@@ -23,6 +24,7 @@ Tracks all payment transactions with:
 ### 2. **Zod Validation** (`zod/transaction.zod.ts`)
 
 Complete validation schemas:
+
 - `CreateTransactionSchema` - For creating new transactions
 - `UpdateTransactionSchema` - For updating transactions
 - `ProcessTransactionSchema` - For processing transactions
@@ -31,6 +33,7 @@ Complete validation schemas:
 ### 3. **Controller** (`app/transaction/transaction.controller.ts`)
 
 Full CRUD operations plus:
+
 - `create` - Create transaction
 - `getAll` - Get all with filtering/pagination
 - `getById` - Get specific transaction
@@ -62,18 +65,18 @@ Complete system documentation
 
 ## 🎯 API Endpoints
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/api/transaction` | Create new transaction |
-| GET | `/api/transaction` | Get all transactions |
-| GET | `/api/transaction/:id` | Get specific transaction |
-| PATCH | `/api/transaction/:id` | Update transaction |
-| DELETE | `/api/transaction/:id` | Delete transaction |
-| POST | `/api/transaction/:id/process` | Process (complete) transaction |
-| POST | `/api/transaction/:id/reconcile` | Reconcile transaction |
-| GET | `/api/transaction/order/:orderId` | Get transactions by order |
-| GET | `/api/transaction/employee/:employeeId` | Get transactions by employee |
-| GET | `/api/transaction/unreconciled` | Get unreconciled transactions |
+| Method | Endpoint                                | Purpose                        |
+| ------ | --------------------------------------- | ------------------------------ |
+| POST   | `/api/transaction`                      | Create new transaction         |
+| GET    | `/api/transaction`                      | Get all transactions           |
+| GET    | `/api/transaction/:id`                  | Get specific transaction       |
+| PATCH  | `/api/transaction/:id`                  | Update transaction             |
+| DELETE | `/api/transaction/:id`                  | Delete transaction             |
+| POST   | `/api/transaction/:id/process`          | Process (complete) transaction |
+| POST   | `/api/transaction/:id/reconcile`        | Reconcile transaction          |
+| GET    | `/api/transaction/order/:orderId`       | Get transactions by order      |
+| GET    | `/api/transaction/employee/:employeeId` | Get transactions by employee   |
+| GET    | `/api/transaction/unreconciled`         | Get unreconciled transactions  |
 
 ---
 
@@ -130,6 +133,7 @@ GET /api/transaction/order/{orderId}
 ```
 
 **Response:**
+
 ```json
 {
   "orderId": "507f1f77bcf86cd799439012",
@@ -145,13 +149,13 @@ GET /api/transaction/order/{orderId}
 
 ## 📊 Transaction Types
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **PURCHASE** | Full payment | Complete order payment |
-| **INSTALLMENT** | Single installment | Monthly payroll deduction |
-| **POINTS_REDEMPTION** | Points payment | Loyalty points used |
-| **REFUND** | Money returned | Order cancelled/returned |
-| **ADJUSTMENT** | Manual correction | Fix errors or adjustments |
+| Type                  | Description        | Use Case                  |
+| --------------------- | ------------------ | ------------------------- |
+| **PURCHASE**          | Full payment       | Complete order payment    |
+| **INSTALLMENT**       | Single installment | Monthly payroll deduction |
+| **POINTS_REDEMPTION** | Points payment     | Loyalty points used       |
+| **REFUND**            | Money returned     | Order cancelled/returned  |
+| **ADJUSTMENT**        | Manual correction  | Fix errors or adjustments |
 
 ---
 
@@ -195,27 +199,27 @@ When an installment is deducted:
 ```typescript
 // 1. Create transaction for installment
 const transaction = await prisma.transaction.create({
-  data: {
-    transactionNumber: `TXN-${Date.now()}`,
-    employeeId: installment.order.employeeId,
-    orderId: installment.orderId,
-    type: 'INSTALLMENT',
-    amount: installment.amount,
-    paymentMethod: 'PAYROLL_DEDUCTION',
-    installmentId: installment.id,
-    status: 'PENDING',
-  }
+	data: {
+		transactionNumber: `TXN-${Date.now()}`,
+		employeeId: installment.order.employeeId,
+		orderId: installment.orderId,
+		type: "INSTALLMENT",
+		amount: installment.amount,
+		paymentMethod: "PAYROLL_DEDUCTION",
+		installmentId: installment.id,
+		status: "PENDING",
+	},
 });
 
 // 2. Process after payroll
 await processTransaction(transaction.id, {
-  payrollBatchId: 'BATCH-2024-01-15',
-  processedBy: 'SYSTEM'
+	payrollBatchId: "BATCH-2024-01-15",
+	processedBy: "SYSTEM",
 });
 
 // 3. Reconcile after verification
 await reconcileTransaction(transaction.id, {
-  reconciledBy: 'admin@company.com'
+	reconciledBy: "admin@company.com",
 });
 ```
 
@@ -238,6 +242,7 @@ GET /api/transaction/unreconciled
 ```
 
 **Response:**
+
 ```json
 {
   "totalUnreconciled": 25,
@@ -259,6 +264,7 @@ GET /api/transaction/employee/{employeeId}
 ```
 
 **Response:**
+
 ```json
 {
   "employeeId": "507f1f77bcf86cd799439011",
@@ -286,8 +292,9 @@ npm test -- transaction.controller.spec.ts
 ```
 
 Test coverage includes:
+
 - ✅ Create transaction
-- ✅ Get all transactions  
+- ✅ Get all transactions
 - ✅ Get by ID
 - ✅ Update transaction
 - ✅ Process transaction
@@ -302,6 +309,7 @@ Test coverage includes:
 ## 📁 Files Created
 
 ### Core Files
+
 ```
 prisma/schema/transaction.prisma     - Prisma model
 zod/transaction.zod.ts               - Validation schemas
@@ -312,6 +320,7 @@ app/transaction/
 ```
 
 ### Supporting Files
+
 ```
 prisma/seeds/transactionSeeder.ts    - Sample data
 tests/transaction.controller.spec.ts - Test suite
@@ -320,6 +329,7 @@ TRANSACTION_README.md                - This file
 ```
 
 ### Updated Files
+
 ```
 prisma/schema/order.prisma           - Added POINTS, MIXED to PaymentMethod
 ```
@@ -343,31 +353,38 @@ prisma/schema/order.prisma           - Added POINTS, MIXED to PaymentMethod
 ## 🔐 Best Practices
 
 ### 1. Transaction Numbers
+
 Use a consistent format:
+
 - `TXN-YYYY-TYPE-###`
 - Example: `TXN-2024-INS-001`
 
 ### 2. Status Management
+
 Follow the proper flow:
+
 ```
 PENDING → PROCESSING → COMPLETED → (Reconciled)
 ```
 
 ### 3. Reconciliation
+
 - Reconcile daily
 - Match with external systems
 - Keep detailed notes
 - Track who reconciled
 
 ### 4. Metadata Usage
+
 Store additional context:
+
 ```json
 {
-  "metadata": {
-    "payrollSystem": "SAP",
-    "batchNumber": "12345",
-    "bankReference": "BNK-001"
-  }
+	"metadata": {
+		"payrollSystem": "SAP",
+		"batchNumber": "12345",
+		"bankReference": "BNK-001"
+	}
 }
 ```
 
@@ -376,42 +393,46 @@ Store additional context:
 ## 💡 Common Use Cases
 
 ### 1. Cash Payment
+
 ```json
 {
-  "type": "PURCHASE",
-  "paymentMethod": "CASH",
-  "cashAmount": 5000.00,
-  "receiptNumber": "RCP-2024-001"
+	"type": "PURCHASE",
+	"paymentMethod": "CASH",
+	"cashAmount": 5000.0,
+	"receiptNumber": "RCP-2024-001"
 }
 ```
 
 ### 2. Installment Deduction
+
 ```json
 {
-  "type": "INSTALLMENT",
-  "paymentMethod": "PAYROLL_DEDUCTION",
-  "installmentId": "inst-123",
-  "payrollBatchId": "BATCH-2024-01-15"
+	"type": "INSTALLMENT",
+	"paymentMethod": "PAYROLL_DEDUCTION",
+	"installmentId": "inst-123",
+	"payrollBatchId": "BATCH-2024-01-15"
 }
 ```
 
 ### 3. Points Redemption
+
 ```json
 {
-  "type": "POINTS_REDEMPTION",
-  "paymentMethod": "POINTS",
-  "pointsUsed": 5000,
-  "pointsTransactionId": "PTS-001"
+	"type": "POINTS_REDEMPTION",
+	"paymentMethod": "POINTS",
+	"pointsUsed": 5000,
+	"pointsTransactionId": "PTS-001"
 }
 ```
 
 ### 4. Refund
+
 ```json
 {
-  "type": "REFUND",
-  "paymentMethod": "CASH",
-  "amount": -1500.00,
-  "notes": "Order cancelled"
+	"type": "REFUND",
+	"paymentMethod": "CASH",
+	"amount": -1500.0,
+	"notes": "Order cancelled"
 }
 ```
 
@@ -420,25 +441,28 @@ Store additional context:
 ## 🚀 Next Steps
 
 1. **Generate Database**
-   ```bash
-   npx prisma db push
-   ```
+
+    ```bash
+    npx prisma db push
+    ```
 
 2. **Seed Sample Data** (optional)
-   ```bash
-   npx prisma db seed
-   ```
+
+    ```bash
+    npx prisma db seed
+    ```
 
 3. **Test Endpoints**
-   ```bash
-   npm run dev
-   # Use Postman/cURL to test
-   ```
+
+    ```bash
+    npm run dev
+    # Use Postman/cURL to test
+    ```
 
 4. **Integrate with Existing Systems**
-   - Connect to payroll system
-   - Link with accounting software
-   - Set up automated reconciliation
+    - Connect to payroll system
+    - Link with accounting software
+    - Set up automated reconciliation
 
 ---
 
@@ -458,7 +482,7 @@ Store additional context:
 ✅ **Process transactions** through workflow  
 ✅ **Reconcile** with external systems  
 ✅ **Generate reports** and analytics  
-✅ **Full audit trail** of all changes  
+✅ **Full audit trail** of all changes
 
 **Start creating transactions and tracking payments today!**
 

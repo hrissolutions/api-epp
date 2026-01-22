@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { buildErrorResponse } from "../helper/error-handler";
 import { config } from "../config/constant";
 import { Logger } from "winston";
+import { isValidObjectId } from "mongoose";
 
 interface ValidationResult {
 	isValid: boolean;
@@ -240,4 +241,42 @@ export const validateQueryParams = (req: Request, logger: Logger): ValidationRes
 			groupBy: groupByValue, // <-- now just a string or undefined
 		},
 	};
+};
+
+/**
+ * Validates if a string is a valid MongoDB ObjectId
+ * @param id - The ID string or array to validate
+ * @param fieldName - Optional field name for error messages (default: "ID")
+ * @returns Object with isValid flag and optional error response
+ */
+export const validateObjectId = (
+	id: string | string[] | undefined | null,
+	fieldName: string = "ID",
+): { isValid: boolean; errorResponse?: object } => {
+	if (!id) {
+		return {
+			isValid: false,
+			errorResponse: buildErrorResponse(`${fieldName} is required`, 400, [
+				{ field: "id", message: `${fieldName} is required` },
+			]),
+		};
+	}
+
+	// Ensure id is a string (handle array case)
+	const idString = Array.isArray(id) ? id[0] : String(id);
+
+	// Validate ObjectId format (24 hex characters)
+	if (!isValidObjectId(idString)) {
+		return {
+			isValid: false,
+			errorResponse: buildErrorResponse(`Invalid ${fieldName} format`, 400, [
+				{
+					field: "id",
+					message: `${fieldName} must be a valid MongoDB ObjectId (24 hex characters)`,
+				},
+			]),
+		};
+	}
+
+	return { isValid: true };
 };

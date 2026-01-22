@@ -629,14 +629,6 @@ export const config = {
 			},
 		},
 
-
-
-
-
-
-
-
-
 		TEMPLATE: {
 			DESCRIPTIONS: {
 				TEMPLATE_CREATED: "Created new template",

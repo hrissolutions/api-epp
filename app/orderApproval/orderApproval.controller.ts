@@ -50,7 +50,9 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const orderApproval = await prisma.orderApproval.create({ data: validation.data as any });
+			const orderApproval = await prisma.orderApproval.create({
+				data: validation.data as any,
+			});
 			orderApprovalLogger.info(`OrderApproval created successfully: ${orderApproval.id}`);
 
 			logActivity(req, {
@@ -77,7 +79,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			try {
 				await invalidateCache.byPattern("cache:orderApproval:list:*");
-				await invalidateCache.byPattern(`cache:orderApproval:byOrderId:${orderApproval.orderId}:*`);
+				await invalidateCache.byPattern(
+					`cache:orderApproval:byOrderId:${orderApproval.orderId}:*`,
+				);
 				orderApprovalLogger.info("OrderApproval cache invalidated after creation");
 			} catch (cacheError) {
 				orderApprovalLogger.warn(
@@ -132,9 +136,19 @@ export const controller = (prisma: PrismaClient) => {
 		try {
 			const whereClause: Prisma.OrderApprovalWhereInput = {};
 
-			const searchFields = ["orderId", "approverId", "approverName", "approverEmail", "status"];
+			const searchFields = [
+				"orderId",
+				"approverId",
+				"approverName",
+				"approverEmail",
+				"status",
+			];
 			if (query) {
-				const searchConditions = buildSearchConditions("OrderApproval", query, searchFields);
+				const searchConditions = buildSearchConditions(
+					"OrderApproval",
+					query,
+					searchFields,
+				);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
@@ -156,7 +170,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			orderApprovalLogger.info(`Retrieved ${orderApprovals.length} order approvals`);
 			const processedData =
-				groupBy && document ? groupDataByField(orderApprovals, groupBy as string) : orderApprovals;
+				groupBy && document
+					? groupDataByField(orderApprovals, groupBy as string)
+					: orderApprovals;
 
 			const responseData: Record<string, any> = {
 				...(document && { orderApprovals: processedData }),
@@ -191,7 +207,9 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				orderApprovalLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				orderApprovalLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -213,7 +231,10 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				orderApprovalLogger.warn(`Redis cache retrieval failed for orderApproval ${id}:`, cacheError);
+				orderApprovalLogger.warn(
+					`Redis cache retrieval failed for orderApproval ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!orderApproval) {
@@ -327,7 +348,9 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:orderApproval:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:orderApproval:list:*");
-				await invalidateCache.byPattern(`cache:orderApproval:byOrderId:${updatedOrderApproval.orderId}:*`);
+				await invalidateCache.byPattern(
+					`cache:orderApproval:byOrderId:${updatedOrderApproval.orderId}:*`,
+				);
 				orderApprovalLogger.info(`Cache invalidated after orderApproval ${id} update`);
 			} catch (cacheError) {
 				orderApprovalLogger.warn(
@@ -386,7 +409,9 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:orderApproval:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:orderApproval:list:*");
-				await invalidateCache.byPattern(`cache:orderApproval:byOrderId:${existingOrderApproval.orderId}:*`);
+				await invalidateCache.byPattern(
+					`cache:orderApproval:byOrderId:${existingOrderApproval.orderId}:*`,
+				);
 				orderApprovalLogger.info(`Cache invalidated after orderApproval ${id} deletion`);
 			} catch (cacheError) {
 				orderApprovalLogger.warn(
@@ -396,7 +421,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			orderApprovalLogger.info(`Order approval deleted: ${id}`);
-			const successResponse = buildSuccessResponse("Order approval deleted successfully", {}, 200);
+			const successResponse = buildSuccessResponse(
+				"Order approval deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			orderApprovalLogger.error(`Failed to delete order approval: ${error}`);
@@ -445,7 +474,7 @@ export const controller = (prisma: PrismaClient) => {
 			res.status(200).json(successResponse);
 		} catch (error: any) {
 			orderApprovalLogger.error(`Failed to approve order approval: ${error}`);
-			
+
 			// Handle stock validation errors with proper status code
 			const statusCode = error.statusCode || 500;
 			const errorDetails = error.errors || [];
@@ -605,9 +634,8 @@ export const controller = (prisma: PrismaClient) => {
 
 				try {
 					// Validate stock availability before auto-approving
-					const { validateStockForOrder, deductStockForOrder } = await import(
-						"../../helper/stockService"
-					);
+					const { validateStockForOrder, deductStockForOrder } =
+						await import("../../helper/stockService");
 					const insufficientStock = await validateStockForOrder(prisma, order.id);
 
 					if (insufficientStock.length > 0) {
@@ -661,7 +689,9 @@ export const controller = (prisma: PrismaClient) => {
 							order.approvedAt = updatedOrder.approvedAt;
 						}
 
-						orderApprovalLogger.info(`Order ${order.orderNumber} auto-approved successfully`);
+						orderApprovalLogger.info(
+							`Order ${order.orderNumber} auto-approved successfully`,
+						);
 					}
 				} catch (updateError) {
 					orderApprovalLogger.error(
@@ -689,7 +719,8 @@ export const controller = (prisma: PrismaClient) => {
 					pendingCount: pendingCount,
 					rejectedCount: rejectedCount,
 					progress: `${approvedCount}/${totalRequired}`,
-					percentageComplete: totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0,
+					percentageComplete:
+						totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0,
 				},
 				approvedApprovers: approvedApprovers,
 				pendingApprovers: pendingApprovers,

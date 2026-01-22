@@ -2,16 +2,16 @@
  * Script to update product prices with proper hierarchy:
  * - sellingPrice < costPrice < retailPrice
  * - Random differences of 1000-5000 between each level
- * 
+ *
  * This script:
  * 1. Finds all products with retailPrice
  * 2. Calculates costPrice = retailPrice - (random 1000-5000)
  * 3. Calculates sellingPrice = costPrice - (random 1000-5000)
  * 4. Updates products ensuring: sellingPrice < costPrice < retailPrice
- * 
+ *
  * Usage:
  *   npx ts-node scripts/update-product-prices.ts
- * 
+ *
  * Or compile and run:
  *   npx tsc scripts/update-product-prices.ts
  *   node scripts/update-product-prices.js
@@ -36,7 +36,7 @@ function getRandomDifference(min: number = 1000, max: number = 5000): number {
  * Calculate prices with proper hierarchy:
  * - costPrice = retailPrice - random(1000-5000)
  * - sellingPrice = costPrice - random(1000-5000)
- * 
+ *
  * Ensures: sellingPrice < costPrice < retailPrice
  */
 function calculatePrices(retailPrice: number): {
@@ -166,12 +166,22 @@ async function updateProductPrices() {
 				totalUpdated++;
 				console.log(`   ✅ Updated: ${product.name} (${product.sku})`);
 				console.log(`      Retail Price: ${retailPrice.toFixed(2)}`);
-				console.log(`      Cost Price: ${product.costPrice?.toFixed(2) || 'N/A'} → ${costPrice.toFixed(2)}`);
-				console.log(`      Selling Price: ${product.sellingPrice?.toFixed(2) || 'N/A'} → ${sellingPrice.toFixed(2)}`);
-				console.log(`      Difference (Retail-Cost): ${(retailPrice - costPrice).toFixed(2)}`);
-				console.log(`      Difference (Cost-Selling): ${(costPrice - sellingPrice).toFixed(2)}\n`);
+				console.log(
+					`      Cost Price: ${product.costPrice?.toFixed(2) || "N/A"} → ${costPrice.toFixed(2)}`,
+				);
+				console.log(
+					`      Selling Price: ${product.sellingPrice?.toFixed(2) || "N/A"} → ${sellingPrice.toFixed(2)}`,
+				);
+				console.log(
+					`      Difference (Retail-Cost): ${(retailPrice - costPrice).toFixed(2)}`,
+				);
+				console.log(
+					`      Difference (Cost-Selling): ${(costPrice - sellingPrice).toFixed(2)}\n`,
+				);
 			} catch (error: any) {
-				console.error(`   ❌ Failed to update product ${product.id} (${product.sku}): ${error.message}\n`);
+				console.error(
+					`   ❌ Failed to update product ${product.id} (${product.sku}): ${error.message}\n`,
+				);
 				totalErrors++;
 			}
 		}
@@ -190,17 +200,27 @@ async function updateProductPrices() {
 			for (const update of updates.slice(0, 10)) {
 				console.log(`\n   - ${update.name} (${update.sku})`);
 				console.log(`     Retail Price: ${update.retailPrice.toFixed(2)}`);
-				console.log(`     Cost Price: ${update.oldCostPrice?.toFixed(2) || 'N/A'} → ${update.newCostPrice.toFixed(2)}`);
-				console.log(`     Selling Price: ${update.oldSellingPrice?.toFixed(2) || 'N/A'} → ${update.newSellingPrice.toFixed(2)}`);
-				console.log(`     Hierarchy: ${update.newSellingPrice.toFixed(2)} < ${update.newCostPrice.toFixed(2)} < ${update.retailPrice.toFixed(2)} ✓`);
+				console.log(
+					`     Cost Price: ${update.oldCostPrice?.toFixed(2) || "N/A"} → ${update.newCostPrice.toFixed(2)}`,
+				);
+				console.log(
+					`     Selling Price: ${update.oldSellingPrice?.toFixed(2) || "N/A"} → ${update.newSellingPrice.toFixed(2)}`,
+				);
+				console.log(
+					`     Hierarchy: ${update.newSellingPrice.toFixed(2)} < ${update.newCostPrice.toFixed(2)} < ${update.retailPrice.toFixed(2)} ✓`,
+				);
 			}
 			if (updates.length > 10) {
 				console.log(`\n   ... and ${updates.length - 10} more products updated`);
 			}
 
 			// Calculate statistics
-			const avgRetailCostDiff = updates.reduce((sum, u) => sum + (u.retailPrice - u.newCostPrice), 0) / updates.length;
-			const avgCostSellingDiff = updates.reduce((sum, u) => sum + (u.newCostPrice - u.newSellingPrice), 0) / updates.length;
+			const avgRetailCostDiff =
+				updates.reduce((sum, u) => sum + (u.retailPrice - u.newCostPrice), 0) /
+				updates.length;
+			const avgCostSellingDiff =
+				updates.reduce((sum, u) => sum + (u.newCostPrice - u.newSellingPrice), 0) /
+				updates.length;
 
 			console.log("\n📈 Price Statistics:");
 			console.log(`   Average difference (Retail - Cost): ${avgRetailCostDiff.toFixed(2)}`);

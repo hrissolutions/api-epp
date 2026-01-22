@@ -39,10 +39,10 @@ export const findMatchingWorkflow = async (
 		for (const workflow of workflows) {
 			approvalLogger.debug(
 				`Checking workflow "${workflow.name}": ` +
-				`requiresInstallment=${workflow.requiresInstallment}, ` +
-				`minAmount=${workflow.minOrderAmount}, ` +
-				`maxAmount=${workflow.maxOrderAmount}, ` +
-				`levels=${workflow.workflowLevels.length}`,
+					`requiresInstallment=${workflow.requiresInstallment}, ` +
+					`minAmount=${workflow.minOrderAmount}, ` +
+					`maxAmount=${workflow.maxOrderAmount}, ` +
+					`levels=${workflow.workflowLevels.length}`,
 			);
 
 			// Check installment requirement
@@ -71,7 +71,7 @@ export const findMatchingWorkflow = async (
 			// All conditions matched!
 			approvalLogger.info(
 				`✓ Matched workflow: "${workflow.name}" (${workflow.id}) for order total: ${orderTotal}, ` +
-				`payment type: ${paymentType}, approval levels: ${workflow.workflowLevels.length}`,
+					`payment type: ${paymentType}, approval levels: ${workflow.workflowLevels.length}`,
 			);
 			return workflow;
 		}
@@ -329,7 +329,7 @@ export const checkAllApprovalsComplete = async (
 
 		// Determine total required approvals
 		let totalRequiredLevels: number;
-		
+
 		if (order.workflow && order.workflow.workflowLevels.length > 0) {
 			// Use workflow levels if workflow exists
 			totalRequiredLevels = order.workflow.workflowLevels.length;
@@ -409,7 +409,8 @@ export const processApproval = async (
 		if (status === "REJECTED") {
 			// Check if order was already approved (stock was deducted)
 			// If so, restore stock when rejecting
-			const wasApproved = approval.order.status === "APPROVED" || approval.order.isFullyApproved;
+			const wasApproved =
+				approval.order.status === "APPROVED" || approval.order.isFullyApproved;
 
 			// Update order to rejected
 			await prisma.order.update({
@@ -475,8 +476,7 @@ export const processApproval = async (
 						where: { id: approvalId },
 						data: {
 							status: "PENDING",
-							comments:
-								`Approval blocked: Insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Need ${i.shortage} more`).join(", ")}`,
+							comments: `Approval blocked: Insufficient stock. ${insufficientStock.map((i) => `${i.productName}: Need ${i.shortage} more`).join(", ")}`,
 						},
 					});
 

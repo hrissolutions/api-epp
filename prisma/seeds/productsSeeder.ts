@@ -9,7 +9,8 @@ export async function seedProducts() {
 		// Electronics - Smartphones
 		{
 			name: "iPhone 15 Pro Max",
-			description: "Latest flagship smartphone from Apple with A17 Pro chip, 256GB storage, and advanced camera system",
+			description:
+				"Latest flagship smartphone from Apple with A17 Pro chip, 256GB storage, and advanced camera system",
 			category: "Electronics",
 			productType: "PHYSICAL_PRODUCT",
 			price: 69999,
@@ -23,14 +24,14 @@ export async function seedProducts() {
 			sku: "APL-IP15PM-256-TBL",
 			imageUrls: [
 				"https://example.com/images/iphone15pro-1.jpg",
-				"https://example.com/images/iphone15pro-2.jpg"
+				"https://example.com/images/iphone15pro-2.jpg",
 			],
 			specifications: {
 				screen: "6.7-inch Super Retina XDR",
 				processor: "A17 Pro chip",
 				storage: "256GB",
 				camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
-				battery: "4,422 mAh"
+				battery: "4,422 mAh",
 			},
 			status: "ACTIVE",
 			stockQuantity: 50,
@@ -39,7 +40,8 @@ export async function seedProducts() {
 		// Electronics - Laptops
 		{
 			name: "MacBook Air M2",
-			description: "Powerful and portable laptop with M2 chip, perfect for work and creativity",
+			description:
+				"Powerful and portable laptop with M2 chip, perfect for work and creativity",
 			category: "Electronics",
 			productType: "PHYSICAL_PRODUCT",
 			price: 69990,
@@ -53,13 +55,13 @@ export async function seedProducts() {
 			sku: "APL-MBA-M2-512-SG",
 			imageUrls: [
 				"https://example.com/images/macbook-air-m2-1.jpg",
-				"https://example.com/images/macbook-air-m2-2.jpg"
+				"https://example.com/images/macbook-air-m2-2.jpg",
 			],
 			specifications: {
 				processor: "Apple M2 chip",
 				memory: "16GB",
 				storage: "512GB SSD",
-				display: "13.6-inch Liquid Retina"
+				display: "13.6-inch Liquid Retina",
 			},
 			status: "ACTIVE",
 			stockQuantity: 30,
@@ -85,7 +87,7 @@ export async function seedProducts() {
 				capacity: "25 cu.ft",
 				type: "French Door",
 				features: ["Twin Cooling Plus", "Ice Maker", "LED Lighting"],
-				energyRating: "4 Star"
+				energyRating: "4 Star",
 			},
 			status: "ACTIVE",
 			stockQuantity: 15,
@@ -110,7 +112,7 @@ export async function seedProducts() {
 			specifications: {
 				material: "Premium Fabric",
 				color: "Grey",
-				seatingCapacity: "5-6 persons"
+				seatingCapacity: "5-6 persons",
 			},
 			status: "ACTIVE",
 			stockQuantity: 8,
@@ -119,7 +121,8 @@ export async function seedProducts() {
 		// Insurance - Health
 		{
 			name: "Comprehensive Health Insurance",
-			description: "Complete health coverage with hospitalization, outpatient, and emergency benefits",
+			description:
+				"Complete health coverage with hospitalization, outpatient, and emergency benefits",
 			category: "Insurance",
 			productType: "INSURANCE",
 			price: 15000,
@@ -131,20 +134,21 @@ export async function seedProducts() {
 			specifications: {
 				coverage: "Up to 2M PHP per year",
 				features: ["Hospitalization", "Outpatient", "Emergency", "Maternity"],
-				ageLimit: "18-65 years"
+				ageLimit: "18-65 years",
 			},
 			insuranceDetails: {
 				coverageAmount: 2000000,
 				policyTerm: "12 months",
 				renewalOptions: "Annual",
-				exclusions: ["Pre-existing conditions", "Cosmetic surgery"]
+				exclusions: ["Pre-existing conditions", "Cosmetic surgery"],
 			},
 			status: "ACTIVE",
 		},
 		// Service - Gym Membership
 		{
 			name: "Premium Gym Membership",
-			description: "12-month premium gym membership with access to all facilities and classes",
+			description:
+				"12-month premium gym membership with access to all facilities and classes",
 			category: "Fitness",
 			productType: "SERVICE",
 			price: 18000,
@@ -159,7 +163,7 @@ export async function seedProducts() {
 			specifications: {
 				duration: "12 months",
 				facilities: ["Gym Equipment", "Pool", "Sauna", "Group Classes"],
-				locations: "All branches nationwide"
+				locations: "All branches nationwide",
 			},
 			status: "ACTIVE",
 		},
@@ -179,7 +183,7 @@ export async function seedProducts() {
 				resolution: "4K + HDR",
 				screens: "4 simultaneous streams",
 				downloads: "6 devices",
-				duration: "12 months prepaid"
+				duration: "12 months prepaid",
 			},
 			status: "ACTIVE",
 		},
@@ -198,7 +202,7 @@ export async function seedProducts() {
 			specifications: {
 				denomination: "PHP 5,000",
 				validity: "12 months from purchase",
-				usableAt: "All SM Malls nationwide"
+				usableAt: "All SM Malls nationwide",
 			},
 			status: "ACTIVE",
 			stockQuantity: 100,
@@ -206,7 +210,7 @@ export async function seedProducts() {
 		},
 		// Electronics - TV
 		{
-			name: "LG 65\" OLED 4K Smart TV",
+			name: 'LG 65" OLED 4K Smart TV',
 			description: "Premium OLED TV with stunning picture quality and smart features",
 			category: "Electronics",
 			productType: "PHYSICAL_PRODUCT",
@@ -225,7 +229,7 @@ export async function seedProducts() {
 				resolution: "4K Ultra HD",
 				displayType: "OLED",
 				smartTV: "webOS",
-				hdmi: "4 ports"
+				hdmi: "4 ports",
 			},
 			status: "ACTIVE",
 			stockQuantity: 12,
@@ -251,7 +255,7 @@ export async function seedProducts() {
 				capacity: "10kg",
 				type: "Front Load",
 				spinSpeed: "1400 RPM",
-				energyRating: "5 Star"
+				energyRating: "5 Star",
 			},
 			status: "ACTIVE",
 			stockQuantity: 20,
@@ -276,7 +280,7 @@ export async function seedProducts() {
 			specifications: {
 				storage: "825GB SSD",
 				resolution: "4K at 120Hz",
-				rayTracing: "Yes"
+				rayTracing: "Yes",
 			},
 			status: "OUT_OF_STOCK",
 			stockQuantity: 0,
@@ -300,10 +304,14 @@ export async function seedProducts() {
 		console.log(`✅ Successfully created ${productsData.length} product records`);
 
 		// Display summary by type
-		const physicalCount = productsData.filter((p) => p.productType === "PHYSICAL_PRODUCT").length;
+		const physicalCount = productsData.filter(
+			(p) => p.productType === "PHYSICAL_PRODUCT",
+		).length;
 		const insuranceCount = productsData.filter((p) => p.productType === "INSURANCE").length;
 		const serviceCount = productsData.filter((p) => p.productType === "SERVICE").length;
-		const subscriptionCount = productsData.filter((p) => p.productType === "SUBSCRIPTION").length;
+		const subscriptionCount = productsData.filter(
+			(p) => p.productType === "SUBSCRIPTION",
+		).length;
 		const voucherCount = productsData.filter((p) => p.productType === "VOUCHER").length;
 
 		console.log("\n📊 Products Summary:");

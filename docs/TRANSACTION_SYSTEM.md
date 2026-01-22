@@ -10,16 +10,16 @@ The Transaction System tracks all payment transactions in the system, including 
 
 ### Core Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | String | Unique transaction identifier |
-| `transactionNumber` | String | Human-readable transaction number (unique) |
-| `employeeId` | String | Reference to employee |
-| `orderId` | String | Reference to order |
-| `type` | TransactionType | Type of transaction |
-| `status` | TransactionStatus | Current status |
-| `amount` | Float | Transaction amount |
-| `paymentMethod` | PaymentMethod | How payment was made |
+| Field               | Type              | Description                                |
+| ------------------- | ----------------- | ------------------------------------------ |
+| `id`                | String            | Unique transaction identifier              |
+| `transactionNumber` | String            | Human-readable transaction number (unique) |
+| `employeeId`        | String            | Reference to employee                      |
+| `orderId`           | String            | Reference to order                         |
+| `type`              | TransactionType   | Type of transaction                        |
+| `status`            | TransactionStatus | Current status                             |
+| `amount`            | Float             | Transaction amount                         |
+| `paymentMethod`     | PaymentMethod     | How payment was made                       |
 
 ### Transaction Types
 
@@ -74,6 +74,7 @@ GET /api/transaction?document=true&count=true&page=1&limit=10
 ```
 
 **Query Parameters:**
+
 - `page` - Page number (default: 1)
 - `limit` - Items per page (default: 10)
 - `order` - Sort order: asc/desc (default: desc)
@@ -127,6 +128,7 @@ Content-Type: application/json
 ```
 
 **Effect:**
+
 - Sets `status` to `COMPLETED`
 - Records `processedAt` timestamp
 - Records `processedBy` user
@@ -144,6 +146,7 @@ Content-Type: application/json
 ```
 
 **Effect:**
+
 - Sets `isReconciled` to `true`
 - Records `reconciledAt` timestamp
 - Records `reconciledBy` user
@@ -155,6 +158,7 @@ GET /api/transaction/order/{orderId}
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -176,6 +180,7 @@ GET /api/transaction/employee/{employeeId}
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -204,6 +209,7 @@ GET /api/transaction/unreconciled
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -319,86 +325,83 @@ POST /api/transaction
 ### Installment Payment Integration
 
 ```typescript
-import { PrismaClient } from './generated/prisma';
+import { PrismaClient } from "./generated/prisma";
 
 async function recordInstallmentPayment(
-  prisma: PrismaClient,
-  installmentId: string,
-  payrollBatchId: string
+	prisma: PrismaClient,
+	installmentId: string,
+	payrollBatchId: string,
 ) {
-  // Get installment details
-  const installment = await prisma.installment.findUnique({
-    where: { id: installmentId },
-    include: { order: true }
-  });
+	// Get installment details
+	const installment = await prisma.installment.findUnique({
+		where: { id: installmentId },
+		include: { order: true },
+	});
 
-  if (!installment) throw new Error('Installment not found');
+	if (!installment) throw new Error("Installment not found");
 
-  // Create transaction record
-  const transaction = await prisma.transaction.create({
-    data: {
-      transactionNumber: `TXN-${Date.now()}`,
-      employeeId: installment.order.employeeId,
-      orderId: installment.orderId,
-      type: 'INSTALLMENT',
-      amount: installment.amount,
-      paymentMethod: 'INSTALLMENT',
-      installmentId: installment.id,
-      status: 'COMPLETED',
-      payrollBatchId: payrollBatchId,
-      processedBy: 'SYSTEM',
-      processedAt: new Date(),
-    }
-  });
+	// Create transaction record
+	const transaction = await prisma.transaction.create({
+		data: {
+			transactionNumber: `TXN-${Date.now()}`,
+			employeeId: installment.order.employeeId,
+			orderId: installment.orderId,
+			type: "INSTALLMENT",
+			amount: installment.amount,
+			paymentMethod: "INSTALLMENT",
+			installmentId: installment.id,
+			status: "COMPLETED",
+			payrollBatchId: payrollBatchId,
+			processedBy: "SYSTEM",
+			processedAt: new Date(),
+		},
+	});
 
-  // Update installment status
-  await prisma.installment.update({
-    where: { id: installmentId },
-    data: {
-      status: 'DEDUCTED',
-      deductedDate: new Date(),
-      payrollBatchId: payrollBatchId,
-    }
-  });
+	// Update installment status
+	await prisma.installment.update({
+		where: { id: installmentId },
+		data: {
+			status: "DEDUCTED",
+			deductedDate: new Date(),
+			payrollBatchId: payrollBatchId,
+		},
+	});
 
-  return transaction;
+	return transaction;
 }
 ```
 
 ### Daily Reconciliation Report
 
 ```typescript
-async function generateReconciliationReport(
-  prisma: PrismaClient,
-  date: Date
-) {
-  const startOfDay = new Date(date.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+async function generateReconciliationReport(prisma: PrismaClient, date: Date) {
+	const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+	const endOfDay = new Date(date.setHours(23, 59, 59, 999));
 
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      processedAt: {
-        gte: startOfDay,
-        lte: endOfDay,
-      },
-      isReconciled: false,
-    },
-    orderBy: { processedAt: 'asc' },
-  });
+	const transactions = await prisma.transaction.findMany({
+		where: {
+			processedAt: {
+				gte: startOfDay,
+				lte: endOfDay,
+			},
+			isReconciled: false,
+		},
+		orderBy: { processedAt: "asc" },
+	});
 
-  const summary = {
-    date: date,
-    totalTransactions: transactions.length,
-    totalAmount: transactions.reduce((sum, t) => sum + Number(t.amount), 0),
-    byPaymentMethod: {
-      CASH: transactions.filter(t => t.paymentMethod === 'CASH').length,
-      INSTALLMENT: transactions.filter(t => t.paymentMethod === 'INSTALLMENT').length,
-      POINTS: transactions.filter(t => t.paymentMethod === 'POINTS').length,
-    },
-    transactions,
-  };
+	const summary = {
+		date: date,
+		totalTransactions: transactions.length,
+		totalAmount: transactions.reduce((sum, t) => sum + Number(t.amount), 0),
+		byPaymentMethod: {
+			CASH: transactions.filter((t) => t.paymentMethod === "CASH").length,
+			INSTALLMENT: transactions.filter((t) => t.paymentMethod === "INSTALLMENT").length,
+			POINTS: transactions.filter((t) => t.paymentMethod === "POINTS").length,
+		},
+		transactions,
+	};
 
-  return summary;
+	return summary;
 }
 ```
 
@@ -410,10 +413,10 @@ async function generateReconciliationReport(
 
 - Use a clear, sequential format: `TXN-YYYY-TYPE-###`
 - Examples:
-  - `TXN-2024-INS-001` - Installment
-  - `TXN-2024-CASH-001` - Cash payment
-  - `TXN-2024-PTS-001` - Points redemption
-  - `TXN-2024-REF-001` - Refund
+    - `TXN-2024-INS-001` - Installment
+    - `TXN-2024-CASH-001` - Cash payment
+    - `TXN-2024-PTS-001` - Points redemption
+    - `TXN-2024-REF-001` - Refund
 
 ### 2. Status Management
 
@@ -441,13 +444,13 @@ Store additional context in the `metadata` field:
 
 ```json
 {
-  "metadata": {
-    "payrollSystem": "SAP",
-    "batchNumber": "12345",
-    "bankReference": "BNK-REF-001",
-    "approvedBy": "manager@company.com",
-    "deviceId": "POS-001"
-  }
+	"metadata": {
+		"payrollSystem": "SAP",
+		"batchNumber": "12345",
+		"bankReference": "BNK-REF-001",
+		"approvedBy": "manager@company.com",
+		"deviceId": "POS-001"
+	}
 }
 ```
 
@@ -503,6 +506,7 @@ npm test -- transaction.controller.spec.ts
 ```
 
 Test coverage includes:
+
 - Create transaction
 - Get all transactions
 - Get by ID
@@ -519,19 +523,19 @@ Test coverage includes:
 ## Security Considerations
 
 1. **Access Control**: Implement role-based access
-   - Employees: View own transactions
-   - Managers: View team transactions
-   - Admins: Full access
+    - Employees: View own transactions
+    - Managers: View team transactions
+    - Admins: Full access
 
 2. **Audit Trail**: All changes are logged
-   - Who processed
-   - Who reconciled
-   - When changes occurred
+    - Who processed
+    - Who reconciled
+    - When changes occurred
 
-3. **Data Integrity**: 
-   - Transaction numbers are unique
-   - Amounts cannot be negative (except refunds)
-   - Status transitions are validated
+3. **Data Integrity**:
+    - Transaction numbers are unique
+    - Amounts cannot be negative (except refunds)
+    - Status transitions are validated
 
 ---
 
@@ -550,6 +554,7 @@ Test coverage includes:
 ## Support
 
 For questions or issues:
+
 - Review API documentation
 - Check error logs
 - Contact development team

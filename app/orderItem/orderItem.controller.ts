@@ -252,7 +252,10 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				orderItemLogger.warn(`Redis cache retrieval failed for orderItem ${id}:`, cacheError);
+				orderItemLogger.warn(
+					`Redis cache retrieval failed for orderItem ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!orderItem) {

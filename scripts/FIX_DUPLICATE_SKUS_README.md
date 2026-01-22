@@ -5,6 +5,7 @@ This script finds and fixes duplicate SKUs in the products collection by making 
 ## Problem
 
 When products have duplicate SKUs, it violates the unique constraint and can cause errors. This script:
+
 1. Finds all products with duplicate SKUs
 2. Keeps the oldest product (by `createdAt`) with the original SKU
 3. Updates other duplicates by appending a suffix (`-1`, `-2`, etc.) to make them unique
@@ -18,6 +19,7 @@ npx ts-node scripts/fix-duplicate-product-skus.ts
 ```
 
 **Requirements:**
+
 - Node.js installed
 - Prisma client generated
 - Database connection configured in `.env`
@@ -41,24 +43,28 @@ npx ts-node scripts/fix-duplicate-product-skus.ts
 ## What the Script Does
 
 ### Step 1: Find Duplicates
+
 - Scans all products
 - Groups them by SKU
 - Identifies SKUs that appear more than once
 
 ### Step 2: Fix Duplicates
+
 - **Keeps the first product** (oldest by `createdAt`) with the original SKU
 - **Updates other products** by appending a suffix:
-  - First duplicate: `SKU-1`
-  - Second duplicate: `SKU-2`
-  - And so on...
+    - First duplicate: `SKU-1`
+    - Second duplicate: `SKU-2`
+    - And so on...
 
 ### Step 3: Verify Uniqueness
+
 - Checks that all SKUs are now unique
 - Shows a summary of changes
 
 ## Example
 
 **Before:**
+
 ```
 Product A: SKU = "PROD-001"
 Product B: SKU = "PROD-001"  ← Duplicate
@@ -66,6 +72,7 @@ Product C: SKU = "PROD-001"  ← Duplicate
 ```
 
 **After:**
+
 ```
 Product A: SKU = "PROD-001"  ← Kept original (oldest)
 Product B: SKU = "PROD-001-1"  ← Updated
@@ -125,16 +132,19 @@ Product C: SKU = "PROD-001-2"  ← Updated
 ## Troubleshooting
 
 ### Error: "Cannot update product"
+
 - Check database permissions
 - Ensure the product ID exists
 - Check for other constraints
 
 ### Still seeing duplicates after running
+
 - Run the script again (it's safe to run multiple times)
 - Check if new duplicates were created
 - Verify the script completed successfully
 
 ### Script runs but no changes
+
 - All SKUs may already be unique
 - Check the output for confirmation
 
@@ -145,21 +155,18 @@ If you prefer to fix manually:
 ```javascript
 // Find duplicates
 db.products.aggregate([
-  {
-    $group: {
-      _id: "$sku",
-      count: { $sum: 1 },
-      products: { $push: { id: "$_id", name: "$name" } }
-    }
-  },
-  {
-    $match: { count: { $gt: 1 } }
-  }
-])
+	{
+		$group: {
+			_id: "$sku",
+			count: { $sum: 1 },
+			products: { $push: { id: "$_id", name: "$name" } },
+		},
+	},
+	{
+		$match: { count: { $gt: 1 } },
+	},
+]);
 
 // Update a specific product
-db.products.updateOne(
-  { _id: ObjectId("product_id_here") },
-  { $set: { sku: "NEW-UNIQUE-SKU" } }
-)
+db.products.updateOne({ _id: ObjectId("product_id_here") }, { $set: { sku: "NEW-UNIQUE-SKU" } });
 ```

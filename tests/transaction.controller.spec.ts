@@ -13,7 +13,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "INSTALLMENT",
-				amount: 1000.00,
+				amount: 1000.0,
 				paymentMethod: "INSTALLMENT",
 				notes: "Test transaction",
 			};
@@ -24,7 +24,10 @@ describe("Transaction Controller", () => {
 				.expect(201);
 
 			expect(response.body).to.have.property("success", true);
-			expect(response.body.data).to.have.property("transactionNumber", newTransaction.transactionNumber);
+			expect(response.body.data).to.have.property(
+				"transactionNumber",
+				newTransaction.transactionNumber,
+			);
 		});
 	});
 
@@ -57,7 +60,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "CASH",
-				amount: 500.00,
+				amount: 500.0,
 				paymentMethod: "CASH",
 			};
 
@@ -69,9 +72,7 @@ describe("Transaction Controller", () => {
 			const transactionId = createResponse.body.data.id;
 
 			// Then retrieve it
-			const response = await request
-				.get(`/api/transaction/${transactionId}`)
-				.expect(200);
+			const response = await request.get(`/api/transaction/${transactionId}`).expect(200);
 
 			expect(response.body).to.have.property("success", true);
 			expect(response.body.data).to.have.property("id", transactionId);
@@ -86,7 +87,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "INSTALLMENT",
-				amount: 1000.00,
+				amount: 1000.0,
 				paymentMethod: "INSTALLMENT",
 			};
 
@@ -121,7 +122,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "INSTALLMENT",
-				amount: 1000.00,
+				amount: 1000.0,
 				paymentMethod: "INSTALLMENT",
 				status: "PENDING",
 			};
@@ -159,7 +160,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "CASH",
-				amount: 500.00,
+				amount: 500.0,
 				paymentMethod: "CASH",
 				status: "COMPLETED",
 			};
@@ -192,9 +193,7 @@ describe("Transaction Controller", () => {
 		it("should retrieve transactions by order ID", async () => {
 			const orderId = "507f1f77bcf86cd799439012";
 
-			const response = await request
-				.get(`/api/transaction/order/${orderId}`)
-				.expect(200);
+			const response = await request.get(`/api/transaction/order/${orderId}`).expect(200);
 
 			expect(response.body).to.have.property("success", true);
 			expect(response.body.data).to.have.property("orderId", orderId);
@@ -220,9 +219,7 @@ describe("Transaction Controller", () => {
 
 	describe("GET /api/transaction/unreconciled", () => {
 		it("should retrieve unreconciled transactions", async () => {
-			const response = await request
-				.get("/api/transaction/unreconciled")
-				.expect(200);
+			const response = await request.get("/api/transaction/unreconciled").expect(200);
 
 			expect(response.body).to.have.property("success", true);
 			expect(response.body.data).to.have.property("totalUnreconciled");
@@ -239,7 +236,7 @@ describe("Transaction Controller", () => {
 				employeeId: "507f1f77bcf86cd799439011",
 				orderId: "507f1f77bcf86cd799439012",
 				type: "ADJUSTMENT",
-				amount: 100.00,
+				amount: 100.0,
 				paymentMethod: "CASH",
 			};
 
@@ -251,16 +248,12 @@ describe("Transaction Controller", () => {
 			const transactionId = createResponse.body.data.id;
 
 			// Then delete it
-			const response = await request
-				.delete(`/api/transaction/${transactionId}`)
-				.expect(200);
+			const response = await request.delete(`/api/transaction/${transactionId}`).expect(200);
 
 			expect(response.body).to.have.property("success", true);
 
 			// Verify it's deleted
-			await request
-				.get(`/api/transaction/${transactionId}`)
-				.expect(404);
+			await request.get(`/api/transaction/${transactionId}`).expect(404);
 		});
 	});
 });

@@ -1,10 +1,10 @@
 /**
  * Script to drop old unique index from approvalLevels collection
  * This fixes the error: "Unique constraint failed on the constraint: approvalLevels_workflowId_level_key"
- * 
+ *
  * Usage:
  *   npx ts-node scripts/drop-old-approval-level-index.ts
- * 
+ *
  * Or compile and run:
  *   npx tsc scripts/drop-old-approval-level-index.ts
  *   node scripts/drop-old-approval-level-index.js
@@ -19,28 +19,28 @@ dotenv.config();
 
 async function dropOldIndex() {
 	const client = new MongoClient(config.database.url);
-	
+
 	try {
 		await client.connect();
 		console.log("\n🔍 Connected to MongoDB\n");
-		
+
 		const db = client.db();
 		const collection = db.collection("approvalLevels");
-		
+
 		// List all current indexes
 		console.log("📋 Current indexes on 'approvalLevels' collection:");
 		const indexes = await collection.indexes();
 		console.log(JSON.stringify(indexes, null, 2));
-		
+
 		// Try to drop the old unique index
 		const indexNamesToDrop = [
-			"workflowId_1_level_1",                    // Default MongoDB naming
-			"approvalLevels_workflowId_level_key",      // Prisma naming
-			"workflowId_level_unique",                  // Alternative naming
+			"workflowId_1_level_1", // Default MongoDB naming
+			"approvalLevels_workflowId_level_key", // Prisma naming
+			"workflowId_level_unique", // Alternative naming
 		];
-		
+
 		let dropped = false;
-		
+
 		for (const indexName of indexNamesToDrop) {
 			try {
 				await collection.dropIndex(indexName);
@@ -57,11 +57,11 @@ async function dropOldIndex() {
 				}
 			}
 		}
-		
+
 		// If none of the named indexes exist, try to find and drop by key pattern
 		if (!dropped) {
 			console.log("\n🔍 Searching for index with workflowId and level fields...\n");
-			
+
 			for (const index of indexes) {
 				const keys = index.key as any;
 				// Check if index has both workflowId and level
@@ -79,7 +79,7 @@ async function dropOldIndex() {
 				}
 			}
 		}
-		
+
 		if (!dropped) {
 			console.log("\n⚠️  No matching index found to drop.");
 			console.log("   The index may have already been removed, or it doesn't exist.\n");
@@ -87,7 +87,9 @@ async function dropOldIndex() {
 			console.log("\n📋 Updated indexes on 'approvalLevels' collection:");
 			const updatedIndexes = await collection.indexes();
 			console.log(JSON.stringify(updatedIndexes, null, 2));
-			console.log("\n✨ Done! You can now create ApprovalLevel records without the old constraint.\n");
+			console.log(
+				"\n✨ Done! You can now create ApprovalLevel records without the old constraint.\n",
+			);
 		}
 	} catch (error) {
 		console.error("❌ Error:", error);

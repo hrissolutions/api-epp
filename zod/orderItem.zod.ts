@@ -2,15 +2,14 @@ import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
 // Decimal schema helper (for Prisma Float type)
-const decimalSchema = z.union([
-	z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"),
-	z.number(),
-]).transform((val) => {
-	if (typeof val === "string") {
-		return parseFloat(val);
-	}
-	return val;
-});
+const decimalSchema = z
+	.union([z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"), z.number()])
+	.transform((val) => {
+		if (typeof val === "string") {
+			return parseFloat(val);
+		}
+		return val;
+	});
 
 // OrderItem Schema (full, including ID)
 export const OrderItemSchema = z.object({

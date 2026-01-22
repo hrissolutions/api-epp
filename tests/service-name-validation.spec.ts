@@ -8,7 +8,7 @@ function validateServiceName(input: string): string {
 	// No special characters like hyphens, underscores, spaces, etc.
 	if (!/^[a-zA-Z0-9]+$/.test(input)) {
 		throw new Error(
-			`Invalid service name "${input}". Service names must contain only alphanumeric characters (letters and numbers). Special characters like hyphens (-), underscores (_), spaces, etc. are not allowed.`
+			`Invalid service name "${input}". Service names must contain only alphanumeric characters (letters and numbers). Special characters like hyphens (-), underscores (_), spaces, etc. are not allowed.`,
 		);
 	}
 
@@ -57,43 +57,43 @@ describe("Service Name Validation", () => {
 	describe("Invalid service names", () => {
 		it("should reject names with hyphens like 'app-site'", () => {
 			expect(() => validateServiceName("app-site")).to.throw(
-				'Invalid service name "app-site". Service names must contain only alphanumeric characters'
+				'Invalid service name "app-site". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject names with underscores like 'app_site'", () => {
 			expect(() => validateServiceName("app_site")).to.throw(
-				'Invalid service name "app_site". Service names must contain only alphanumeric characters'
+				'Invalid service name "app_site". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject names with spaces like 'app site'", () => {
 			expect(() => validateServiceName("app site")).to.throw(
-				'Invalid service name "app site". Service names must contain only alphanumeric characters'
+				'Invalid service name "app site". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject names with special characters like 'app@site'", () => {
 			expect(() => validateServiceName("app@site")).to.throw(
-				'Invalid service name "app@site". Service names must contain only alphanumeric characters'
+				'Invalid service name "app@site". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject names with dots like 'app.site'", () => {
 			expect(() => validateServiceName("app.site")).to.throw(
-				'Invalid service name "app.site". Service names must contain only alphanumeric characters'
+				'Invalid service name "app.site". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject empty strings", () => {
 			expect(() => validateServiceName("")).to.throw(
-				'Invalid service name "". Service names must contain only alphanumeric characters'
+				'Invalid service name "". Service names must contain only alphanumeric characters',
 			);
 		});
 
 		it("should reject names with exclamation marks like 'app!'", () => {
 			expect(() => validateServiceName("app!")).to.throw(
-				'Invalid service name "app!". Service names must contain only alphanumeric characters'
+				'Invalid service name "app!". Service names must contain only alphanumeric characters',
 			);
 		});
 	});

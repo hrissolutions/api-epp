@@ -12,7 +12,10 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import { CreateApprovalWorkflowSchema, UpdateApprovalWorkflowSchema } from "../../zod/approvalWorkflow.zod";
+import {
+	CreateApprovalWorkflowSchema,
+	UpdateApprovalWorkflowSchema,
+} from "../../zod/approvalWorkflow.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
@@ -81,8 +84,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const approvalWorkflow = await prisma.approvalWorkflow.create({ data: validation.data as any });
-			approvalWorkflowLogger.info(`ApprovalWorkflow created successfully: ${approvalWorkflow.id}`);
+			const approvalWorkflow = await prisma.approvalWorkflow.create({
+				data: validation.data as any,
+			});
+			approvalWorkflowLogger.info(
+				`ApprovalWorkflow created successfully: ${approvalWorkflow.id}`,
+			);
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
@@ -164,7 +171,11 @@ export const controller = (prisma: PrismaClient) => {
 
 			const searchFields = ["name", "description"];
 			if (query) {
-				const searchConditions = buildSearchConditions("ApprovalWorkflow", query, searchFields);
+				const searchConditions = buildSearchConditions(
+					"ApprovalWorkflow",
+					query,
+					searchFields,
+				);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
@@ -186,7 +197,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			approvalWorkflowLogger.info(`Retrieved ${approvalWorkflows.length} approval workflows`);
 			const processedData =
-				groupBy && document ? groupDataByField(approvalWorkflows, groupBy as string) : approvalWorkflows;
+				groupBy && document
+					? groupDataByField(approvalWorkflows, groupBy as string)
+					: approvalWorkflows;
 
 			const responseData: Record<string, any> = {
 				...(document && { approvalWorkflows: processedData }),
@@ -196,7 +209,11 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			res.status(200).json(
-				buildSuccessResponse("Approval workflows retrieved successfully", responseData, 200),
+				buildSuccessResponse(
+					"Approval workflows retrieved successfully",
+					responseData,
+					200,
+				),
 			);
 		} catch (error) {
 			approvalWorkflowLogger.error(`Failed to get approval workflows: ${error}`);
@@ -221,7 +238,9 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				approvalWorkflowLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				approvalWorkflowLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -243,7 +262,10 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				approvalWorkflowLogger.warn(`Redis cache retrieval failed for approvalWorkflow ${id}:`, cacheError);
+				approvalWorkflowLogger.warn(
+					`Redis cache retrieval failed for approvalWorkflow ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!approvalWorkflow) {
@@ -275,7 +297,9 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			approvalWorkflowLogger.info(`Approval workflow retrieved: ${(approvalWorkflow as any).id}`);
+			approvalWorkflowLogger.info(
+				`Approval workflow retrieved: ${(approvalWorkflow as any).id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				"Approval workflow retrieved successfully",
 				approvalWorkflow,
@@ -320,7 +344,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			if (!validationResult.success) {
 				const formattedErrors = formatZodErrors(validationResult.error.format());
-				approvalWorkflowLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+				approvalWorkflowLogger.error(
+					`Validation failed: ${JSON.stringify(formattedErrors)}`,
+				);
 				const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 				res.status(400).json(errorResponse);
 				return;
@@ -358,7 +384,9 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:approvalWorkflow:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:approvalWorkflow:list:*");
-				approvalWorkflowLogger.info(`Cache invalidated after approvalWorkflow ${id} update`);
+				approvalWorkflowLogger.info(
+					`Cache invalidated after approvalWorkflow ${id} update`,
+				);
 			} catch (cacheError) {
 				approvalWorkflowLogger.warn(
 					"Failed to invalidate cache after approvalWorkflow update:",
@@ -416,7 +444,9 @@ export const controller = (prisma: PrismaClient) => {
 			try {
 				await invalidateCache.byPattern(`cache:approvalWorkflow:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:approvalWorkflow:list:*");
-				approvalWorkflowLogger.info(`Cache invalidated after approvalWorkflow ${id} deletion`);
+				approvalWorkflowLogger.info(
+					`Cache invalidated after approvalWorkflow ${id} deletion`,
+				);
 			} catch (cacheError) {
 				approvalWorkflowLogger.warn(
 					"Failed to invalidate cache after approvalWorkflow deletion:",
@@ -425,7 +455,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			approvalWorkflowLogger.info(`Approval workflow deleted: ${id}`);
-			const successResponse = buildSuccessResponse("Approval workflow deleted successfully", {}, 200);
+			const successResponse = buildSuccessResponse(
+				"Approval workflow deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			approvalWorkflowLogger.error(`Failed to delete approval workflow: ${error}`);

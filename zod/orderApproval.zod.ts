@@ -2,21 +2,9 @@ import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
 // Enums
-export const ApproverRoleEnum = z.enum([
-	"MANAGER",
-	"HR",
-	"FINANCE",
-	"DEPARTMENT_HEAD",
-	"ADMIN",
-]);
+export const ApproverRoleEnum = z.enum(["MANAGER", "HR", "FINANCE", "DEPARTMENT_HEAD", "ADMIN"]);
 
-export const ApprovalStatusEnum = z.enum([
-	"PENDING",
-	"APPROVED",
-	"REJECTED",
-	"EXPIRED",
-	"SKIPPED",
-]);
+export const ApprovalStatusEnum = z.enum(["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SKIPPED"]);
 
 export type ApproverRole = z.infer<typeof ApproverRoleEnum>;
 export type ApprovalStatus = z.infer<typeof ApprovalStatusEnum>;

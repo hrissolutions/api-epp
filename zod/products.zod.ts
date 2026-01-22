@@ -27,15 +27,14 @@ export const ProductImageSchema = z.object({
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 
 // Decimal schema helper (for Prisma Decimal type)
-const decimalSchema = z.union([
-	z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"),
-	z.number(),
-]).transform((val) => {
-	if (typeof val === "string") {
-		return parseFloat(val);
-	}
-	return val;
-});
+const decimalSchema = z
+	.union([z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"), z.number()])
+	.transform((val) => {
+		if (typeof val === "string") {
+			return parseFloat(val);
+		}
+		return val;
+	});
 
 // Product Schema (full, including ID)
 export const ProductSchema = z.object({

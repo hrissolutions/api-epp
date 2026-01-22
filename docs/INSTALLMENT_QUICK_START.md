@@ -1,6 +1,7 @@
 # Installment System - Quick Start Guide
 
 ## Overview
+
 This guide shows you how to set up installments for orders with bi-monthly salary deductions.
 
 ## Quick Example
@@ -28,6 +29,7 @@ Content-Type: application/json
 ### Step 2: System Generates Installments Automatically
 
 The system will create:
+
 - 6 installment records
 - Each with `amount: 1000.00` (6000 ÷ 6)
 - Cutoff dates: 15th and end of month
@@ -40,6 +42,7 @@ GET /api/installment/order/507f1f77bcf86cd799439011/summary
 ```
 
 **Response:**
+
 ```json
 {
   "totalInstallments": 6,
@@ -72,42 +75,43 @@ Content-Type: application/json
 
 ## Bi-Monthly Schedule
 
-| Month | Cutoff 1 | Cutoff 2 |
-|-------|----------|----------|
-| Jan   | Jan 15   | Jan 31   |
-| Feb   | Feb 15   | Feb 28/29|
-| Mar   | Mar 15   | Mar 31   |
-| Apr   | Apr 15   | Apr 30   |
-| May   | May 15   | May 31   |
-| Jun   | Jun 15   | Jun 30   |
+| Month | Cutoff 1 | Cutoff 2  |
+| ----- | -------- | --------- |
+| Jan   | Jan 15   | Jan 31    |
+| Feb   | Feb 15   | Feb 28/29 |
+| Mar   | Mar 15   | Mar 31    |
+| Apr   | Apr 15   | Apr 30    |
+| May   | May 15   | May 31    |
+| Jun   | Jun 15   | Jun 30    |
 
 ## Example: 3-Month Installment Plan
 
 **Order Details:**
+
 - Total: ₱6,000
 - Months: 3
 - Start Date: January 5, 2024
 
 **Generated Installments:**
 
-| # | Amount | Cutoff Date | Scheduled Date | Status  |
-|---|--------|-------------|----------------|---------|
-| 1 | ₱1,000 | Jan 15      | Jan 20         | PENDING |
-| 2 | ₱1,000 | Jan 31      | Feb 5          | PENDING |
-| 3 | ₱1,000 | Feb 15      | Feb 20         | PENDING |
-| 4 | ₱1,000 | Feb 28      | Mar 5          | PENDING |
-| 5 | ₱1,000 | Mar 15      | Mar 20         | PENDING |
-| 6 | ₱1,000 | Mar 31      | Apr 5          | PENDING |
+| #   | Amount | Cutoff Date | Scheduled Date | Status  |
+| --- | ------ | ----------- | -------------- | ------- |
+| 1   | ₱1,000 | Jan 15      | Jan 20         | PENDING |
+| 2   | ₱1,000 | Jan 31      | Feb 5          | PENDING |
+| 3   | ₱1,000 | Feb 15      | Feb 20         | PENDING |
+| 4   | ₱1,000 | Feb 28      | Mar 5          | PENDING |
+| 5   | ₱1,000 | Mar 15      | Mar 20         | PENDING |
+| 6   | ₱1,000 | Mar 31      | Apr 5          | PENDING |
 
 ## Payment Statuses
 
-| Status    | Description |
-|-----------|-------------|
-| PENDING   | Waiting for cutoff date |
-| SCHEDULED | Ready for payroll deduction |
+| Status    | Description                       |
+| --------- | --------------------------------- |
+| PENDING   | Waiting for cutoff date           |
+| SCHEDULED | Ready for payroll deduction       |
 | DEDUCTED  | Successfully deducted from salary |
-| FAILED    | Deduction failed (retry needed) |
-| CANCELLED | Order cancelled or modified |
+| FAILED    | Deduction failed (retry needed)   |
+| CANCELLED | Order cancelled or modified       |
 
 ## Common Use Cases
 
@@ -158,18 +162,18 @@ PATCH /api/installment/{id}
 ```
 1. On Payroll Cutoff Date (15th or end of month)
    └─> GET /api/installment/pending-payroll
-   
+
 2. For Each Employee in Payroll
    ├─> Check employee active status
    ├─> Verify sufficient salary
    └─> Calculate total deductions
-   
+
 3. Process Payroll
    └─> Deduct installment amounts from salary
-   
+
 4. After Successful Payroll
    └─> POST /api/installment/{id}/deduct (for each installment)
-   
+
 5. Handle Failures
    └─> PATCH /api/installment/{id} with status: "FAILED"
 ```
@@ -180,8 +184,8 @@ The installment service is configured in `helper/installmentService.ts`:
 
 ```typescript
 const PAYROLL_CUTOFFS = {
-  FIRST: 15,              // First cutoff: 15th of month
-  SECOND: "END_OF_MONTH", // Second cutoff: last day
+	FIRST: 15, // First cutoff: 15th of month
+	SECOND: "END_OF_MONTH", // Second cutoff: last day
 };
 
 // Days after cutoff for scheduled payment
@@ -234,15 +238,19 @@ curl -X POST http://localhost:3000/api/installment/{id}/deduct \
 ## Troubleshooting
 
 ### Issue: Installments not generated
+
 **Solution**: Ensure `paymentType: "INSTALLMENT"` and `installmentMonths` is set
 
 ### Issue: Wrong number of installments
+
 **Solution**: Count = installmentMonths × 2 (for bi-monthly payroll)
 
 ### Issue: Incorrect cutoff dates
+
 **Solution**: Check system date and timezone settings
 
 ### Issue: Cannot mark as deducted
+
 **Solution**: Verify installment exists and status is PENDING or SCHEDULED
 
 ## Need Help?

@@ -5,7 +5,7 @@
 **Employee:** Juan Dela Cruz  
 **Order:** ₱12,000 Samsung Galaxy Phone  
 **Payment Plan:** 6-month installment via payroll deduction  
-**Start Date:** January 10, 2024  
+**Start Date:** January 10, 2024
 
 ---
 
@@ -16,6 +16,7 @@
 Juan browses the company store and adds a Samsung Galaxy phone to his cart.
 
 **Request:**
+
 ```http
 POST /api/order HTTP/1.1
 Content-Type: application/json
@@ -38,73 +39,75 @@ Content-Type: application/json
 ### 2️⃣ System Automatically Generates Installments
 
 The backend automatically:
+
 - Calculates: 6 months × 2 cutoffs = **12 installments**
 - Amount per installment: ₱12,000 ÷ 12 = **₱1,000 each**
 - Generates cutoff dates (alternating 15th and end of month)
 - Sets scheduled payment dates (5 days after cutoff)
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "message": "Order created successfully",
-  "data": {
-    "order": {
-      "id": "507f1f77bcf86cd799439011",
-      "orderNumber": "ORD-2024-12345",
-      "employeeId": "67890abcdef123456789",
-      "total": 12000.00,
-      "paymentType": "INSTALLMENT",
-      "installmentMonths": 6,
-      "installmentCount": 12,
-      "installmentAmount": 1000.00,
-      "status": "APPROVED"
-    },
-    "installments": [
-      {
-        "id": "inst-001",
-        "installmentNumber": 1,
-        "amount": 1000.00,
-        "status": "PENDING",
-        "cutOffDate": "2024-01-15T00:00:00.000Z",
-        "scheduledDate": "2024-01-20T00:00:00.000Z"
-      },
-      {
-        "id": "inst-002",
-        "installmentNumber": 2,
-        "amount": 1000.00,
-        "status": "PENDING",
-        "cutOffDate": "2024-01-31T00:00:00.000Z",
-        "scheduledDate": "2024-02-05T00:00:00.000Z"
-      },
-      // ... 10 more installments
-    ],
-    "installmentSummary": {
-      "totalInstallments": 12,
-      "installmentAmount": 1000.00,
-      "firstPayment": "2024-01-20T00:00:00.000Z",
-      "lastPayment": "2024-07-20T00:00:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Order created successfully",
+	"data": {
+		"order": {
+			"id": "507f1f77bcf86cd799439011",
+			"orderNumber": "ORD-2024-12345",
+			"employeeId": "67890abcdef123456789",
+			"total": 12000.0,
+			"paymentType": "INSTALLMENT",
+			"installmentMonths": 6,
+			"installmentCount": 12,
+			"installmentAmount": 1000.0,
+			"status": "APPROVED"
+		},
+		"installments": [
+			{
+				"id": "inst-001",
+				"installmentNumber": 1,
+				"amount": 1000.0,
+				"status": "PENDING",
+				"cutOffDate": "2024-01-15T00:00:00.000Z",
+				"scheduledDate": "2024-01-20T00:00:00.000Z"
+			},
+			{
+				"id": "inst-002",
+				"installmentNumber": 2,
+				"amount": 1000.0,
+				"status": "PENDING",
+				"cutOffDate": "2024-01-31T00:00:00.000Z",
+				"scheduledDate": "2024-02-05T00:00:00.000Z"
+			}
+			// ... 10 more installments
+		],
+		"installmentSummary": {
+			"totalInstallments": 12,
+			"installmentAmount": 1000.0,
+			"firstPayment": "2024-01-20T00:00:00.000Z",
+			"lastPayment": "2024-07-20T00:00:00.000Z"
+		}
+	}
 }
 ```
 
 ### 3️⃣ Complete Payment Schedule
 
-| # | Cutoff Date | Payment Date | Amount  | Status  |
-|---|-------------|--------------|---------|---------|
-| 1 | Jan 15, 2024 | Jan 20, 2024 | ₱1,000 | PENDING |
-| 2 | Jan 31, 2024 | Feb 5, 2024  | ₱1,000 | PENDING |
-| 3 | Feb 15, 2024 | Feb 20, 2024 | ₱1,000 | PENDING |
-| 4 | Feb 29, 2024 | Mar 5, 2024  | ₱1,000 | PENDING |
-| 5 | Mar 15, 2024 | Mar 20, 2024 | ₱1,000 | PENDING |
-| 6 | Mar 31, 2024 | Apr 5, 2024  | ₱1,000 | PENDING |
-| 7 | Apr 15, 2024 | Apr 20, 2024 | ₱1,000 | PENDING |
-| 8 | Apr 30, 2024 | May 5, 2024  | ₱1,000 | PENDING |
-| 9 | May 15, 2024 | May 20, 2024 | ₱1,000 | PENDING |
-| 10 | May 31, 2024 | Jun 5, 2024  | ₱1,000 | PENDING |
-| 11 | Jun 15, 2024 | Jun 20, 2024 | ₱1,000 | PENDING |
-| 12 | Jun 30, 2024 | Jul 5, 2024  | ₱1,000 | PENDING |
+| #   | Cutoff Date  | Payment Date | Amount | Status  |
+| --- | ------------ | ------------ | ------ | ------- |
+| 1   | Jan 15, 2024 | Jan 20, 2024 | ₱1,000 | PENDING |
+| 2   | Jan 31, 2024 | Feb 5, 2024  | ₱1,000 | PENDING |
+| 3   | Feb 15, 2024 | Feb 20, 2024 | ₱1,000 | PENDING |
+| 4   | Feb 29, 2024 | Mar 5, 2024  | ₱1,000 | PENDING |
+| 5   | Mar 15, 2024 | Mar 20, 2024 | ₱1,000 | PENDING |
+| 6   | Mar 31, 2024 | Apr 5, 2024  | ₱1,000 | PENDING |
+| 7   | Apr 15, 2024 | Apr 20, 2024 | ₱1,000 | PENDING |
+| 8   | Apr 30, 2024 | May 5, 2024  | ₱1,000 | PENDING |
+| 9   | May 15, 2024 | May 20, 2024 | ₱1,000 | PENDING |
+| 10  | May 31, 2024 | Jun 5, 2024  | ₱1,000 | PENDING |
+| 11  | Jun 15, 2024 | Jun 20, 2024 | ₱1,000 | PENDING |
+| 12  | Jun 30, 2024 | Jul 5, 2024  | ₱1,000 | PENDING |
 
 ---
 
@@ -121,43 +124,45 @@ GET /api/installment/pending-payroll?cutoffDate=2024-01-15
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "cutoffDate": "2024-01-15T00:00:00.000Z",
-    "totalPending": 156,
-    "totalAmount": 437500.00,
-    "installments": [
-      {
-        "id": "inst-001",
-        "installmentNumber": 1,
-        "amount": 1000.00,
-        "status": "PENDING",
-        "cutOffDate": "2024-01-15T00:00:00.000Z",
-        "scheduledDate": "2024-01-20T00:00:00.000Z",
-        "order": {
-          "orderNumber": "ORD-2024-12345",
-          "employeeId": "67890abcdef123456789",
-          "total": 12000.00
-        }
-      },
-      // ... 155 more installments from other employees
-    ]
-  }
+	"success": true,
+	"data": {
+		"cutoffDate": "2024-01-15T00:00:00.000Z",
+		"totalPending": 156,
+		"totalAmount": 437500.0,
+		"installments": [
+			{
+				"id": "inst-001",
+				"installmentNumber": 1,
+				"amount": 1000.0,
+				"status": "PENDING",
+				"cutOffDate": "2024-01-15T00:00:00.000Z",
+				"scheduledDate": "2024-01-20T00:00:00.000Z",
+				"order": {
+					"orderNumber": "ORD-2024-12345",
+					"employeeId": "67890abcdef123456789",
+					"total": 12000.0
+				}
+			}
+			// ... 155 more installments from other employees
+		]
+	}
 }
 ```
 
 **Afternoon - Payroll Processing:**
 
 For Juan Dela Cruz:
+
 - Gross Salary: ₱25,000
 - Deductions:
-  - SSS: ₱1,000
-  - PhilHealth: ₱500
-  - Pag-IBIG: ₱100
-  - Tax: ₱2,000
-  - **Installment: ₱1,000** ← First installment deducted
+    - SSS: ₱1,000
+    - PhilHealth: ₱500
+    - Pag-IBIG: ₱100
+    - Tax: ₱2,000
+    - **Installment: ₱1,000** ← First installment deducted
 - Net Salary: ₱20,400
 
 **After Successful Deduction:**
@@ -173,27 +178,29 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "message": "Installment marked as deducted",
-  "data": {
-    "installment": {
-      "id": "inst-001",
-      "installmentNumber": 1,
-      "amount": 1000.00,
-      "status": "DEDUCTED",
-      "cutOffDate": "2024-01-15T00:00:00.000Z",
-      "scheduledDate": "2024-01-20T00:00:00.000Z",
-      "deductedDate": "2024-01-20T14:30:00.000Z",
-      "payrollBatchId": "BATCH-2024-01-15-001",
-      "deductionReference": "DED-JAN15-JUANDC-001"
-    }
-  }
+	"success": true,
+	"message": "Installment marked as deducted",
+	"data": {
+		"installment": {
+			"id": "inst-001",
+			"installmentNumber": 1,
+			"amount": 1000.0,
+			"status": "DEDUCTED",
+			"cutOffDate": "2024-01-15T00:00:00.000Z",
+			"scheduledDate": "2024-01-20T00:00:00.000Z",
+			"deductedDate": "2024-01-20T14:30:00.000Z",
+			"payrollBatchId": "BATCH-2024-01-15-001",
+			"deductionReference": "DED-JAN15-JUANDC-001"
+		}
+	}
 }
 ```
 
 **✅ Status Update:**
+
 - Installment 1: ~~PENDING~~ → **DEDUCTED** ✓
 - 11 installments remaining
 
@@ -209,6 +216,7 @@ Same process repeats:
 4. Mark installment #2 as DEDUCTED
 
 **Juan's Progress:**
+
 - Paid: ₱2,000 (2 installments)
 - Remaining: ₱10,000 (10 installments)
 
@@ -219,6 +227,7 @@ Same process repeats:
 **Problem Scenario:** Juan took unpaid leave, salary is only ₱5,000
 
 Payroll system checks:
+
 - Gross Salary: ₱5,000
 - Regular Deductions: ₱3,600
 - Available: ₱1,400
@@ -237,9 +246,11 @@ Content-Type: application/json
 ```
 
 **Status Update:**
+
 - Installment 3: ~~PENDING~~ → **FAILED** ⚠️
 
 **Follow-up Action:**
+
 - HR notifies Juan
 - Installment will be retried next cutoff
 - Or can be rescheduled
@@ -251,6 +262,7 @@ Content-Type: application/json
 ### Juan's Dashboard
 
 **Order Status:**
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Order: Samsung Galaxy Phone
@@ -270,49 +282,51 @@ Failed:    ₱1,000.00 (1 installment)
 ```
 
 **Get Summary via API:**
+
 ```http
 GET /api/installment/order/507f1f77bcf86cd799439011/summary
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "totalInstallments": 12,
-    "paidCount": 2,
-    "pendingCount": 9,
-    "failedCount": 1,
-    "totalAmount": 12000.00,
-    "paidAmount": 2000.00,
-    "remainingAmount": 10000.00,
-    "installments": [
-      {
-        "installmentNumber": 1,
-        "amount": 1000.00,
-        "status": "DEDUCTED",
-        "deductedDate": "2024-01-20T14:30:00.000Z"
-      },
-      {
-        "installmentNumber": 2,
-        "amount": 1000.00,
-        "status": "DEDUCTED",
-        "deductedDate": "2024-02-05T15:00:00.000Z"
-      },
-      {
-        "installmentNumber": 3,
-        "amount": 1000.00,
-        "status": "FAILED"
-      },
-      {
-        "installmentNumber": 4,
-        "amount": 1000.00,
-        "status": "PENDING",
-        "cutOffDate": "2024-02-29T00:00:00.000Z"
-      }
-      // ... more installments
-    ]
-  }
+	"success": true,
+	"data": {
+		"totalInstallments": 12,
+		"paidCount": 2,
+		"pendingCount": 9,
+		"failedCount": 1,
+		"totalAmount": 12000.0,
+		"paidAmount": 2000.0,
+		"remainingAmount": 10000.0,
+		"installments": [
+			{
+				"installmentNumber": 1,
+				"amount": 1000.0,
+				"status": "DEDUCTED",
+				"deductedDate": "2024-01-20T14:30:00.000Z"
+			},
+			{
+				"installmentNumber": 2,
+				"amount": 1000.0,
+				"status": "DEDUCTED",
+				"deductedDate": "2024-02-05T15:00:00.000Z"
+			},
+			{
+				"installmentNumber": 3,
+				"amount": 1000.0,
+				"status": "FAILED"
+			},
+			{
+				"installmentNumber": 4,
+				"amount": 1000.0,
+				"status": "PENDING",
+				"cutOffDate": "2024-02-29T00:00:00.000Z"
+			}
+			// ... more installments
+		]
+	}
 }
 ```
 
@@ -323,11 +337,13 @@ GET /api/installment/order/507f1f77bcf86cd799439011/summary
 ### Payroll Administrator Dashboard
 
 **Query Today's Pending Installments:**
+
 ```http
 GET /api/installment/pending-payroll
 ```
 
 **Dashboard Metrics:**
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Payroll Cutoff: January 15, 2024
@@ -347,6 +363,7 @@ Status Breakdown:
 ```
 
 **Export for Payroll System:**
+
 ```csv
 Employee ID,Employee Name,Order Number,Installment,Amount,Status
 67890abcdef123456789,Juan Dela Cruz,ORD-2024-12345,1,1000.00,READY
@@ -401,13 +418,14 @@ JUL 05  │ ✓ Installment 12 deducted (₱1,000)
 ✅ **Flexible Handling** - Can handle failed deductions gracefully  
 ✅ **Complete Tracking** - Full audit trail from start to finish  
 ✅ **Payroll Integration** - Easy to integrate with existing payroll system  
-✅ **Employee Transparency** - Clear visibility of payment schedule  
+✅ **Employee Transparency** - Clear visibility of payment schedule
 
 ---
 
 ## Next: Start Using the System
 
 Ready to implement? See:
+
 - `INSTALLMENT_QUICK_START.md` for API examples
 - `INSTALLMENT_SYSTEM.md` for full documentation
 - `INSTALLMENT_SETUP_SUMMARY.md` for implementation checklist

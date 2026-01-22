@@ -10,8 +10,8 @@ const installmentLogger = logger.child({ module: "installmentService" });
  * Bi-monthly payroll: 15th and end of month
  */
 const PAYROLL_CUTOFFS = {
-	FIRST: 15,  // First cutoff: 15th of the month
-	SECOND: "END_OF_MONTH",  // Second cutoff: last day of the month
+	FIRST: 15, // First cutoff: 15th of the month
+	SECOND: "END_OF_MONTH", // Second cutoff: last day of the month
 };
 
 /**
@@ -21,22 +21,30 @@ const PAYROLL_CUTOFFS = {
 export function calculateCutoffDates(startDate: Date, installmentCount: number): Date[] {
 	const cutoffDates: Date[] = [];
 	let currentDate = new Date(startDate);
-	
+
 	// Start from the next available cutoff
 	const day = currentDate.getDate();
-	
+
 	for (let i = 0; i < installmentCount; i++) {
 		let cutoffDate: Date;
-		
+
 		// Determine if this should be 15th or end of month
 		if (i % 2 === 0) {
 			// First cutoff of the month (15th)
 			if (day <= PAYROLL_CUTOFFS.FIRST) {
 				// If before or on 15th of current month, use this month's 15th
-				cutoffDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), PAYROLL_CUTOFFS.FIRST);
+				cutoffDate = new Date(
+					currentDate.getFullYear(),
+					currentDate.getMonth(),
+					PAYROLL_CUTOFFS.FIRST,
+				);
 			} else {
 				// If after 15th, move to next month's 15th
-				cutoffDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, PAYROLL_CUTOFFS.FIRST);
+				cutoffDate = new Date(
+					currentDate.getFullYear(),
+					currentDate.getMonth() + 1,
+					PAYROLL_CUTOFFS.FIRST,
+				);
 			}
 		} else {
 			// Second cutoff of the month (end of month)
@@ -45,9 +53,9 @@ export function calculateCutoffDates(startDate: Date, installmentCount: number):
 			// Get last day of current month
 			cutoffDate = new Date(year, month + 1, 0); // Day 0 of next month = last day of current month
 		}
-		
+
 		cutoffDates.push(cutoffDate);
-		
+
 		// Move to the next cutoff period
 		if (i % 2 === 0) {
 			// After 15th, stay in same month for end-of-month
@@ -57,7 +65,7 @@ export function calculateCutoffDates(startDate: Date, installmentCount: number):
 			currentDate = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth() + 1, 1);
 		}
 	}
-	
+
 	return cutoffDates;
 }
 
@@ -83,35 +91,35 @@ export async function generateInstallments(
 	orderId: string,
 	installmentMonths: number,
 	totalAmount: number,
-	startDate: Date = new Date()
+	startDate: Date = new Date(),
 ) {
 	try {
 		// Calculate installment count (2 per month for bi-monthly payroll)
 		const installmentCount = installmentMonths * 2;
-		
+
 		// Calculate amount per installment
 		const installmentAmount = parseFloat((totalAmount / installmentCount).toFixed(2));
-		
+
 		// Adjust last installment to account for rounding
 		const lastInstallmentAmount = parseFloat(
-			(totalAmount - (installmentAmount * (installmentCount - 1))).toFixed(2)
+			(totalAmount - installmentAmount * (installmentCount - 1)).toFixed(2),
 		);
-		
+
 		installmentLogger.info(
 			`Generating ${installmentCount} installments for order ${orderId}: ` +
-			`${installmentMonths} months × 2 cutoffs = ${installmentCount} installments`
+				`${installmentMonths} months × 2 cutoffs = ${installmentCount} installments`,
 		);
-		
+
 		// Calculate cutoff dates
 		const cutoffDates = calculateCutoffDates(startDate, installmentCount);
-		
+
 		// Create installment records
 		const installments = [];
 		for (let i = 0; i < installmentCount; i++) {
 			const cutoffDate = cutoffDates[i];
 			const scheduledDate = calculateScheduledDate(cutoffDate);
 			const amount = i === installmentCount - 1 ? lastInstallmentAmount : installmentAmount;
-			
+
 			const installment = await prisma.installment.create({
 				data: {
 					orderId,
@@ -123,20 +131,20 @@ export async function generateInstallments(
 					notes: `Installment ${i + 1} of ${installmentCount} for ${installmentMonths}-month plan`,
 				},
 			});
-			
+
 			installments.push(installment);
-			
+
 			installmentLogger.info(
 				`Created installment ${i + 1}/${installmentCount}: ` +
-				`Amount=${amount}, CutOff=${cutoffDate.toISOString().split('T')[0]}, ` +
-				`Scheduled=${scheduledDate.toISOString().split('T')[0]}`
+					`Amount=${amount}, CutOff=${cutoffDate.toISOString().split("T")[0]}, ` +
+					`Scheduled=${scheduledDate.toISOString().split("T")[0]}`,
 			);
 		}
-		
+
 		installmentLogger.info(
-			`Successfully generated ${installments.length} installments for order ${orderId}`
+			`Successfully generated ${installments.length} installments for order ${orderId}`,
 		);
-		
+
 		return installments;
 	} catch (error) {
 		installmentLogger.error(`Failed to generate installments for order ${orderId}:`, error);
@@ -151,7 +159,7 @@ export async function markInstallmentAsDeducted(
 	prisma: PrismaClient,
 	installmentId: string,
 	payrollBatchId?: string,
-	deductionReference?: string
+	deductionReference?: string,
 ) {
 	try {
 		// Get the installment details
@@ -173,10 +181,10 @@ export async function markInstallmentAsDeducted(
 				deductionReference,
 			},
 		});
-		
+
 		installmentLogger.info(
 			`Installment ${installmentId} marked as DEDUCTED ` +
-			`(batch: ${payrollBatchId}, ref: ${deductionReference})`
+				`(batch: ${payrollBatchId}, ref: ${deductionReference})`,
 		);
 
 		// Record payment in transaction ledger
@@ -192,19 +200,19 @@ export async function markInstallmentAsDeducted(
 					payrollDate: new Date(),
 					processedBy: "SYSTEM",
 					notes: `Installment ${installment.installmentNumber} deducted`,
-				}
+				},
 			);
 			installmentLogger.info(
-				`Payment recorded in transaction ledger for installment ${installmentId}`
+				`Payment recorded in transaction ledger for installment ${installmentId}`,
 			);
 		} catch (transactionError) {
 			installmentLogger.error(
 				`Failed to record payment in transaction ledger:`,
-				transactionError
+				transactionError,
 			);
 			// Don't fail the entire operation if transaction update fails
 		}
-		
+
 		return updatedInstallment;
 	} catch (error) {
 		installmentLogger.error(`Failed to mark installment ${installmentId} as deducted:`, error);
@@ -218,7 +226,7 @@ export async function markInstallmentAsDeducted(
  */
 export async function getPendingInstallmentsForPayroll(
 	prisma: PrismaClient,
-	cutoffDate: Date = new Date()
+	cutoffDate: Date = new Date(),
 ) {
 	try {
 		const pendingInstallments = await prisma.installment.findMany({
@@ -242,11 +250,11 @@ export async function getPendingInstallmentsForPayroll(
 				cutOffDate: "asc",
 			},
 		});
-		
+
 		installmentLogger.info(
-			`Found ${pendingInstallments.length} pending installments for cutoff date ${cutoffDate.toISOString().split('T')[0]}`
+			`Found ${pendingInstallments.length} pending installments for cutoff date ${cutoffDate.toISOString().split("T")[0]}`,
 		);
-		
+
 		return pendingInstallments;
 	} catch (error) {
 		installmentLogger.error("Failed to get pending installments:", error);
@@ -263,22 +271,22 @@ export async function getOrderInstallmentSummary(prisma: PrismaClient, orderId: 
 			where: { orderId },
 			orderBy: { installmentNumber: "asc" },
 		});
-		
+
 		const summary = {
 			totalInstallments: installments.length,
-			paidCount: installments.filter(i => i.status === "DEDUCTED").length,
-			pendingCount: installments.filter(i => i.status === "PENDING").length,
-			failedCount: installments.filter(i => i.status === "FAILED").length,
+			paidCount: installments.filter((i) => i.status === "DEDUCTED").length,
+			pendingCount: installments.filter((i) => i.status === "PENDING").length,
+			failedCount: installments.filter((i) => i.status === "FAILED").length,
 			totalAmount: installments.reduce((sum, i) => sum + i.amount, 0),
 			paidAmount: installments
-				.filter(i => i.status === "DEDUCTED")
+				.filter((i) => i.status === "DEDUCTED")
 				.reduce((sum, i) => sum + i.amount, 0),
 			remainingAmount: installments
-				.filter(i => i.status === "PENDING" || i.status === "FAILED")
+				.filter((i) => i.status === "PENDING" || i.status === "FAILED")
 				.reduce((sum, i) => sum + i.amount, 0),
 			installments,
 		};
-		
+
 		return summary;
 	} catch (error) {
 		installmentLogger.error(`Failed to get installment summary for order ${orderId}:`, error);

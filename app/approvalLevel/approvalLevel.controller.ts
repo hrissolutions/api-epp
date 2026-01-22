@@ -81,7 +81,9 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const approvalLevel = await prisma.approvalLevel.create({ data: validation.data as any });
+			const approvalLevel = await prisma.approvalLevel.create({
+				data: validation.data as any,
+			});
 			approvalLevelLogger.info(`ApprovalLevel created successfully: ${approvalLevel.id}`);
 
 			logActivity(req, {
@@ -165,7 +167,11 @@ export const controller = (prisma: PrismaClient) => {
 
 			const searchFields = ["role", "description"];
 			if (query) {
-				const searchConditions = buildSearchConditions("ApprovalLevel", query, searchFields);
+				const searchConditions = buildSearchConditions(
+					"ApprovalLevel",
+					query,
+					searchFields,
+				);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
@@ -187,7 +193,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			approvalLevelLogger.info(`Retrieved ${approvalLevels.length} approval levels`);
 			const processedData =
-				groupBy && document ? groupDataByField(approvalLevels, groupBy as string) : approvalLevels;
+				groupBy && document
+					? groupDataByField(approvalLevels, groupBy as string)
+					: approvalLevels;
 
 			const responseData: Record<string, any> = {
 				...(document && { approvalLevels: processedData }),
@@ -222,7 +230,9 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				approvalLevelLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				approvalLevelLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -244,7 +254,10 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				approvalLevelLogger.warn(`Redis cache retrieval failed for approvalLevel ${id}:`, cacheError);
+				approvalLevelLogger.warn(
+					`Redis cache retrieval failed for approvalLevel ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!approvalLevel) {
@@ -428,7 +441,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			approvalLevelLogger.info(`Approval level deleted: ${id}`);
-			const successResponse = buildSuccessResponse("Approval level deleted successfully", {}, 200);
+			const successResponse = buildSuccessResponse(
+				"Approval level deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			approvalLevelLogger.error(`Failed to delete approval level: ${error}`);

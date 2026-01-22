@@ -2,10 +2,7 @@ import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
 // Enums
-export const PurchaseTypeEnum = z.enum([
-	"FULL_PAYMENT",
-	"PAYROLL_LOAN",
-]);
+export const PurchaseTypeEnum = z.enum(["FULL_PAYMENT", "PAYROLL_LOAN"]);
 
 export const PurchaseStatusEnum = z.enum([
 	"PENDING",
@@ -34,9 +31,13 @@ export const PurchaseSchema = z.object({
 	totalAmount: z.number().positive("Total amount must be positive"),
 	downPayment: z.number().min(0).optional().nullable(),
 	status: PurchaseStatusEnum.default("PENDING"),
-	approvedBy: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid approvedBy ObjectId format",
-	}).optional().nullable(),
+	approvedBy: z
+		.string()
+		.refine((val) => !val || isValidObjectId(val), {
+			message: "Invalid approvedBy ObjectId format",
+		})
+		.optional()
+		.nullable(),
 	approvedAt: z.coerce.date().optional().nullable(),
 	rejectionReason: z.string().optional().nullable(),
 	notes: z.string().optional().nullable(),

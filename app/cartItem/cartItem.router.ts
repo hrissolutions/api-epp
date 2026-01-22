@@ -408,7 +408,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 * /api/cartItem/checkout:
 	 *   post:
 	 *     summary: Checkout cart items to create an order
-	 *     description: Convert all cart items for an employee into an order with optional installment payment. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears the cart.
+	 *     description: Convert cart items for an employee into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears only the checked-out items from the cart.
 	 *     tags: [CartItem]
 	 *     requestBody:
 	 *       required: true
@@ -423,6 +423,27 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                 type: string
 	 *                 description: Employee ID who owns the cart
 	 *                 example: "507f1f77bcf86cd799439011"
+	 *               items:
+	 *                 type: array
+	 *                 description: Optional array of specific items to checkout. If not provided, all cart items will be checked out.
+	 *                 items:
+	 *                   type: object
+	 *                   required:
+	 *                     - productId
+	 *                     - quantity
+	 *                   properties:
+	 *                     productId:
+	 *                       type: string
+	 *                       description: Product ID to checkout
+	 *                       example: "696da7163ff7642054c61734"
+	 *                     quantity:
+	 *                       type: integer
+	 *                       minimum: 1
+	 *                       description: Quantity to checkout (must not exceed quantity in cart)
+	 *                       example: 2
+	 *                 example:
+	 *                   - productId: "696da7163ff7642054c61734"
+	 *                     quantity: 2
 	 *               paymentType:
 	 *                 type: string
 	 *                 enum: [CASH, INSTALLMENT, POINTS, MIXED]
@@ -460,7 +481,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *               notes:
 	 *                 type: string
 	 *                 description: Additional notes for the order
-	 *                 example: "Please deliver during business hours"
+	 *                 example: "Order placed via API"
 	 *     responses:
 	 *       201:
 	 *         description: Order created successfully from cart

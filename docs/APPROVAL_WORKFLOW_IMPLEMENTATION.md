@@ -1,6 +1,7 @@
 # Order Approval Workflow Implementation
 
 ## Overview
+
 This document outlines the complete implementation of the order approval workflow system, including all models, controllers, routes, and validation schemas.
 
 ## Changes Made
@@ -10,19 +11,22 @@ This document outlines the complete implementation of the order approval workflo
 #### New Models Created
 
 **`prisma/schema/orderApproval.prisma`**
+
 - Tracks individual approval steps for each order
 - Fields: orderId (@db.ObjectId), approvalLevel, approverRole, approverId, approverName, approverEmail, status, comments, notification tracking
 - Indexes: orderId, approverId, status, approvalLevel
 - Unique constraint: [orderId, approvalLevel]
-- Note: All IDs use @map("_id") for MongoDB compatibility
+- Note: All IDs use @map("\_id") for MongoDB compatibility
 
 **`prisma/schema/approvalWorkflow.prisma`**
+
 - Defines approval workflow configurations
 - Fields: name, description, isActive, minOrderAmount (Float), maxOrderAmount (Float), requiresInstallment
 - Relations: levels (ApprovalLevel[])
 - Note: Uses Float instead of Decimal for MongoDB compatibility
 
 **`prisma/schema/approvalLevel.prisma`**
+
 - Defines approval levels within workflows
 - Fields: workflowId, level, role, description, isRequired, autoApproveUnder (Float), timeoutDays
 - Unique constraint: [workflowId, level]
@@ -31,16 +35,18 @@ This document outlines the complete implementation of the order approval workflo
 #### Updated Models
 
 **`prisma/schema/order.prisma`**
+
 - Added approval workflow fields:
-  - `approvals` (OrderApproval[])
-  - `currentApprovalLevel` (Int, default: 1)
-  - `isFullyApproved` (Boolean, default: false)
-  - `approvedAt` (DateTime?)
-  - `rejectedAt` (DateTime?)
-  - `rejectedBy` (String?)
-  - `rejectionReason` (String?)
+    - `approvals` (OrderApproval[])
+    - `currentApprovalLevel` (Int, default: 1)
+    - `isFullyApproved` (Boolean, default: false)
+    - `approvedAt` (DateTime?)
+    - `rejectedAt` (DateTime?)
+    - `rejectedBy` (String?)
+    - `rejectionReason` (String?)
 
 **OrderStatus Enum Updated:**
+
 ```prisma
 enum OrderStatus {
   PENDING_APPROVAL  // Waiting for approvals
@@ -55,6 +61,7 @@ enum OrderStatus {
 ```
 
 **New Enums Added:**
+
 ```prisma
 enum ApproverRole {
   MANAGER           // Direct manager
@@ -76,22 +83,27 @@ enum ApprovalStatus {
 ### 2. Zod Validation Schemas
 
 **Created:**
+
 - `zod/orderApproval.zod.ts` - Validation for OrderApproval model
 - `zod/approvalWorkflow.zod.ts` - Validation for ApprovalWorkflow model
 - `zod/approvalLevel.zod.ts` - Validation for ApprovalLevel model
 
 **Updated:**
+
 - `zod/order.zod.ts` - Updated OrderStatus enum and default status to PENDING_APPROVAL
 
 ### 3. App Structure (Controllers, Routes, Index)
 
 #### OrderApproval Module
+
 **Location:** `app/orderApproval/`
+
 - `orderApproval.controller.ts` - CRUD operations for order approvals
 - `orderApproval.router.ts` - API routes with caching
 - `index.ts` - Module export
 
 **Endpoints:**
+
 - `GET /api/orderApproval` - Get all order approvals (with filtering, pagination)
 - `GET /api/orderApproval/:id` - Get order approval by ID
 - `POST /api/orderApproval` - Create new order approval
@@ -99,12 +111,15 @@ enum ApprovalStatus {
 - `DELETE /api/orderApproval/:id` - Delete order approval
 
 #### ApprovalWorkflow Module
+
 **Location:** `app/approvalWorkflow/`
+
 - `approvalWorkflow.controller.ts` - CRUD operations for approval workflows
 - `approvalWorkflow.router.ts` - API routes with caching
 - `index.ts` - Module export
 
 **Endpoints:**
+
 - `GET /api/approvalWorkflow` - Get all workflows (with filtering, pagination)
 - `GET /api/approvalWorkflow/:id` - Get workflow by ID
 - `POST /api/approvalWorkflow` - Create new workflow
@@ -112,12 +127,15 @@ enum ApprovalStatus {
 - `DELETE /api/approvalWorkflow/:id` - Delete workflow
 
 #### ApprovalLevel Module
+
 **Location:** `app/approvalLevel/`
+
 - `approvalLevel.controller.ts` - CRUD operations for approval levels
 - `approvalLevel.router.ts` - API routes with caching
 - `index.ts` - Module export
 
 **Endpoints:**
+
 - `GET /api/approvalLevel` - Get all approval levels (with filtering, pagination)
 - `GET /api/approvalLevel/:id` - Get approval level by ID
 - `POST /api/approvalLevel` - Create new approval level
@@ -127,35 +145,41 @@ enum ApprovalStatus {
 ### 4. Application Registration
 
 **Updated `index.ts`:**
+
 - Registered orderApproval, approvalWorkflow, and approvalLevel modules
 - Added routes to middleware exclusion list (no authentication required for now)
 
 ## Features Implemented
 
 ### 1. Multi-Level Approval System
+
 - Support for multiple approval levels (Manager, HR, Finance, Department Head, Admin)
 - Track current approval level
 - Sequential approval process
 
 ### 2. Approval Tracking
+
 - Track approver details (ID, name, email)
 - Record approval/rejection timestamps
 - Store approval comments
 - Notification tracking (notified at, reminder sent at)
 
 ### 3. Workflow Configuration
+
 - Create custom approval workflows
 - Set workflow conditions (min/max order amounts)
 - Configure installment requirements
 - Activate/deactivate workflows
 
 ### 4. Approval Level Configuration
+
 - Define approval levels within workflows
 - Set role requirements for each level
 - Configure auto-approval thresholds
 - Set timeout periods for auto-approval
 
 ### 5. Order Integration
+
 - Track approval status directly on orders
 - Link orders to approval records
 - Support for rejection with reasons
@@ -170,12 +194,15 @@ enum ApprovalStatus {
 ## Next Steps
 
 ### 1. Database Changes ✅ COMPLETED
+
 - ✅ Prisma client generated successfully
 - ✅ Build completed without errors
 - Since you're using MongoDB, Prisma will automatically sync the schema on first use (no migration needed)
 
 ### 2. Test the Endpoints
+
 Use tools like Postman or curl to test:
+
 - Creating workflows
 - Adding approval levels to workflows
 - Creating order approvals
@@ -184,6 +211,7 @@ Use tools like Postman or curl to test:
 ### 3. Implement Business Logic (Optional Enhancements)
 
 Consider adding service layers for:
+
 - **Workflow Matcher**: Automatically determine which workflow applies to an order
 - **Approval Processor**: Handle approval/rejection logic
 - **Notification Service**: Send notifications to approvers
@@ -191,6 +219,7 @@ Consider adding service layers for:
 - **Reminder Service**: Send reminder notifications
 
 Example implementation locations:
+
 - `helper/approvalWorkflowMatcher.ts`
 - `helper/approvalProcessor.ts`
 - `helper/approvalNotificationService.ts`
@@ -198,6 +227,7 @@ Example implementation locations:
 ### 4. Add Custom Routes (Optional)
 
 Consider adding specialized endpoints:
+
 - `POST /api/orderApproval/:id/approve` - Approve an order approval
 - `POST /api/orderApproval/:id/reject` - Reject an order approval
 - `GET /api/order/:orderId/approvals` - Get all approvals for an order
@@ -207,6 +237,7 @@ Consider adding specialized endpoints:
 ### 5. Frontend Integration
 
 Develop UI components for:
+
 - Approval dashboard for approvers
 - Workflow configuration UI for admins
 - Order approval history view
@@ -215,6 +246,7 @@ Develop UI components for:
 ### 6. Security & Authorization
 
 Consider implementing:
+
 - Role-based access control for approvers
 - Permissions for workflow management
 - Audit logging for approval actions (already partially implemented)
@@ -222,6 +254,7 @@ Consider implementing:
 ### 7. Testing
 
 Create tests for:
+
 - Workflow matching logic
 - Approval state transitions
 - Auto-approval scenarios
@@ -230,6 +263,7 @@ Create tests for:
 ## API Examples
 
 ### Create an Approval Workflow
+
 ```json
 POST /api/approvalWorkflow
 {
@@ -243,6 +277,7 @@ POST /api/approvalWorkflow
 ```
 
 ### Add Approval Level to Workflow
+
 ```json
 POST /api/approvalLevel
 {
@@ -257,6 +292,7 @@ POST /api/approvalLevel
 ```
 
 ### Create Order Approval
+
 ```json
 POST /api/orderApproval
 {
@@ -270,6 +306,7 @@ POST /api/orderApproval
 ```
 
 ### Update Approval Status
+
 ```json
 PATCH /api/orderApproval/:id
 {
@@ -289,6 +326,7 @@ ApprovalWorkflow (1) ----< (M) ApprovalLevel
 ## Caching Strategy
 
 All endpoints implement Redis caching:
+
 - Individual records: 90 seconds TTL
 - List queries: 60 seconds TTL
 - Automatic cache invalidation on create/update/delete operations
@@ -296,6 +334,7 @@ All endpoints implement Redis caching:
 ## Logging & Monitoring
 
 All operations include:
+
 - Activity logging (user actions)
 - Audit logging (data changes)
 - Error logging

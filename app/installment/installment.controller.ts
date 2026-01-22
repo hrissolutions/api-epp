@@ -190,7 +190,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			installmentLogger.info(`Retrieved ${installments.length} installments`);
 			const processedData =
-				groupBy && document ? groupDataByField(installments, groupBy as string) : installments;
+				groupBy && document
+					? groupDataByField(installments, groupBy as string)
+					: installments;
 
 			const responseData: Record<string, any> = {
 				...(document && { installments: processedData }),
@@ -243,11 +245,16 @@ export const controller = (prisma: PrismaClient) => {
 				if (redisClient.isClientConnected()) {
 					installment = await redisClient.getJSON(cacheKey);
 					if (installment) {
-						installmentLogger.info(`Installment ${id} retrieved from direct Redis cache`);
+						installmentLogger.info(
+							`Installment ${id} retrieved from direct Redis cache`,
+						);
 					}
 				}
 			} catch (cacheError) {
-				installmentLogger.warn(`Redis cache retrieval failed for installment ${id}:`, cacheError);
+				installmentLogger.warn(
+					`Redis cache retrieval failed for installment ${id}:`,
+					cacheError,
+				);
 			}
 
 			if (!installment) {
@@ -279,7 +286,9 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			installmentLogger.info(`${config.SUCCESS.INSTALLMENT.RETRIEVED}: ${(installment as any).id}`);
+			installmentLogger.info(
+				`${config.SUCCESS.INSTALLMENT.RETRIEVED}: ${(installment as any).id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.INSTALLMENT.RETRIEVED,
 				installment,
@@ -371,7 +380,9 @@ export const controller = (prisma: PrismaClient) => {
 				);
 			}
 
-			installmentLogger.info(`${config.SUCCESS.INSTALLMENT.UPDATED}: ${updatedInstallment.id}`);
+			installmentLogger.info(
+				`${config.SUCCESS.INSTALLMENT.UPDATED}: ${updatedInstallment.id}`,
+			);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.INSTALLMENT.UPDATED,
 				{ installment: updatedInstallment },
@@ -431,7 +442,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			installmentLogger.info(`${config.SUCCESS.INSTALLMENT.DELETED}: ${id}`);
-			const successResponse = buildSuccessResponse(config.SUCCESS.INSTALLMENT.DELETED, {}, 200);
+			const successResponse = buildSuccessResponse(
+				config.SUCCESS.INSTALLMENT.DELETED,
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
 			installmentLogger.error(`${config.ERROR.INSTALLMENT.DELETE_FAILED}: ${error}`);
@@ -478,13 +493,15 @@ export const controller = (prisma: PrismaClient) => {
 				prisma,
 				id,
 				payrollBatchId,
-				deductionReference
+				deductionReference,
 			);
 
 			try {
 				await invalidateCache.byPattern(`cache:installment:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:installment:list:*");
-				installmentLogger.info(`Cache invalidated after installment ${id} marked as deducted`);
+				installmentLogger.info(
+					`Cache invalidated after installment ${id} marked as deducted`,
+				);
 			} catch (cacheError) {
 				installmentLogger.warn(
 					"Failed to invalidate cache after marking installment as deducted:",
@@ -516,7 +533,7 @@ export const controller = (prisma: PrismaClient) => {
 	const getPendingForPayroll = async (req: Request, res: Response, _next: NextFunction) => {
 		try {
 			const { cutoffDate } = req.query;
-			
+
 			let cutoffDateObj = new Date();
 			if (cutoffDate && typeof cutoffDate === "string") {
 				cutoffDateObj = new Date(cutoffDate);
@@ -528,9 +545,14 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			}
 
-			installmentLogger.info(`Getting pending installments for cutoff date: ${cutoffDateObj.toISOString()}`);
+			installmentLogger.info(
+				`Getting pending installments for cutoff date: ${cutoffDateObj.toISOString()}`,
+			);
 
-			const pendingInstallments = await getPendingInstallmentsForPayroll(prisma, cutoffDateObj);
+			const pendingInstallments = await getPendingInstallmentsForPayroll(
+				prisma,
+				cutoffDateObj,
+			);
 
 			const summary = {
 				cutoffDate: cutoffDateObj,
@@ -540,7 +562,7 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			installmentLogger.info(
-				`Found ${pendingInstallments.length} pending installments (total: ${summary.totalAmount})`
+				`Found ${pendingInstallments.length} pending installments (total: ${summary.totalAmount})`,
 			);
 
 			const successResponse = buildSuccessResponse(
@@ -583,8 +605,8 @@ export const controller = (prisma: PrismaClient) => {
 
 			installmentLogger.info(
 				`Installment summary for order ${orderId}: ` +
-				`${summary.paidCount}/${summary.totalInstallments} paid, ` +
-				`remaining: ${summary.remainingAmount}`
+					`${summary.paidCount}/${summary.totalInstallments} paid, ` +
+					`remaining: ${summary.remainingAmount}`,
 			);
 
 			const successResponse = buildSuccessResponse(
@@ -603,11 +625,11 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { 
-		create, 
-		getAll, 
-		getById, 
-		update, 
+	return {
+		create,
+		getAll,
+		getById,
+		update,
 		remove,
 		markAsDeducted,
 		getPendingForPayroll,

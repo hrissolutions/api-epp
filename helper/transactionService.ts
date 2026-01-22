@@ -13,7 +13,7 @@ export async function createTransactionForOrder(
 	employeeId: string,
 	totalAmount: number,
 	paymentType: string,
-	paymentMethod: any
+	paymentMethod: any,
 ) {
 	try {
 		const transactionNumber = `TXN-${Date.now()}`;
@@ -34,7 +34,7 @@ export async function createTransactionForOrder(
 		});
 
 		transactionLogger.info(
-			`Transaction ledger created for order ${orderId}: ${transactionNumber}`
+			`Transaction ledger created for order ${orderId}: ${transactionNumber}`,
 		);
 
 		return transaction;
@@ -58,7 +58,7 @@ export async function recordInstallmentPayment(
 		payrollDate?: Date;
 		processedBy?: string;
 		notes?: string;
-	}
+	},
 ) {
 	try {
 		// Get the transaction for this order
@@ -105,8 +105,8 @@ export async function recordInstallmentPayment(
 
 		transactionLogger.info(
 			`Payment recorded for order ${orderId}: ` +
-			`Paid ${amount}, Total Paid: ${newPaidAmount}/${transaction.totalAmount}, ` +
-			`Balance: ${newBalance}, Status: ${updatedTransaction.status}`
+				`Paid ${amount}, Total Paid: ${newPaidAmount}/${transaction.totalAmount}, ` +
+				`Balance: ${newBalance}, Status: ${updatedTransaction.status}`,
 		);
 
 		return updatedTransaction;
@@ -138,9 +138,8 @@ export async function getTransactionSummary(prisma: PrismaClient, orderId: strin
 			balance: transaction.balance,
 			status: transaction.status,
 			paymentCount: paymentHistory.length,
-			lastPayment: paymentHistory.length > 0 
-				? paymentHistory[paymentHistory.length - 1] 
-				: null,
+			lastPayment:
+				paymentHistory.length > 0 ? paymentHistory[paymentHistory.length - 1] : null,
 			paymentHistory,
 		};
 	} catch (error) {
@@ -156,7 +155,7 @@ export async function reconcileTransaction(
 	prisma: PrismaClient,
 	orderId: string,
 	reconciledBy: string,
-	notes?: string
+	notes?: string,
 ) {
 	try {
 		const transaction = await prisma.transaction.findFirst({
@@ -181,9 +180,7 @@ export async function reconcileTransaction(
 			},
 		});
 
-		transactionLogger.info(
-			`Transaction reconciled for order ${orderId} by ${reconciledBy}`
-		);
+		transactionLogger.info(`Transaction reconciled for order ${orderId} by ${reconciledBy}`);
 
 		return updatedTransaction;
 	} catch (error) {
@@ -212,9 +209,7 @@ export async function getUnreconciledTransactions(prisma: PrismaClient) {
 			transactions,
 		};
 
-		transactionLogger.info(
-			`Found ${transactions.length} unreconciled transactions`
-		);
+		transactionLogger.info(`Found ${transactions.length} unreconciled transactions`);
 
 		return summary;
 	} catch (error) {

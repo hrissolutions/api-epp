@@ -35,15 +35,14 @@ export type TransactionStatus = z.infer<typeof TransactionStatusEnum>;
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
 // Decimal schema helper (for Float type)
-const decimalSchema = z.union([
-	z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"),
-	z.number(),
-]).transform((val) => {
-	if (typeof val === "string") {
-		return parseFloat(val);
-	}
-	return val;
-});
+const decimalSchema = z
+	.union([z.string().regex(/^\d+\.?\d*$/, "Invalid decimal format"), z.number()])
+	.transform((val) => {
+		if (typeof val === "string") {
+			return parseFloat(val);
+		}
+		return val;
+	});
 
 // Transaction Schema (full, including ID)
 export const TransactionSchema = z.object({

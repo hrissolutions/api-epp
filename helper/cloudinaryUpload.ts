@@ -75,11 +75,7 @@ export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
  * @param publicIds Array of Cloudinary public IDs
  * @returns Array of deletion results
  */
-export async function deleteMultipleFromCloudinary(
-	publicIds: string[],
-): Promise<boolean[]> {
-	const results = await Promise.all(
-		publicIds.map((publicId) => deleteFromCloudinary(publicId)),
-	);
+export async function deleteMultipleFromCloudinary(publicIds: string[]): Promise<boolean[]> {
+	const results = await Promise.all(publicIds.map((publicId) => deleteFromCloudinary(publicId)));
 	return results;
 }

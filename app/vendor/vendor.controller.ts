@@ -120,10 +120,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:vendor:list:*");
 				vendorLogger.info("Vendor list cache invalidated after creation");
 			} catch (cacheError) {
-				vendorLogger.warn(
-					"Failed to invalidate cache after vendor creation:",
-					cacheError,
-				);
+				vendorLogger.warn("Failed to invalidate cache after vendor creation:", cacheError);
 			}
 
 			const successResponse = buildSuccessResponse(
@@ -373,10 +370,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:vendor:list:*");
 				vendorLogger.info(`Cache invalidated after vendor ${id} update`);
 			} catch (cacheError) {
-				vendorLogger.warn(
-					"Failed to invalidate cache after vendor update:",
-					cacheError,
-				);
+				vendorLogger.warn("Failed to invalidate cache after vendor update:", cacheError);
 			}
 
 			vendorLogger.info(`${config.SUCCESS.VENDOR.UPDATED}: ${updatedVendor.id}`);
@@ -432,10 +426,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:vendor:list:*");
 				vendorLogger.info(`Cache invalidated after vendor ${id} deletion`);
 			} catch (cacheError) {
-				vendorLogger.warn(
-					"Failed to invalidate cache after vendor deletion:",
-					cacheError,
-				);
+				vendorLogger.warn("Failed to invalidate cache after vendor deletion:", cacheError);
 			}
 
 			vendorLogger.info(`${config.SUCCESS.VENDOR.DELETED}: ${id}`);

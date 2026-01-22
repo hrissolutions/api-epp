@@ -118,7 +118,7 @@ function validateServiceName(input: string): string {
 	// No special characters like hyphens, underscores, spaces, etc.
 	if (!/^[a-zA-Z0-9]+$/.test(input)) {
 		throw new Error(
-			`Invalid service name "${input}". Service names must contain only alphanumeric characters (letters and numbers). Special characters like hyphens (-), underscores (_), spaces, etc. are not allowed.`
+			`Invalid service name "${input}". Service names must contain only alphanumeric characters (letters and numbers). Special characters like hyphens (-), underscores (_), spaces, etc. are not allowed.`,
 		);
 	}
 
@@ -578,26 +578,20 @@ function updateConstantsForService(name: string) {
 	if (content.includes("AUDIT_LOG:")) {
 		// Add to AUDIT_LOG.RESOURCES section
 		if (content.includes("RESOURCES:")) {
-			content = content.replace(
-				/(RESOURCES:\s*\{[\s\S]*?)(\n\t\t\},)/,
-				(_m, p1, p2) => {
-					if (p1.includes(`${UPPER}: "${lower}"`)) return _m; // Already exists
-					const block = `\n\t\t\t${UPPER}: "${lower}",`;
-					return p1 + block + p2;
-				},
-			);
+			content = content.replace(/(RESOURCES:\s*\{[\s\S]*?)(\n\t\t\},)/, (_m, p1, p2) => {
+				if (p1.includes(`${UPPER}: "${lower}"`)) return _m; // Already exists
+				const block = `\n\t\t\t${UPPER}: "${lower}",`;
+				return p1 + block + p2;
+			});
 		}
 
 		// Add to AUDIT_LOG.ENTITY_TYPES section
 		if (content.includes("ENTITY_TYPES:")) {
-			content = content.replace(
-				/(ENTITY_TYPES:\s*\{[\s\S]*?)(\n\t\t\},)/,
-				(_m, p1, p2) => {
-					if (p1.includes(`${UPPER}: "${lower}"`)) return _m; // Already exists
-					const block = `\n\t\t\t${UPPER}: "${lower}",`;
-					return p1 + block + p2;
-				},
-			);
+			content = content.replace(/(ENTITY_TYPES:\s*\{[\s\S]*?)(\n\t\t\},)/, (_m, p1, p2) => {
+				if (p1.includes(`${UPPER}: "${lower}"`)) return _m; // Already exists
+				const block = `\n\t\t\t${UPPER}: "${lower}",`;
+				return p1 + block + p2;
+			});
 		}
 
 		// Add resource-specific AUDIT_LOG section (config.AUDIT_LOG.SERVICENAME.DESCRIPTIONS.SERVICENAME_CREATED)
@@ -607,7 +601,8 @@ function updateConstantsForService(name: string) {
 			console.log(`🔍 Looking for AUDIT_LOG section to add ${UPPER} service...`);
 
 			// Simple and reliable approach: find the TEMPLATE section within AUDIT_LOG and insert before it
-			const templatePattern = /(\n\s*TEMPLATE:\s*\{\s*\n\s*DESCRIPTIONS:\s*\{[\s\S]*?\n\s*\},\s*\n\s*\},\s*\n\s*\},)/;
+			const templatePattern =
+				/(\n\s*TEMPLATE:\s*\{\s*\n\s*DESCRIPTIONS:\s*\{[\s\S]*?\n\s*\},\s*\n\s*\},\s*\n\s*\},)/;
 
 			if (templatePattern.test(content)) {
 				console.log(`✅ Found TEMPLATE section, inserting ${UPPER} before it`);
@@ -643,9 +638,7 @@ function scaffoldZodForService(name: string, source: string) {
 	const sourceZodFile = path.join(getTemplateZodDir(), `${source.toLowerCase()}.zod.ts`);
 	const targetZodFile = path.join(zodDir, `${name}.zod.ts`);
 	if (!fs.existsSync(sourceZodFile)) {
-		console.log(
-			`⚠ Zod template not found at ${sourceZodFile}, skipping Zod schema generation`,
-		);
+		console.log(`⚠ Zod template not found at ${sourceZodFile}, skipping Zod schema generation`);
 		return;
 	}
 	if (fs.existsSync(targetZodFile)) {

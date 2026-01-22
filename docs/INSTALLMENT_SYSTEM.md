@@ -7,14 +7,18 @@ The Installment System automatically manages bi-monthly salary deductions for or
 ## System Architecture
 
 ### 1. Order Model
+
 Tracks high-level installment information:
+
 - `installmentMonths`: Number of months for the installment plan (e.g., 3 months)
 - `installmentCount`: Total number of deductions (e.g., 6 = 3 months × 2 cut-offs)
 - `installmentAmount`: Amount per deduction
 - `paymentType`: Must be set to `INSTALLMENT` to trigger auto-generation
 
 ### 2. Installment Model
+
 Creates individual records for each deduction:
+
 - `installmentNumber`: Sequence number (1, 2, 3, ...)
 - `amount`: Deduction amount for this installment
 - `status`: Current status (PENDING, SCHEDULED, DEDUCTED, FAILED, CANCELLED)
@@ -39,10 +43,12 @@ When an order is created with `paymentType: "INSTALLMENT"`:
 ### Bi-Monthly Payroll Schedule
 
 The system uses a bi-monthly payroll schedule:
+
 - **First cutoff**: 15th of each month
 - **Second cutoff**: Last day of each month (28th, 30th, or 31st)
 
 **Example for 3-month plan starting January 5:**
+
 ```
 Installment 1: Cutoff Jan 15, Scheduled Jan 20
 Installment 2: Cutoff Jan 31, Scheduled Feb 5
@@ -60,19 +66,20 @@ Installment 6: Cutoff Mar 31, Scheduled Apr 5
 
 ```json
 {
-  "orderNumber": "ORD-2024-001",
-  "employeeId": "507f1f77bcf86cd799439011",
-  "total": 6000.00,
-  "subtotal": 5500.00,
-  "tax": 500.00,
-  "paymentType": "INSTALLMENT",
-  "installmentMonths": 3,
-  "paymentMethod": "PAYROLL_DEDUCTION",
-  "status": "APPROVED"
+	"orderNumber": "ORD-2024-001",
+	"employeeId": "507f1f77bcf86cd799439011",
+	"total": 6000.0,
+	"subtotal": 5500.0,
+	"tax": 500.0,
+	"paymentType": "INSTALLMENT",
+	"installmentMonths": 3,
+	"paymentMethod": "PAYROLL_DEDUCTION",
+	"status": "APPROVED"
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -115,6 +122,7 @@ Installment 6: Cutoff Mar 31, Scheduled Apr 5
 Returns all installments that should be deducted for the specified cutoff date.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -149,25 +157,26 @@ Returns all installments that should be deducted for the specified cutoff date.
 
 ```json
 {
-  "payrollBatchId": "BATCH-2024-01-15",
-  "deductionReference": "DED-2024-001234"
+	"payrollBatchId": "BATCH-2024-01-15",
+	"deductionReference": "DED-2024-001234"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "message": "Installment marked as deducted",
-  "data": {
-    "installment": {
-      "id": "507f1f77bcf86cd799439012",
-      "status": "DEDUCTED",
-      "deductedDate": "2024-01-20T10:30:00.000Z",
-      "payrollBatchId": "BATCH-2024-01-15",
-      "deductionReference": "DED-2024-001234"
-    }
-  }
+	"success": true,
+	"message": "Installment marked as deducted",
+	"data": {
+		"installment": {
+			"id": "507f1f77bcf86cd799439012",
+			"status": "DEDUCTED",
+			"deductedDate": "2024-01-20T10:30:00.000Z",
+			"payrollBatchId": "BATCH-2024-01-15",
+			"deductionReference": "DED-2024-001234"
+		}
+	}
 }
 ```
 
@@ -178,6 +187,7 @@ Returns all installments that should be deducted for the specified cutoff date.
 Returns a comprehensive summary of all installments for a specific order.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -229,55 +239,57 @@ PENDING (retry)
 ### For Payroll Administrators
 
 1. **Before Each Payroll Run** (on cutoff date):
-   ```
-   GET /api/installment/pending-payroll?cutoffDate=2024-01-15
-   ```
+
+    ```
+    GET /api/installment/pending-payroll?cutoffDate=2024-01-15
+    ```
 
 2. **Process Each Installment**:
-   - Verify employee is active
-   - Check salary is sufficient for deduction
-   - Deduct from employee salary
+    - Verify employee is active
+    - Check salary is sufficient for deduction
+    - Deduct from employee salary
 
 3. **After Successful Deduction**:
-   ```
-   POST /api/installment/{installmentId}/deduct
-   {
-     "payrollBatchId": "BATCH-2024-01-15",
-     "deductionReference": "DED-2024-001234"
-   }
-   ```
+
+    ```
+    POST /api/installment/{installmentId}/deduct
+    {
+      "payrollBatchId": "BATCH-2024-01-15",
+      "deductionReference": "DED-2024-001234"
+    }
+    ```
 
 4. **Handle Failed Deductions**:
-   ```
-   PATCH /api/installment/{installmentId}
-   {
-     "status": "FAILED",
-     "notes": "Insufficient salary balance"
-   }
-   ```
+    ```
+    PATCH /api/installment/{installmentId}
+    {
+      "status": "FAILED",
+      "notes": "Insufficient salary balance"
+    }
+    ```
 
 ## Code Examples
 
 ### Service Layer Usage
 
 ```typescript
-import { generateInstallments, markInstallmentAsDeducted } from './helper/installmentService';
+import { generateInstallments, markInstallmentAsDeducted } from "./helper/installmentService";
 
 // Generate installments for an order
 const installments = await generateInstallments(
-  prisma,
-  orderId,
-  3,        // 3 months
-  6000.00,  // total amount
-  new Date() // start date
+	prisma,
+	orderId,
+	3, // 3 months
+	6000.0, // total amount
+	new Date(), // start date
 );
 
 // Mark as deducted
 const updated = await markInstallmentAsDeducted(
-  prisma,
-  installmentId,
-  "BATCH-2024-01-15",
-  "DED-2024-001234"
+	prisma,
+	installmentId,
+	"BATCH-2024-01-15",
+	"DED-2024-001234",
 );
 ```
 
@@ -285,29 +297,30 @@ const updated = await markInstallmentAsDeducted(
 
 ```typescript
 const employeeInstallments = await prisma.installment.findMany({
-  where: {
-    order: {
-      employeeId: "507f1f77bcf86cd799439013"
-    },
-    status: "PENDING"
-  },
-  include: {
-    order: {
-      select: {
-        orderNumber: true,
-        total: true
-      }
-    }
-  },
-  orderBy: {
-    cutOffDate: 'asc'
-  }
+	where: {
+		order: {
+			employeeId: "507f1f77bcf86cd799439013",
+		},
+		status: "PENDING",
+	},
+	include: {
+		order: {
+			select: {
+				orderNumber: true,
+				total: true,
+			},
+		},
+	},
+	orderBy: {
+		cutOffDate: "asc",
+	},
 });
 ```
 
 ## Database Schema
 
 ### Order Table
+
 ```prisma
 model Order {
   id                String        @id @default(auto()) @map("_id") @db.ObjectId
@@ -324,6 +337,7 @@ model Order {
 ```
 
 ### Installment Table
+
 ```prisma
 model Installment {
   id                 String            @id @default(auto()) @map("_id") @db.ObjectId

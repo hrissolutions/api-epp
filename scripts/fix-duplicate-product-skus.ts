@@ -1,13 +1,13 @@
 /**
  * Script to find and fix duplicate product SKUs
- * 
+ *
  * This script:
  * 1. Finds all products with duplicate SKUs
  * 2. Updates each duplicate SKU to make it unique by appending a suffix (-1, -2, etc.)
- * 
+ *
  * Usage:
  *   npx ts-node scripts/fix-duplicate-product-skus.ts
- * 
+ *
  * Or compile and run:
  *   npx tsc scripts/fix-duplicate-product-skus.ts
  *   node scripts/fix-duplicate-product-skus.js
@@ -64,7 +64,11 @@ async function findDuplicateSKUs(): Promise<DuplicateGroup[]> {
 	return duplicates;
 }
 
-async function generateUniqueSKU(baseSKU: string, existingSKUs: Set<string>, suffix: number): Promise<string> {
+async function generateUniqueSKU(
+	baseSKU: string,
+	existingSKUs: Set<string>,
+	suffix: number,
+): Promise<string> {
 	let newSKU = `${baseSKU}-${suffix}`;
 	let attempts = 0;
 	const maxAttempts = 1000;
@@ -149,7 +153,9 @@ async function fixDuplicateSKUs() {
 					console.log(`      Old SKU: ${product.sku}`);
 					console.log(`      New SKU: ${newSKU}\n`);
 				} catch (error: any) {
-					console.error(`   ❌ Failed to update product ${product.id}: ${error.message}\n`);
+					console.error(
+						`   ❌ Failed to update product ${product.id}: ${error.message}\n`,
+					);
 				}
 			}
 		}

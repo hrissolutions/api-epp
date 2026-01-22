@@ -1,15 +1,14 @@
 import { z } from "zod";
 
 // Number schema helper
-const numberSchema = z.union([
-	z.string().regex(/^\d+\.?\d*$/, "Invalid number format"),
-	z.number(),
-]).transform((val) => {
-	if (typeof val === "string") {
-		return parseFloat(val);
-	}
-	return val;
-});
+const numberSchema = z
+	.union([z.string().regex(/^\d+\.?\d*$/, "Invalid number format"), z.number()])
+	.transform((val) => {
+		if (typeof val === "string") {
+			return parseFloat(val);
+		}
+		return val;
+	});
 
 // WorkflowApprovalLevel Schema (full, including ID)
 export const WorkflowApprovalLevelSchema = z.object({

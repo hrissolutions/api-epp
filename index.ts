@@ -134,7 +134,26 @@ app.use(`${config.baseApiPath}/auth`, authSecurityMiddleware);
 
 // Apply middleware for protected routes, excluding /docs, /auth, /products, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, /transaction, /orderApproval, /approvalWorkflow, /approvalLevel, and /workflowApprovalLevel
 app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) => {
-	if (req.path.startsWith("/docs") || req.path.startsWith("/auth") || req.path.startsWith("/products") || req.path.startsWith("/purchase") || req.path.startsWith("/category") || req.path.startsWith("/wishlistItem") || req.path.startsWith("/wishlist") || req.path.startsWith("/cartItem") || req.path.startsWith("/cart") || req.path.startsWith("/order") || req.path.startsWith("/orderItem") || req.path.startsWith("/vendor") || req.path.startsWith("/installment") || req.path.startsWith("/transaction") || req.path.startsWith("/orderApproval") || req.path.startsWith("/approvalWorkflow") || req.path.startsWith("/approvalLevel") || req.path.startsWith("/workflowApprovalLevel")) {
+	if (
+		req.path.startsWith("/docs") ||
+		req.path.startsWith("/auth") ||
+		req.path.startsWith("/products") ||
+		req.path.startsWith("/purchase") ||
+		req.path.startsWith("/category") ||
+		req.path.startsWith("/wishlistItem") ||
+		req.path.startsWith("/wishlist") ||
+		req.path.startsWith("/cartItem") ||
+		req.path.startsWith("/cart") ||
+		req.path.startsWith("/order") ||
+		req.path.startsWith("/orderItem") ||
+		req.path.startsWith("/vendor") ||
+		req.path.startsWith("/installment") ||
+		req.path.startsWith("/transaction") ||
+		req.path.startsWith("/orderApproval") ||
+		req.path.startsWith("/approvalWorkflow") ||
+		req.path.startsWith("/approvalLevel") ||
+		req.path.startsWith("/workflowApprovalLevel")
+	) {
 		// Skip middleware for the docs, auth, products, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, and workflowApprovalLevel routes
 		return next();
 	}

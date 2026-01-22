@@ -1,9 +1,9 @@
 // ============================================
 // Script to Drop Old Unique Index from MongoDB Web/Atlas
 // ============================================
-// 
+//
 // INSTRUCTIONS FOR MONGODB ATLAS/WEB:
-// 
+//
 // 1. Go to your MongoDB Atlas/Web dashboard
 // 2. Click on "Browse Collections" or "Collections"
 // 3. Select your database
@@ -35,9 +35,9 @@ print("🔧 Attempting to drop old unique index...\n");
 
 // Common index name patterns to try
 const indexNamesToTry = [
-  "workflowId_1_level_1",                    // Default MongoDB naming
-  "approvalLevels_workflowId_level_key",      // Prisma naming
-  "workflowId_level_unique",                  // Alternative naming
+	"workflowId_1_level_1", // Default MongoDB naming
+	"approvalLevels_workflowId_level_key", // Prisma naming
+	"workflowId_level_unique", // Alternative naming
 ];
 
 let dropped = false;
@@ -45,73 +45,73 @@ let droppedIndexName = null;
 
 // Try dropping by name first
 for (const indexName of indexNamesToTry) {
-  try {
-    const result = db.approvalLevels.dropIndex(indexName);
-    if (result.ok === 1) {
-      print("✅ Successfully dropped index: " + indexName + "\n");
-      dropped = true;
-      droppedIndexName = indexName;
-      break;
-    }
-  } catch (error) {
-    // Index doesn't exist with this name, continue
-    if (error.codeName === "IndexNotFound" || error.message.includes("index not found")) {
-      print("ℹ️  Index '" + indexName + "' not found, trying next...\n");
-    } else {
-      print("⚠️  Error checking index '" + indexName + "': " + error.message + "\n");
-    }
-  }
+	try {
+		const result = db.approvalLevels.dropIndex(indexName);
+		if (result.ok === 1) {
+			print("✅ Successfully dropped index: " + indexName + "\n");
+			dropped = true;
+			droppedIndexName = indexName;
+			break;
+		}
+	} catch (error) {
+		// Index doesn't exist with this name, continue
+		if (error.codeName === "IndexNotFound" || error.message.includes("index not found")) {
+			print("ℹ️  Index '" + indexName + "' not found, trying next...\n");
+		} else {
+			print("⚠️  Error checking index '" + indexName + "': " + error.message + "\n");
+		}
+	}
 }
 
 // If not found by name, search by key pattern
 if (!dropped) {
-  print("🔍 Searching for index with 'workflowId' and 'level' fields...\n");
-  
-  for (let i = 0; i < indexes.length; i++) {
-    const index = indexes[i];
-    const keys = index.key;
-    
-    // Check if this index has both workflowId and level
-    if (keys && keys.workflowId !== undefined && keys.level !== undefined) {
-      const indexName = index.name;
-      
-      // Skip the default _id index
-      if (indexName === "_id_") {
-        continue;
-      }
-      
-      try {
-        const result = db.approvalLevels.dropIndex(indexName);
-        if (result.ok === 1) {
-          print("✅ Successfully dropped index: " + indexName);
-          print("   Index keys: " + JSON.stringify(keys) + "\n");
-          dropped = true;
-          droppedIndexName = indexName;
-          break;
-        }
-      } catch (error) {
-        print("❌ Error dropping index '" + indexName + "': " + error.message + "\n");
-      }
-    }
-  }
+	print("🔍 Searching for index with 'workflowId' and 'level' fields...\n");
+
+	for (let i = 0; i < indexes.length; i++) {
+		const index = indexes[i];
+		const keys = index.key;
+
+		// Check if this index has both workflowId and level
+		if (keys && keys.workflowId !== undefined && keys.level !== undefined) {
+			const indexName = index.name;
+
+			// Skip the default _id index
+			if (indexName === "_id_") {
+				continue;
+			}
+
+			try {
+				const result = db.approvalLevels.dropIndex(indexName);
+				if (result.ok === 1) {
+					print("✅ Successfully dropped index: " + indexName);
+					print("   Index keys: " + JSON.stringify(keys) + "\n");
+					dropped = true;
+					droppedIndexName = indexName;
+					break;
+				}
+			} catch (error) {
+				print("❌ Error dropping index '" + indexName + "': " + error.message + "\n");
+			}
+		}
+	}
 }
 
 // Step 4: Show results
 if (dropped) {
-  print("✨ Index dropped successfully!\n");
-  print("📋 Updated indexes on 'approvalLevels' collection:\n");
-  const updatedIndexes = db.approvalLevels.getIndexes();
-  printjson(updatedIndexes);
-  print("\n✅ You can now create ApprovalLevel records without the constraint error!\n");
+	print("✨ Index dropped successfully!\n");
+	print("📋 Updated indexes on 'approvalLevels' collection:\n");
+	const updatedIndexes = db.approvalLevels.getIndexes();
+	printjson(updatedIndexes);
+	print("\n✅ You can now create ApprovalLevel records without the constraint error!\n");
 } else {
-  print("⚠️  No matching index found to drop.\n");
-  print("   Possible reasons:");
-  print("   1. The index was already removed");
-  print("   2. The index doesn't exist");
-  print("   3. The index has a different name\n");
-  print("   Current indexes are shown above. If you see an index with");
-  print("   'workflowId' and 'level', you can drop it manually using:");
-  print("   db.approvalLevels.dropIndex('index_name_here')\n");
+	print("⚠️  No matching index found to drop.\n");
+	print("   Possible reasons:");
+	print("   1. The index was already removed");
+	print("   2. The index doesn't exist");
+	print("   3. The index has a different name\n");
+	print("   Current indexes are shown above. If you see an index with");
+	print("   'workflowId' and 'level', you can drop it manually using:");
+	print("   db.approvalLevels.dropIndex('index_name_here')\n");
 }
 
 // ============================================

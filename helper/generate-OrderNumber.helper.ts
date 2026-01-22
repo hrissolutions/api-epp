@@ -7,15 +7,12 @@ const orderNumberLogger = logger.child({ module: "generateOrderNumber" });
 /**
  * Generates a unique order number in the format: ORD-YYYYMMDD-A0001
  * Sequence format: A0001, A0002, ..., A9999, B0001, B0002, ..., B9999, C0001, etc.
- * 
+ *
  * @param prisma - Prisma client instance
  * @param date - Optional date to use (defaults to today)
  * @returns Promise<string> - Generated order number
  */
-export const generateOrderNumber = async (
-	prisma: PrismaClient,
-	date?: Date,
-): Promise<string> => {
+export const generateOrderNumber = async (prisma: PrismaClient, date?: Date): Promise<string> => {
 	try {
 		const today = date || new Date();
 		const dateStr = today.toISOString().slice(0, 10).replace(/-/g, ""); // YYYYMMDD
