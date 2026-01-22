@@ -88,12 +88,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			// Generate order number if not provided
-			const orderNumber = validation.data.orderNumber || await generateOrderNumber(prisma);
-			
+			// Generate order number automatically
+			const orderNumber = await generateOrderNumber(prisma);
+
 			// Calculate order totals from items
 			const totals = await calculateOrderTotals(prisma, validation.data.items);
-			
+
 			// Prepare order data with embedded items array and calculated totals
 			const orderData = {
 				...validation.data,
@@ -104,7 +104,7 @@ export const controller = (prisma: PrismaClient) => {
 				tax: totals.tax,
 				total: totals.total,
 			};
-			
+
 			// Create the order first
 			const order = await prisma.order.create({ data: orderData as any });
 			orderLogger.info(`Order created successfully: ${order.id}`);
@@ -125,9 +125,14 @@ export const controller = (prisma: PrismaClient) => {
 					});
 					createdOrderItems.push(orderItem);
 				}
-				orderLogger.info(`Created ${createdOrderItems.length} OrderItem records for order ${order.id}`);
+				orderLogger.info(
+					`Created ${createdOrderItems.length} OrderItem records for order ${order.id}`,
+				);
 			} catch (orderItemError) {
-				orderLogger.error(`Failed to create OrderItems for order ${order.id}:`, orderItemError);
+				orderLogger.error(
+					`Failed to create OrderItems for order ${order.id}:`,
+					orderItemError,
+				);
 				// Continue with other operations even if OrderItem creation fails
 			}
 
@@ -140,11 +145,14 @@ export const controller = (prisma: PrismaClient) => {
 					order.employeeId,
 					order.total,
 					order.paymentType,
-					order.paymentMethod
+					order.paymentMethod,
 				);
 				orderLogger.info(`Transaction ledger created for order ${order.id}`);
 			} catch (transactionError) {
-				orderLogger.error(`Failed to create transaction for order ${order.id}:`, transactionError);
+				orderLogger.error(
+					`Failed to create transaction for order ${order.id}:`,
+					transactionError,
+				);
 			}
 
 			// Automatically generate installments if payment type is INSTALLMENT
@@ -152,28 +160,30 @@ export const controller = (prisma: PrismaClient) => {
 			if (order.paymentType === "INSTALLMENT") {
 				// Use provided installmentMonths or default to 6 months if not specified
 				const installmentMonths = order.installmentMonths || 6;
-				
+
 				// Update order with installmentMonths if it wasn't provided
 				if (!order.installmentMonths) {
 					await prisma.order.update({
 						where: { id: order.id },
 						data: { installmentMonths },
 					});
-					orderLogger.info(`Set default installmentMonths to ${installmentMonths} for order ${order.id}`);
+					orderLogger.info(
+						`Set default installmentMonths to ${installmentMonths} for order ${order.id}`,
+					);
 				}
 				try {
 					orderLogger.info(
-						`Generating installments for order ${order.id}: ${installmentMonths} months`
+						`Generating installments for order ${order.id}: ${installmentMonths} months`,
 					);
-					
+
 					generatedInstallments = await generateInstallments(
 						prisma,
 						order.id,
 						installmentMonths,
 						order.total,
-						order.orderDate || new Date()
+						order.orderDate || new Date(),
 					);
-					
+
 					// Update order with installment details
 					await prisma.order.update({
 						where: { id: order.id },
@@ -182,14 +192,14 @@ export const controller = (prisma: PrismaClient) => {
 							installmentAmount: generatedInstallments[0]?.amount || 0,
 						},
 					});
-					
+
 					orderLogger.info(
-						`Successfully generated ${generatedInstallments.length} installments for order ${order.id}`
+						`Successfully generated ${generatedInstallments.length} installments for order ${order.id}`,
 					);
 				} catch (installmentError) {
 					orderLogger.error(
 						`Failed to generate installments for order ${order.id}:`,
-						installmentError
+						installmentError,
 					);
 					// Note: Order is still created even if installment generation fails
 					// This allows manual intervention if needed
@@ -202,12 +212,12 @@ export const controller = (prisma: PrismaClient) => {
 			let approvalChain = null;
 			try {
 				orderLogger.info(
-					`Creating approval chain for order ${order.id}: Total=${order.total}, PaymentType=${order.paymentType}`
+					`Creating approval chain for order ${order.id}: Total=${order.total}, PaymentType=${order.paymentType}`,
 				);
-				
+
 				// Get employee name (TODO: fetch from Person/User database)
 				const employeeName = "Employee Name"; // You should fetch this from your employee database
-				
+
 				// Prepare installments data for approval email (if available)
 				const installmentsForApproval = generatedInstallments
 					? generatedInstallments.map((inst: any) => ({
@@ -219,7 +229,7 @@ export const controller = (prisma: PrismaClient) => {
 							cutOffDate: inst.cutOffDate,
 						}))
 					: undefined;
-				
+
 				approvalChain = await createApprovalChain(
 					prisma,
 					order.id,
@@ -230,33 +240,33 @@ export const controller = (prisma: PrismaClient) => {
 					order.paymentType,
 					order.orderDate || new Date(),
 					order.notes || undefined,
-					installmentsForApproval
+					installmentsForApproval,
 				);
-				
+
 				if (approvalChain) {
 					orderLogger.info(
 						`✓ Successfully created approval chain for order ${order.id}: ` +
-						`Workflow="${approvalChain.workflow.name}" (${approvalChain.workflow.id}), ` +
-						`${approvalChain.approvals.length} approval level(s) created`
+							`Workflow="${approvalChain.workflow.name}" (${approvalChain.workflow.id}), ` +
+							`${approvalChain.approvals.length} approval level(s) created`,
 					);
-					
+
 					// Log each approval level created
 					approvalChain.approvals.forEach((approval: any) => {
 						orderLogger.info(
-							`  - Level ${approval.approvalLevel}: ${approval.approverRole} → ${approval.approverName} (${approval.approverEmail})`
+							`  - Level ${approval.approvalLevel}: ${approval.approverRole} → ${approval.approverName} (${approval.approverEmail})`,
 						);
 					});
 				} else {
 					orderLogger.warn(
 						`⚠ No approval workflow matched for order ${order.id}. ` +
-						`Order total: ${order.total}, Payment type: ${order.paymentType}. ` +
-						`Please ensure a workflow exists that matches these criteria.`
+							`Order total: ${order.total}, Payment type: ${order.paymentType}. ` +
+							`Please ensure a workflow exists that matches these criteria.`,
 					);
 				}
 			} catch (approvalError: any) {
 				orderLogger.error(
 					`✗ Failed to create approval chain for order ${order.id}:`,
-					approvalError
+					approvalError,
 				);
 				// Note: Order is still created even if approval chain creation fails
 				// This allows manual intervention if needed
@@ -299,10 +309,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:order:list:*");
 				orderLogger.info("Order list cache invalidated after creation");
 			} catch (cacheError) {
-				orderLogger.warn(
-					"Failed to invalidate cache after order creation:",
-					cacheError,
-				);
+				orderLogger.warn("Failed to invalidate cache after order creation:", cacheError);
 			}
 
 			const successResponse = buildSuccessResponse(
@@ -310,21 +317,25 @@ export const controller = (prisma: PrismaClient) => {
 				{
 					order,
 					orderItems: createdOrderItems.length > 0 ? createdOrderItems : undefined,
-					transaction: transaction ? {
-						transactionNumber: transaction.transactionNumber,
-						totalAmount: transaction.totalAmount,
-						paidAmount: transaction.paidAmount,
-						balance: transaction.balance,
-						status: transaction.status,
-					} : null,
-					...(generatedInstallments && { 
+					transaction: transaction
+						? {
+								transactionNumber: transaction.transactionNumber,
+								totalAmount: transaction.totalAmount,
+								paidAmount: transaction.paidAmount,
+								balance: transaction.balance,
+								status: transaction.status,
+							}
+						: null,
+					...(generatedInstallments && {
 						installments: generatedInstallments,
 						installmentSummary: {
 							totalInstallments: generatedInstallments.length,
 							installmentAmount: generatedInstallments[0]?.amount || 0,
 							firstPayment: generatedInstallments[0]?.scheduledDate,
-							lastPayment: generatedInstallments[generatedInstallments.length - 1]?.scheduledDate,
-						}
+							lastPayment:
+								generatedInstallments[generatedInstallments.length - 1]
+									?.scheduledDate,
+						},
 					}),
 					...(approvalChain && {
 						approvalWorkflow: {
@@ -341,7 +352,7 @@ export const controller = (prisma: PrismaClient) => {
 								approverEmail: a.approverEmail,
 								status: a.status,
 							})),
-						}
+						},
 					}),
 				},
 				201,
@@ -417,7 +428,9 @@ export const controller = (prisma: PrismaClient) => {
 
 			orderLogger.info(`Retrieved ${orders.length} orders`);
 			const processedData =
-				groupBy && document ? groupDataByField(normalizedOrders, groupBy as string) : normalizedOrders;
+				groupBy && document
+					? groupDataByField(normalizedOrders, groupBy as string)
+					: normalizedOrders;
 
 			const responseData: Record<string, any> = {
 				...(document && { orders: processedData }),
@@ -491,10 +504,7 @@ export const controller = (prisma: PrismaClient) => {
 						await redisClient.setJSON(cacheKey, order, 3600);
 						orderLogger.info(`Order ${id} stored in direct Redis cache`);
 					} catch (cacheError) {
-						orderLogger.warn(
-							`Failed to store order ${id} in Redis cache:`,
-							cacheError,
-						);
+						orderLogger.warn(`Failed to store order ${id} in Redis cache:`, cacheError);
 					}
 				}
 			}
@@ -600,14 +610,17 @@ export const controller = (prisma: PrismaClient) => {
 					await restoreStockForOrder(prisma, id);
 					orderLogger.info(`Stock restored for cancelled order ${id}`);
 				} catch (stockError) {
-					orderLogger.error(`Failed to restore stock for cancelled order ${id}:`, stockError);
+					orderLogger.error(
+						`Failed to restore stock for cancelled order ${id}:`,
+						stockError,
+					);
 					// Continue with order cancellation even if stock restoration fails
 				}
 			}
 
 			const updatedOrder = await prisma.order.update({
 				where: { id },
-				data: prismaData,
+				data: prismaData as any,
 			});
 
 			try {
@@ -615,10 +628,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:order:list:*");
 				orderLogger.info(`Cache invalidated after order ${id} update`);
 			} catch (cacheError) {
-				orderLogger.warn(
-					"Failed to invalidate cache after order update:",
-					cacheError,
-				);
+				orderLogger.warn("Failed to invalidate cache after order update:", cacheError);
 			}
 
 			orderLogger.info(`${config.SUCCESS.ORDER.UPDATED}: ${updatedOrder.id}`);
@@ -674,10 +684,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:order:list:*");
 				orderLogger.info(`Cache invalidated after order ${id} deletion`);
 			} catch (cacheError) {
-				orderLogger.warn(
-					"Failed to invalidate cache after order deletion:",
-					cacheError,
-				);
+				orderLogger.warn("Failed to invalidate cache after order deletion:", cacheError);
 			}
 
 			orderLogger.info(`${config.SUCCESS.ORDER.DELETED}: ${id}`);
