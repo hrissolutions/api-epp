@@ -54,6 +54,8 @@ const orderApproval = require("./app/orderApproval")(prisma);
 const approvalWorkflow = require("./app/approvalWorkflow")(prisma);
 const approvalLevel = require("./app/approvalLevel")(prisma);
 const workflowApprovalLevel = require("./app/workflowApprovalLevel")(prisma);
+const notification = require("./app/notification")(prisma);
+const auditLogging = require("./app/auditLogging")(prisma);
 const docs = require("./app/docs/docs");
 
 app.use(express.json());
@@ -152,9 +154,10 @@ app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) =>
 		req.path.startsWith("/orderApproval") ||
 		req.path.startsWith("/approvalWorkflow") ||
 		req.path.startsWith("/approvalLevel") ||
-		req.path.startsWith("/workflowApprovalLevel")
+		req.path.startsWith("/workflowApprovalLevel") ||
+		req.path.startsWith("/notification")
 	) {
-		// Skip middleware for the docs, auth, items, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, and workflowApprovalLevel routes
+		// Skip middleware for the docs, auth, items, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, workflowApprovalLevel, and notification routes
 		return next();
 	}
 	verifyToken(req, res, () => {
@@ -177,6 +180,8 @@ app.use(config.baseApiPath, orderApproval);
 app.use(config.baseApiPath, approvalWorkflow);
 app.use(config.baseApiPath, approvalLevel);
 app.use(config.baseApiPath, workflowApprovalLevel);
+app.use(config.baseApiPath, notification);
+app.use(config.baseApiPath, auditLogging);
 app.use(config.baseApiPath, docs(prisma, app));
 
 // Store app instance globally for docs generation after all routes are registered
