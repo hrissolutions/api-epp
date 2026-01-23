@@ -179,6 +179,19 @@ export const config = {
 			ERROR_UPDATING: "Error updating installment",
 			ORDER_MUST_BE_ASC_OR_DESC: "Order must be asc or desc",
 		},
+		NOTIFICATION: {
+			VALIDATION_FAILED: "Notification validation failed",
+			INVALID_ID_FORMAT: "Invalid notification ID format",
+			NOT_FOUND: "Notification not found",
+			CREATE_FAILED: "Error creating notification",
+			UPDATE_FAILED: "Error updating notification",
+			DELETE_FAILED: "Error deleting notification",
+			GET_FAILED: "Error getting notification",
+			GET_ALL_FAILED: "Error getting notifications",
+			ERROR_GETTING: "Error getting notification",
+			ERROR_UPDATING: "Error updating notification",
+			ORDER_MUST_BE_ASC_OR_DESC: "Order must be asc or desc",
+		},
 	},
 
 	SUCCESS: {
@@ -274,9 +287,40 @@ export const config = {
 			RETRIEVED_ALL: "Installments retrieved successfully",
 			GETTING_BY_ID: "Getting installment by ID",
 		},
+		NOTIFICATION: {
+			CREATED: "Notification created successfully",
+			UPDATED: "Notification updated successfully",
+			DELETED: "Notification deleted successfully",
+			RETRIEVED: "Notification retrieved successfully",
+			RETRIEVED_ALL: "Notifications retrieved successfully",
+			GETTING_BY_ID: "Getting notification by ID",
+		},
 	},
 
 	ACTIVITY_LOG: {
+		NOTIFICATION: {
+			ACTIONS: {
+				CREATE_NOTIFICATION: "CREATE_NOTIFICATION",
+				GET_ALL_NOTIFICATION: "GET_ALL_NOTIFICATION",
+				GET_NOTIFICATION: "GET_NOTIFICATION",
+				UPDATE_NOTIFICATION: "UPDATE_NOTIFICATION",
+				DELETE_NOTIFICATION: "DELETE_NOTIFICATION",
+			},
+			DESCRIPTIONS: {
+				NOTIFICATION_CREATED: "Created new notification",
+				NOTIFICATION_UPDATED: "Updated notification",
+				NOTIFICATION_DELETED: "Deleted notification",
+				NOTIFICATION_RETRIEVED: "Retrieved notification details",
+				NOTIFICATIONS_RETRIEVED: "Retrieved notification list",
+			},
+			PAGES: {
+				NOTIFICATION_CREATION: "Notification Creation",
+				NOTIFICATION_UPDATE: "Notification Update",
+				NOTIFICATION_DELETION: "Notification Deletion",
+				NOTIFICATION_DETAILS: "Notification Details",
+				NOTIFICATION_LIST: "Notification List",
+			},
+		},
 		INSTALLMENT: {
 			ACTIONS: {
 				CREATE_INSTALLMENT: "CREATE_INSTALLMENT",
@@ -544,6 +588,7 @@ export const config = {
 			ORDERITEM: "orderitem",
 			VENDOR: "vendor",
 			INSTALLMENT: "installment",
+			NOTIFICATION: "notification",
 		},
 		SEVERITY: {
 			LOW: "LOW" as const,
@@ -564,6 +609,7 @@ export const config = {
 			ORDERITEM: "orderitem",
 			VENDOR: "vendor",
 			INSTALLMENT: "installment",
+			NOTIFICATION: "notification",
 		},
 		PRODUCTS: {
 			DESCRIPTIONS: {
@@ -626,6 +672,13 @@ export const config = {
 				INSTALLMENT_CREATED: "Created new installment",
 				INSTALLMENT_UPDATED: "Updated installment",
 				INSTALLMENT_DELETED: "Deleted installment",
+			},
+		},
+		NOTIFICATION: {
+			DESCRIPTIONS: {
+				NOTIFICATION_CREATED: "Created new notification",
+				NOTIFICATION_UPDATED: "Updated notification",
+				NOTIFICATION_DELETED: "Deleted notification",
 			},
 		},
 
