@@ -7,9 +7,75 @@ import {
 	sendOrderRejectedEmail,
 } from "./email.helper";
 import { deductStockForOrder, restoreStockForOrder, validateStockForOrder } from "./stockService";
+import { invalidateCache } from "../middleware/cache";
 
 const logger = getLogger();
 const approvalLogger = logger.child({ module: "approvalService" });
+
+/**
+ * Create an "order approved" notification for the employee (idempotent).
+ */
+export const createOrderApprovedNotificationIfNeeded = async (
+	prisma: PrismaClient,
+	orderId: string,
+) => {
+	try {
+		const order = await prisma.order.findUnique({
+			where: { id: orderId },
+			select: {
+				id: true,
+				orderNumber: true,
+				employeeId: true,
+				total: true,
+				status: true,
+				isFullyApproved: true,
+				approvedAt: true,
+			},
+		});
+
+		if (!order) return;
+		if (!(order.status === "APPROVED" || order.isFullyApproved)) return;
+
+		// Avoid duplicates (no unique index on Notification)
+		const existing = await prisma.notification.findFirst({
+			where: {
+				source: order.id,
+				category: "order_approved",
+				isDeleted: false,
+			},
+			select: { id: true },
+		});
+		if (existing) return;
+
+		await prisma.notification.create({
+			data: {
+				source: order.id,
+				category: "order_approved",
+				title: `Order ${order.orderNumber} approved`,
+				description: `Your order ${order.orderNumber} has been approved.`,
+				recipients: {
+					read: [],
+					unread: [{ user: order.employeeId, date: new Date() }],
+				},
+				metadata: {
+					orderId: order.id,
+					orderNumber: order.orderNumber,
+					total: order.total,
+					approvedAt: order.approvedAt,
+				},
+				isDeleted: false,
+			},
+		});
+
+		try {
+			await invalidateCache.byPattern("cache:notification:list:*");
+		} catch (cacheError) {
+			approvalLogger.warn("Failed to invalidate notification cache:", cacheError);
+		}
+	} catch (error) {
+		approvalLogger.error(`Failed to create order approved notification: ${error}`);
+	}
+};
 
 /**
  * Find matching workflow for an order based on amount and payment type
@@ -506,6 +572,9 @@ export const processApproval = async (
 						approvedAt: new Date(),
 					},
 				});
+
+				// Create "order approved" notification for the employee
+				await createOrderApprovedNotificationIfNeeded(prisma, approval.orderId);
 
 				// Deduct stock for all products in the order
 				try {

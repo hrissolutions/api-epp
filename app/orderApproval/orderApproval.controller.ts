@@ -18,7 +18,10 @@ import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
 import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
-import { processApproval } from "../../helper/approvalService";
+import {
+	processApproval,
+	createOrderApprovedNotificationIfNeeded,
+} from "../../helper/approvalService";
 
 const logger = getLogger();
 const orderApprovalLogger = logger.child({ module: "orderApproval" });
@@ -663,6 +666,9 @@ export const controller = (prisma: PrismaClient) => {
 								approvedAt: new Date(),
 							},
 						});
+
+						// Create "order approved" notification for the employee
+						await createOrderApprovedNotificationIfNeeded(prisma, order.id);
 
 						// Deduct stock for all products in the order
 						try {
