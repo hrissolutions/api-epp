@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidObjectId } from "mongoose";
 
 // Number schema helper
 const numberSchema = z
@@ -30,6 +31,10 @@ export const CreateWorkflowApprovalLevelSchema = WorkflowApprovalLevelSchema.omi
 	id: true,
 	createdAt: true,
 	updatedAt: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateWorkflowApprovalLevel = z.infer<typeof CreateWorkflowApprovalLevelSchema>;

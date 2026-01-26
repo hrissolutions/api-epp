@@ -54,7 +54,10 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			const orderApproval = await prisma.orderApproval.create({
-				data: validation.data as any,
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
 			});
 			orderApprovalLogger.info(`OrderApproval created successfully: ${orderApproval.id}`);
 
@@ -241,8 +244,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!orderApproval) {
-				const query: Prisma.OrderApprovalFindFirstArgs = {
-					where: { id },
+				const query: Prisma.OrderApprovalFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

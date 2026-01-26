@@ -49,6 +49,10 @@ export const CreateInstallmentSchema = InstallmentSchema.omit({
 	deductionReference: true,
 	notes: true,
 	status: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateInstallment = z.infer<typeof CreateInstallmentSchema>;

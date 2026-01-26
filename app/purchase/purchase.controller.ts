@@ -83,7 +83,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const purchase = await prisma.purchase.create({ data: validation.data });
+			const purchase = await prisma.purchase.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			purchaseLogger.info(`Purchase created successfully: ${purchase.id}`);
 
 			logActivity(req, {
@@ -188,6 +193,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [purchases, total] = await Promise.all([
@@ -258,8 +264,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!purchase) {
-				const query: Prisma.PurchaseFindFirstArgs = {
-					where: { id },
+				const query: Prisma.PurchaseFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

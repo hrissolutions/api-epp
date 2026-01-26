@@ -26,6 +26,10 @@ export const CreateCartItemSchema = CartItemSchema.omit({
 	updatedAt: true,
 }).partial({
 	quantity: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateCartItem = z.infer<typeof CreateCartItemSchema>;

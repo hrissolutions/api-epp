@@ -1,5 +1,6 @@
 model Transaction {
   id                String @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId   String? @db.ObjectId
   transactionNumber String @unique
 
   // Link to employee and order
@@ -46,6 +47,7 @@ model Transaction {
   @@index([status])
   @@index([paymentMethod])
   @@index([createdAt])
+  @@index([organizationId])
   @@map("transactions")
 }
 

@@ -126,6 +126,7 @@ export const controller = (prisma: PrismaClient) => {
 						employeeId: employeeId,
 						itemId: itemId,
 						quantity: quantityToAdd,
+						organizationId: (req as any).organizationId,
 					} as any,
 				});
 				cartItemLogger.info(`CartItem created successfully: ${cartItem.id}`);
@@ -273,6 +274,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [cartItems, total] = await Promise.all([
@@ -344,8 +346,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!cartItem) {
-				const query: Prisma.CartItemFindFirstArgs = {
-					where: { id },
+				const query: Prisma.CartItemFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);
@@ -934,6 +935,7 @@ export const controller = (prisma: PrismaClient) => {
 					notes: notes || null,
 					orderDate: new Date(),
 					items: orderItemsData, // Embedded items array
+					organizationId: (req as any).organizationId,
 				} as any,
 			});
 

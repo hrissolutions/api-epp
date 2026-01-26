@@ -1,12 +1,13 @@
 model Item {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  sku         String   @unique
-  name        String
-  description String?
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  categoryId  String   @db.ObjectId
-  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  vendorId    String   @db.ObjectId
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?  @db.ObjectId
+  sku            String   @unique
+  name           String
+  description    String?
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  categoryId     String   @db.ObjectId
+  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  vendorId       String   @db.ObjectId
 
   // Item type
   itemType    ItemType @default(PRODUCT)
@@ -44,6 +45,7 @@ model Item {
   @@index([categoryId])
   @@index([vendorId])
   @@index([itemType])
+  @@index([organizationId])
   @@map("items")
 }
 

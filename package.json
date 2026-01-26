@@ -27,6 +27,9 @@
 		"migrate:items-itemtype:dry-run": "ts-node scripts/migrate-items-add-itemtype.ts --dry-run",
 		"update:items-itemtype": "ts-node scripts/update-all-items-itemtype.ts",
 		"update:items-itemtype:dry-run": "ts-node scripts/update-all-items-itemtype.ts --dry-run",
+		"migrate:organizationId": "ts-node scripts/migrate-add-organizationId.ts",
+		"migrate:organizationId:dry-run": "ts-node scripts/migrate-add-organizationId.ts --dry-run",
+		"migrate:organizationId:force": "ts-node scripts/migrate-add-organizationId.ts --force",
 		"api-list": "curl -X GET 'http://localhost:3000/api/docs/api-list?format=json' | jq",
 		"zod-generate": "node scripts/zod-generate.js"
 	},

@@ -16,21 +16,22 @@ type RequestMetadata {
 }
 
 model AuditLogging {
-  id            String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String           @db.ObjectId
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String
-  severity      String
-  entity        Entity
-  changes       Changes?
-  metadata      RequestMetadata?
-  description   String?
-  archiveStatus Boolean          @default(false)
-  archiveDate   DateTime?
-  isDeleted     Boolean          @default(false)
-  timestamp     DateTime         @default(now())
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?           @db.ObjectId
+  userId         String           @db.ObjectId
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String
+  severity       String
+  entity         Entity
+  changes        Changes?
+  metadata       RequestMetadata?
+  description    String?
+  archiveStatus  Boolean          @default(false)
+  archiveDate    DateTime?
+  isDeleted      Boolean          @default(false)
+  timestamp      DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([userId])
   @@index([type])
@@ -38,6 +39,7 @@ model AuditLogging {
   @@index([archiveStatus])
   @@index([isDeleted])
   @@index([timestamp])
+  @@index([organizationId])
   @@map("auditLogs")
 }
 

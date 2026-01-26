@@ -99,7 +99,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const orderItem = await prisma.orderItem.create({ data: validation.data as any });
+			const orderItem = await prisma.orderItem.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			orderItemLogger.info(`OrderItem created successfully: ${orderItem.id}`);
 
 			logActivity(req, {
@@ -202,6 +207,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const normalizedFields = normalizeOrderItemFields(fields);
 			const findManyQuery = buildFindManyQuery(
 				whereClause,
@@ -283,8 +289,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!orderItem) {
-				const query: Prisma.OrderItemFindFirstArgs = {
-					where: { id },
+				const query: Prisma.OrderItemFindFirstArgs = { where: { id },
 				};
 
 				const normalizedFields = normalizeOrderItemFields(fields);

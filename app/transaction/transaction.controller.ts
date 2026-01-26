@@ -76,7 +76,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const transaction = await prisma.transaction.create({ data: validation.data as any });
+			const transaction = await prisma.transaction.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			transactionLogger.info(`Transaction created successfully: ${transaction.id}`);
 
 			logActivity(req, {
@@ -190,6 +195,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [transactions, total] = await Promise.all([
@@ -265,8 +271,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!transaction) {
-				const query: Prisma.TransactionFindFirstArgs = {
-					where: { id },
+				const query: Prisma.TransactionFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

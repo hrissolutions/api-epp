@@ -1,17 +1,19 @@
 model Vendor {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  name        String    @unique
-  code        String    @unique
-  description String?
-  contactName String?
-  email       String?
-  phone       String?
-  website     String?
-  isActive    Boolean   @default(true)
-  items       Item[]
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?   @db.ObjectId
+  name           String    @unique
+  code           String    @unique
+  description    String?
+  contactName     String?
+  email          String?
+  phone          String?
+  website        String?
+  isActive       Boolean   @default(true)
+  items          Item[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("vendors")
 }

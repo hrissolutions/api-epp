@@ -61,7 +61,12 @@ export const controller = (prisma: PrismaClient) => {
 				metadata,
 				isDeleted,
 			};
-			const notification = await prisma.notification.create({ data: createData });
+			const notification = await prisma.notification.create({
+				data: {
+					...createData,
+					organizationId: (req as any).organizationId || createData.organizationId,
+				} as any,
+			});
 			notificationLogger.info(`Notification created successfully: ${notification.id}`);
 
 			logActivity(req, {

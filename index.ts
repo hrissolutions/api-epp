@@ -134,32 +134,17 @@ if (process.env.NODE_ENV !== "production") {
 // Apply authentication-specific security middleware
 app.use(`${config.baseApiPath}/auth`, authSecurityMiddleware);
 
-// Apply middleware for protected routes, excluding /docs, /auth, /items, /purchase, /category, /wishlistItem, /wishlist, /cartItem, /cart, /order, /orderItem, /vendor, /installment, /transaction, /orderApproval, /approvalWorkflow, /approvalLevel, and /workflowApprovalLevel
+// Apply middleware for protected routes, only excluding /docs and /auth (for API documentation and authentication endpoints)
 app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) => {
 	if (
 		req.path.startsWith("/docs") ||
 		req.path.startsWith("/auth") ||
-		req.path.startsWith("/items") ||
-		req.path.startsWith("/purchase") ||
-		req.path.startsWith("/category") ||
-		req.path.startsWith("/wishlistItem") ||
-		req.path.startsWith("/wishlist") ||
-		req.path.startsWith("/cartItem") ||
-		req.path.startsWith("/cart") ||
-		req.path.startsWith("/order") ||
-		req.path.startsWith("/orderItem") ||
-		req.path.startsWith("/vendor") ||
-		req.path.startsWith("/installment") ||
-		req.path.startsWith("/transaction") ||
-		req.path.startsWith("/orderApproval") ||
-		req.path.startsWith("/approvalWorkflow") ||
-		req.path.startsWith("/approvalLevel") ||
-		req.path.startsWith("/workflowApprovalLevel") ||
-		req.path.startsWith("/notification")
+		req.path.startsWith("/swagger")
 	) {
-		// Skip middleware for the docs, auth, items, purchase, category, wishlistItem, wishlist, cartItem, cart, order, orderItem, vendor, installment, transaction, orderApproval, approvalWorkflow, approvalLevel, workflowApprovalLevel, and notification routes
+		// Skip middleware for docs, auth, and swagger routes (public access)
 		return next();
 	}
+	// All other routes require authentication
 	verifyToken(req, res, () => {
 		next();
 	});

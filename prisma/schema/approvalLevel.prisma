@@ -1,18 +1,20 @@
 model ApprovalLevel {
-  id              String                  @id @default(auto()) @map("_id") @db.ObjectId
-  role            ApproverRole
-  description     String?
-  isRequired      Boolean                 @default(true)
+  id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId     String?                 @db.ObjectId
+  role               ApproverRole
+  description        String?
+  isRequired         Boolean                 @default(true)
   
   // Auto-approval settings
-  autoApproveUnder Float?
-  timeoutDays     Int?                    // Auto-approve after X days if no response
+  autoApproveUnder   Float?
+  timeoutDays        Int?                    // Auto-approve after X days if no response
   
   // Many-to-many relation with workflows
-  workflows       WorkflowApprovalLevel[]
+  workflows          WorkflowApprovalLevel[]
   
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
 
+  @@index([organizationId])
   @@map("approvalLevels")
 }

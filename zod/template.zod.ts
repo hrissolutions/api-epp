@@ -23,6 +23,10 @@ export const CreateTemplateSchema = TemplateSchema.omit({
 	description: true,
 	type: true,
 	isDeleted: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateTemplate = z.infer<typeof CreateTemplateSchema>;

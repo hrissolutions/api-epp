@@ -32,6 +32,10 @@ export const CreateVendorSchema = VendorSchema.omit({
 	phone: true,
 	website: true,
 	isActive: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateVendor = z.infer<typeof CreateVendorSchema>;

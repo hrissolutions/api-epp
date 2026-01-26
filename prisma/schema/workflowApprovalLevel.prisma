@@ -1,5 +1,6 @@
 model WorkflowApprovalLevel {
   id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId  String?           @db.ObjectId
   workflowId      String            @db.ObjectId
   approvalLevelId String            @db.ObjectId
   level           Int               // Level number in this workflow (1, 2, 3...)
@@ -19,5 +20,6 @@ model WorkflowApprovalLevel {
   @@index([workflowId])
   @@index([approvalLevelId])
   @@index([approverId])
+  @@index([organizationId])
   @@map("workflowApprovalLevels")
 }

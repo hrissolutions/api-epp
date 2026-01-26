@@ -192,6 +192,7 @@ export const controller = (prisma: PrismaClient) => {
 				data: {
 					...validation.data,
 					images: itemImages.length > 0 ? itemImages : undefined,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
 				} as any,
 			});
 			itemsLogger.info(`Item created successfully: ${item.id}`);
@@ -994,7 +995,10 @@ export const controller = (prisma: PrismaClient) => {
 
 					// Create item in database
 					const item = await prisma.item.create({
-						data: validation.data as any,
+						data: {
+							...validation.data,
+							organizationId: (req as any).organizationId || validation.data.organizationId,
+						} as any,
 					});
 
 					successCount++;

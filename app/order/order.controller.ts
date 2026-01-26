@@ -106,7 +106,12 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			// Create the order first
-			const order = await prisma.order.create({ data: orderData as any });
+			const order = await prisma.order.create({
+				data: {
+					...orderData,
+					organizationId: (req as any).organizationId || orderData.organizationId,
+				} as any,
+			});
 			orderLogger.info(`Order created successfully: ${order.id}`);
 
 			// Create OrderItem records for each item
@@ -121,6 +126,7 @@ export const controller = (prisma: PrismaClient) => {
 							unitPrice: item.unitPrice,
 							discount: item.discount,
 							subtotal: item.subtotal,
+							organizationId: (req as any).organizationId || order.organizationId,
 						},
 					});
 					createdOrderItems.push(orderItem);
@@ -413,6 +419,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [orders, total] = await Promise.all([
@@ -491,8 +498,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!order) {
-				const query: Prisma.OrderFindFirstArgs = {
-					where: { id },
+				const query: Prisma.OrderFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

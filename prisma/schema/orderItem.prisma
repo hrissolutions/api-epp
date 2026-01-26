@@ -1,9 +1,10 @@
 model OrderItem {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId   String  @db.ObjectId
-  item      Item    @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  itemId    String  @db.ObjectId
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId        String  @db.ObjectId
+  item           Item    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  itemId         String  @db.ObjectId
 
   quantity  Int
   unitPrice Float
@@ -14,5 +15,6 @@ model OrderItem {
 
   @@index([orderId])
   @@index([itemId])
+  @@index([organizationId])
   @@map("orderItems")
 }

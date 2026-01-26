@@ -82,7 +82,10 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			const approvalLevel = await prisma.approvalLevel.create({
-				data: validation.data as any,
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
 			});
 			approvalLevelLogger.info(`ApprovalLevel created successfully: ${approvalLevel.id}`);
 
@@ -261,8 +264,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!approvalLevel) {
-				const query: Prisma.ApprovalLevelFindFirstArgs = {
-					where: { id },
+				const query: Prisma.ApprovalLevelFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

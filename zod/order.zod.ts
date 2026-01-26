@@ -132,6 +132,9 @@ export const CreateOrderSchema = z.object({
 	deliveredDate: z.coerce.date().optional().nullable(),
 	cancelledDate: z.coerce.date().optional().nullable(),
 	notes: z.string().optional().nullable(),
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateOrder = z.infer<typeof CreateOrderSchema>;

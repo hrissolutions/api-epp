@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidObjectId } from "mongoose";
 
 // Helper to generate slug from name
 export const generateSlug = (name: string): string => {
@@ -35,6 +36,11 @@ export const CreateCategorySchema = CategorySchema.omit({
 		parentId: true,
 		isActive: true,
 		slug: true, // Slug is optional, will be auto-generated from name if not provided
+	})
+	.extend({
+		organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+			message: "Invalid organizationId ObjectId format",
+		}).optional().nullable(),
 	})
 	.refine(
 		(data) => {

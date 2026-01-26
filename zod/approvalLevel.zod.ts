@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidObjectId } from "mongoose";
 import { ApproverRoleEnum } from "./orderApproval.zod";
 
 // Number schema helper
@@ -36,6 +37,10 @@ export const CreateApprovalLevelSchema = ApprovalLevelSchema.omit({
 	isRequired: true,
 	autoApproveUnder: true,
 	timeoutDays: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateApprovalLevel = z.infer<typeof CreateApprovalLevelSchema>;

@@ -43,7 +43,12 @@ export const controller = (prisma: PrismaClient) => {
 				data.timestamp = new Date();
 			}
 
-			const logEntry = await prisma.auditLogging.create({ data });
+			const logEntry = await prisma.auditLogging.create({
+				data: {
+					...data,
+					organizationId: (req as any).organizationId || data.organizationId,
+				} as any,
+			});
 			auditLogger.info(`Audit log created: ${logEntry.id}`);
 
 			try {
@@ -201,8 +206,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!logEntry) {
-				const query: Prisma.AuditLoggingFindFirstArgs = {
-					where: { id },
+				const query: Prisma.AuditLoggingFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fieldsStr);

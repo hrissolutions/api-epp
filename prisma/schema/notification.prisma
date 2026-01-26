@@ -9,20 +9,22 @@ type Recipients {
 }
 
 model Notification {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  source      String      @db.ObjectId
-  category    String
-  title       String
-  description String
-  recipients  Recipients?
-  metadata    Json?
-  isDeleted   Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?     @db.ObjectId
+  source         String      @db.ObjectId
+  category       String
+  title          String
+  description    String
+  recipients     Recipients?
+  metadata       Json?
+  isDeleted      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([source])
   @@index([category])
   @@index([isDeleted])
   @@index([createdAt])
+  @@index([organizationId])
   @@map("notifications")
 }

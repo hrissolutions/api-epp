@@ -49,7 +49,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const template = await prisma.template.create({ data: validation.data });
+			const template = await prisma.template.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			templateLogger.info(`Template created successfully: ${template.id}`);
 
 			logActivity(req, {
@@ -223,8 +228,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!template) {
-				const query: Prisma.TemplateFindFirstArgs = {
-					where: { id },
+				const query: Prisma.TemplateFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

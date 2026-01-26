@@ -85,7 +85,10 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			const approvalWorkflow = await prisma.approvalWorkflow.create({
-				data: validation.data as any,
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
 			});
 			approvalWorkflowLogger.info(
 				`ApprovalWorkflow created successfully: ${approvalWorkflow.id}`,
@@ -269,8 +272,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!approvalWorkflow) {
-				const query: Prisma.ApprovalWorkflowFindFirstArgs = {
-					where: { id },
+				const query: Prisma.ApprovalWorkflowFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);

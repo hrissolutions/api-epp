@@ -1,5 +1,6 @@
 model Purchase {
   id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?        @db.ObjectId
   employeeId      String         @db.ObjectId
   itemId          String         @db.ObjectId
   purchaseType    PurchaseType
@@ -20,6 +21,7 @@ model Purchase {
   @@index([itemId])
   @@index([status])
   @@index([createdAt])
+  @@index([organizationId])
   @@map("purchases")
 }
 

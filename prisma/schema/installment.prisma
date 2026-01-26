@@ -1,7 +1,8 @@
 model Installment {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  orderId String @db.ObjectId
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+  order          Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId        String @db.ObjectId
 
   installmentNumber Int
   amount            Float
@@ -25,6 +26,7 @@ model Installment {
   @@index([status])
   @@index([cutOffDate])
   @@index([scheduledDate])
+  @@index([organizationId])
   @@map("installments")
 }
 

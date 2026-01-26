@@ -59,6 +59,10 @@ export const CreatePurchaseSchema = PurchaseSchema.omit({
 	approvedBy: true,
 	rejectionReason: true,
 	notes: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreatePurchase = z.infer<typeof CreatePurchaseSchema>;

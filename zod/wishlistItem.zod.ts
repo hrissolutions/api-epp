@@ -21,6 +21,10 @@ export type WishlistItem = z.infer<typeof WishlistItemSchema>;
 export const CreateWishlistItemSchema = WishlistItemSchema.omit({
 	id: true,
 	createdAt: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateWishlistItem = z.infer<typeof CreateWishlistItemSchema>;

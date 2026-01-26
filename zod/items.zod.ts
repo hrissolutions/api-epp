@@ -100,6 +100,10 @@ export const CreateItemSchema = ItemSchema.omit({
 	isFeatured: true,
 	isAvailable: true,
 	itemType: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateItem = z.infer<typeof CreateItemSchema>;

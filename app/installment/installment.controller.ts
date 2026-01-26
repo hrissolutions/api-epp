@@ -76,7 +76,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const installment = await prisma.installment.create({ data: validation.data as any });
+			const installment = await prisma.installment.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			installmentLogger.info(`Installment created successfully: ${installment.id}`);
 
 			logActivity(req, {
@@ -181,6 +186,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [installments, total] = await Promise.all([
@@ -258,8 +264,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!installment) {
-				const query: Prisma.InstallmentFindFirstArgs = {
-					where: { id },
+				const query: Prisma.InstallmentFindFirstArgs = { where: { id },
 				};
 
 				query.select = getNestedFields(fields);
