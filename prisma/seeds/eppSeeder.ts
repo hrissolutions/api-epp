@@ -1,4 +1,4 @@
-import { PrismaClient, ProductStatus } from "../../generated/prisma";
+import { PrismaClient, ItemStatus, ItemType } from "../../generated/prisma";
 
 const prisma = new PrismaClient();
 
@@ -130,11 +130,11 @@ export async function seedEPP() {
 		console.log("      └── 📁 Kitchen Appliances");
 
 		// ==========================================
-		// 3. SEED PRODUCTS
+		// 3. SEED ITEMS
 		// ==========================================
-		console.log("📦 Creating products...");
+		console.log("📦 Creating items...");
 
-		const products = [
+		const items = [
 			// ==========================================
 			// SMARTPHONES
 			// ==========================================
@@ -176,7 +176,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-SMT-002",
@@ -216,7 +216,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-SMT-003",
@@ -251,7 +251,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-SMT-004",
@@ -286,7 +286,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 
 			// ==========================================
@@ -330,7 +330,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-LAP-002",
@@ -370,7 +370,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-LAP-003",
@@ -405,7 +405,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-LAP-004",
@@ -440,7 +440,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 
 			// ==========================================
@@ -476,7 +476,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-ACC-002",
@@ -509,7 +509,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 
 			// ==========================================
@@ -552,7 +552,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-ACC-004",
@@ -585,7 +585,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-ACC-005",
@@ -618,7 +618,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 
 			// ==========================================
@@ -656,7 +656,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-KIT-002",
@@ -689,7 +689,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-KIT-003",
@@ -727,7 +727,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 			{
 				sku: "UZARO-KIT-004",
@@ -761,7 +761,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: true,
 				isAvailable: true,
-				status: ProductStatus.APPROVED,
+				status: ItemStatus.APPROVED,
 			},
 
 			// ==========================================
@@ -800,7 +800,7 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.PENDING,
+				status: ItemStatus.PENDING,
 			},
 			{
 				sku: "UZARO-LAP-005",
@@ -835,19 +835,22 @@ export async function seedEPP() {
 				isActive: true,
 				isFeatured: false,
 				isAvailable: true,
-				status: ProductStatus.PENDING,
+				status: ItemStatus.PENDING,
 			},
 		];
 
-		for (const productData of products) {
-			await prisma.product.upsert({
-				where: { sku: productData.sku },
+		for (const itemData of items) {
+			await prisma.item.upsert({
+				where: { sku: itemData.sku },
 				update: {},
-				create: productData,
+				create: {
+					...itemData,
+					itemType: ItemType.PRODUCT,
+				},
 			});
 		}
 
-		console.log(`✅ ${products.length} products created`);
+		console.log(`✅ ${items.length} items created`);
 
 		// ==========================================
 		// SUMMARY
@@ -855,7 +858,7 @@ export async function seedEPP() {
 		console.log("\n📊 EPP Seeding Summary:");
 		console.log("   🏢 Vendors: 1");
 		console.log("   📂 Categories: 7 (with hierarchy)");
-		console.log(`   📦 Products: ${products.length}`);
+		console.log(`   📦 Items: ${items.length}`);
 		console.log("\n🎉 EPP seeding completed successfully!");
 	} catch (error) {
 		console.error("❌ Error during EPP seeding:", error);
