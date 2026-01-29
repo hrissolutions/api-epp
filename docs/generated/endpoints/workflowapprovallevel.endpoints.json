@@ -1,0 +1,262 @@
+[
+  {
+    "id": "GET /api/workflowApprovalLevel/{id}",
+    "method": "GET",
+    "url": "/api/workflowApprovalLevel/{id}",
+    "summary": "Get workflow approval level by ID",
+    "description": "Retrieve a specific workflow approval level by its unique identifier",
+    "tags": [
+      "WorkflowApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Workflow Approval Level ID"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Workflow approval level retrieved successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Workflow approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/workflowApprovalLevel/{id}",
+    "method": "PATCH",
+    "url": "/api/workflowApprovalLevel/{id}",
+    "summary": "Update workflow approval level",
+    "description": "Update a workflow approval level",
+    "tags": [
+      "WorkflowApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Workflow approval level updated successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Workflow approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/workflowApprovalLevel/{id}",
+    "method": "DELETE",
+    "url": "/api/workflowApprovalLevel/{id}",
+    "summary": "Delete workflow approval level",
+    "description": "Delete a workflow approval level",
+    "tags": [
+      "WorkflowApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Workflow approval level deleted successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Workflow approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/workflowApprovalLevel",
+    "method": "GET",
+    "url": "/api/workflowApprovalLevel",
+    "summary": "Get all workflow approval levels",
+    "description": "Retrieve workflow approval levels with filtering, pagination, and sorting",
+    "tags": [
+      "WorkflowApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Workflow approval levels retrieved successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/workflowApprovalLevel",
+    "method": "POST",
+    "url": "/api/workflowApprovalLevel",
+    "summary": "Create new workflow approval level",
+    "description": "Create a new workflow approval level linking a workflow to an approval level",
+    "tags": [
+      "WorkflowApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "workflowId",
+          "approvalLevelId",
+          "level"
+        ],
+        "properties": {
+          "workflowId": {
+            "type": "string"
+          },
+          "approvalLevelId": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Workflow approval level created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "description": "Validation error",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

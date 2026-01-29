@@ -1,14 +1,16 @@
 model WishlistItem {
   id             String  @id @default(auto()) @map("_id") @db.ObjectId
   organizationId String? @db.ObjectId
-  employeeId     String  @db.ObjectId
-  item           Item    @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  itemId         String  @db.ObjectId
+  // This replaces employeeId - it's the ID from ADAM SSO
+  userId         String   @db.ObjectId
+  userType       UserType @default(EMPLOYEE) // To know if we check HRIS
+  item           Item     @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  itemId         String   @db.ObjectId
 
   createdAt DateTime @default(now())
 
-  @@unique([employeeId, itemId])
-  @@index([employeeId])
+  @@unique([userId, itemId])
+  @@index([userId])
   @@index([itemId])
   @@index([organizationId])
   @@map("wishlistItems")

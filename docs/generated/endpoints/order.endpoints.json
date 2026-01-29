@@ -1,19 +1,14 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/order/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/order/{id}",
+    "summary": "Get order by ID",
+    "description": "Retrieve a specific order by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "Order"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -23,7 +18,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Order ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +33,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "Order retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +45,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
                     }
                   }
                 }
@@ -64,9 +59,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -83,20 +75,15 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/order/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/order/{id}",
+    "summary": "Update order",
+    "description": "Update order data by ID (partial update)",
     "tags": [
-      "Template"
+      "Order"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json"
     ],
@@ -108,7 +95,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Order ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,13 +108,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "Order name",
+            "example": "Updated Email Order"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "Order description",
+            "example": "Updated description for the order"
           },
           "type": {
             "type": "string",
@@ -137,7 +124,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Order type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -153,7 +140,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "Order updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +152,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
                     }
                   }
                 }
@@ -179,9 +166,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -198,20 +182,15 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/order/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/order/{id}",
+    "summary": "Delete order",
+    "description": "Permanently delete a order by ID",
     "tags": [
-      "Template"
+      "Order"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -221,13 +200,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Order ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "Order deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -251,9 +230,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "404": {
         "contentTypes": []
       },
@@ -268,20 +244,15 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/order",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/order",
+    "summary": "Get all orders",
+    "description": "Retrieve orders with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "Order"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [],
     "queryParams": [
@@ -368,7 +339,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include order documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +378,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "orders": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/Order"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +390,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/Order"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -445,9 +416,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "500": {
         "contentTypes": []
       }
@@ -459,20 +427,15 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/order",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/order",
+    "summary": "Create new order",
+    "description": "Create a new order with the provided data",
     "tags": [
-      "Template"
+      "Order"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json",
       "application/x-www-form-urlencoded",
@@ -491,13 +454,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "Order name",
+            "example": "Email Welcome Order"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "Order description",
+            "example": "Welcome email order for new users"
           },
           "type": {
             "type": "string",
@@ -507,7 +470,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Order type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -525,7 +488,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "Order created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +500,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
                     }
                   }
                 }
@@ -551,9 +514,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "500": {

@@ -1,19 +1,14 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/category/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/category/{id}",
+    "summary": "Get category by ID",
+    "description": "Retrieve a specific category by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "Category"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -23,7 +18,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Category ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +33,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "Category retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +45,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "category": {
+                      "$ref": "#/components/schemas/Category"
                     }
                   }
                 }
@@ -64,9 +59,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -83,20 +75,15 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/category/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/category/{id}",
+    "summary": "Update category",
+    "description": "Update category data by ID (partial update)",
     "tags": [
-      "Template"
+      "Category"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json"
     ],
@@ -108,7 +95,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Category ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,13 +108,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "Category name",
+            "example": "Updated Email Category"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "Category description",
+            "example": "Updated description for the category"
           },
           "type": {
             "type": "string",
@@ -137,7 +124,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Category type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -153,7 +140,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "Category updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +152,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "category": {
+                      "$ref": "#/components/schemas/Category"
                     }
                   }
                 }
@@ -179,9 +166,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -198,20 +182,15 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/category/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/category/{id}",
+    "summary": "Delete category",
+    "description": "Permanently delete a category by ID",
     "tags": [
-      "Template"
+      "Category"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -221,13 +200,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Category ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "Category deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -251,9 +230,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "404": {
         "contentTypes": []
       },
@@ -268,20 +244,15 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/category",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/category",
+    "summary": "Get all categorys",
+    "description": "Retrieve categorys with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "Category"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [],
     "queryParams": [
@@ -368,7 +339,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include category documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +378,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "categorys": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/Category"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +390,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/Category"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -444,12 +415,6 @@
       },
       "400": {
         "contentTypes": []
-      },
-      "401": {
-        "contentTypes": []
-      },
-      "500": {
-        "contentTypes": []
       }
     },
     "paginationHints": {
@@ -459,20 +424,15 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/category",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/category",
+    "summary": "Create new category",
+    "description": "Create a new category with the provided data",
     "tags": [
-      "Template"
+      "Category"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json",
       "application/x-www-form-urlencoded",
@@ -491,13 +451,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "Category name",
+            "example": "Email Welcome Category"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "Category description",
+            "example": "Welcome email category for new users"
           },
           "type": {
             "type": "string",
@@ -507,7 +467,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Category type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -525,7 +485,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "Category created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +497,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "category": {
+                      "$ref": "#/components/schemas/Category"
                     }
                   }
                 }
@@ -551,9 +511,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "500": {

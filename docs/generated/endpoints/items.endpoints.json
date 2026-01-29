@@ -1,19 +1,14 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/items/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/items/{id}",
+    "summary": "Get items by ID",
+    "description": "Retrieve a specific item by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "Items"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -23,7 +18,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Item ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +33,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "Item retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +45,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "item": {
+                      "$ref": "#/components/schemas/Item"
                     }
                   }
                 }
@@ -64,9 +59,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -83,20 +75,15 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/items/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/items/{id}",
+    "summary": "Update item",
+    "description": "Update item data by ID (partial update)",
     "tags": [
-      "Template"
+      "Items"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json"
     ],
@@ -108,7 +95,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Item ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,29 +108,22 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "Item name",
+            "example": "Updated Item"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "Item description",
+            "example": "Updated description for the item"
           },
-          "type": {
+          "itemType": {
             "type": "string",
             "enum": [
-              "email",
-              "sms",
-              "push",
-              "form"
+              "PRODUCT",
+              "LOAN"
             ],
-            "description": "Template type for categorization",
-            "example": "email"
-          },
-          "isDeleted": {
-            "type": "boolean",
-            "description": "Soft delete flag",
-            "example": false
+            "description": "Item type",
+            "example": "PRODUCT"
           }
         }
       },
@@ -153,7 +133,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "Item updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +145,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "item": {
+                      "$ref": "#/components/schemas/Item"
                     }
                   }
                 }
@@ -179,9 +159,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -198,20 +175,15 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/items/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/items/{id}",
+    "summary": "Delete item",
+    "description": "Permanently delete an item by ID",
     "tags": [
-      "Template"
+      "Items"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -221,13 +193,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Item ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "Item deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -251,9 +223,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "404": {
         "contentTypes": []
       },
@@ -268,20 +237,15 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/items",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/items",
+    "summary": "Get all items",
+    "description": "Retrieve items with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "Items"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [],
     "queryParams": [
@@ -368,7 +332,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include items documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +371,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "items": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/Item"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +383,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/Item"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -445,9 +409,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "500": {
         "contentTypes": []
       }
@@ -459,20 +420,15 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/items",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/items",
+    "summary": "Create new item",
+    "description": "Create a new item with the provided data",
     "tags": [
-      "Template"
+      "Items"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json",
       "application/x-www-form-urlencoded",
@@ -491,29 +447,22 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "Item name",
+            "example": "Sample Item"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "Item description",
+            "example": "Description for the item"
           },
-          "type": {
+          "itemType": {
             "type": "string",
             "enum": [
-              "email",
-              "sms",
-              "push",
-              "form"
+              "PRODUCT",
+              "LOAN"
             ],
-            "description": "Template type for categorization",
-            "example": "email"
-          },
-          "isDeleted": {
-            "type": "boolean",
-            "description": "Soft delete flag",
-            "default": false
+            "description": "Item type",
+            "example": "PRODUCT"
           }
         }
       },
@@ -525,7 +474,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "Item created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +486,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "item": {
+                      "$ref": "#/components/schemas/Item"
                     }
                   }
                 }
@@ -553,7 +502,98 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/items/import",
+    "method": "POST",
+    "url": "/api/items/import",
+    "summary": "Import items from CSV",
+    "description": "Bulk import items from a CSV file",
+    "tags": [
+      "Items"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "multipart/form-data"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "CSV file containing item data"
+          }
+        }
+      },
+      "contentTypes": [
+        "multipart/form-data"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Items imported successfully",
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/Success"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "totalRows": {
+                          "type": "integer"
+                        },
+                        "processed": {
+                          "type": "integer"
+                        },
+                        "successful": {
+                          "type": "integer"
+                        },
+                        "failed": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "contentTypes": [
+          "application/json"
+        ]
+      },
+      "400": {
         "contentTypes": []
       },
       "500": {

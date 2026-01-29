@@ -1,14 +1,16 @@
 model Purchase {
-  id              String         @id @default(auto()) @map("_id") @db.ObjectId
-  organizationId String?        @db.ObjectId
-  employeeId      String         @db.ObjectId
-  itemId          String         @db.ObjectId
-  purchaseType    PurchaseType
-  totalAmount     Float
-  downPayment     Float?
-  status          PurchaseStatus @default(PENDING)
-  approvedBy      String?        @db.ObjectId
-  approvedAt      DateTime?
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+  // This replaces employeeId - it's the ID from ADAM SSO
+  userId         String   @db.ObjectId
+  userType       UserType @default(EMPLOYEE) // To know if we check HRIS
+  itemId         String   @db.ObjectId
+  purchaseType   PurchaseType
+  totalAmount    Float
+  downPayment    Float?
+  status         PurchaseStatus @default(PENDING)
+  approvedBy     String?        @db.ObjectId
+  approvedAt     DateTime?
   rejectionReason String?
   notes           String?
   createdAt       DateTime       @default(now())
@@ -17,7 +19,7 @@ model Purchase {
   // Relations
   item Item @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  @@index([employeeId])
+  @@index([userId])
   @@index([itemId])
   @@index([status])
   @@index([createdAt])

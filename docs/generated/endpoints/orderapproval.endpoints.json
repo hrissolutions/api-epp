@@ -1,0 +1,495 @@
+[
+  {
+    "id": "GET /api/orderApproval/{id}",
+    "method": "GET",
+    "url": "/api/orderApproval/{id}",
+    "summary": "Get order approval by ID",
+    "description": "Retrieve a specific order approval by its unique identifier",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Order Approval ID"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Order approval retrieved successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Order approval not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/orderApproval/{id}",
+    "method": "PATCH",
+    "url": "/api/orderApproval/{id}",
+    "summary": "Update order approval",
+    "description": "Update an order approval record",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Order approval updated successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Order approval not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/orderApproval/{id}",
+    "method": "DELETE",
+    "url": "/api/orderApproval/{id}",
+    "summary": "Delete order approval",
+    "description": "Delete an order approval record",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Order approval deleted successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Order approval not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/orderApproval",
+    "method": "GET",
+    "url": "/api/orderApproval",
+    "summary": "Get all order approvals",
+    "description": "Retrieve order approvals with filtering, pagination, and sorting",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Order approvals retrieved successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/orderApproval",
+    "method": "POST",
+    "url": "/api/orderApproval",
+    "summary": "Create new order approval",
+    "description": "Create a new order approval record",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "approvalLevel",
+          "approverRole",
+          "approverId",
+          "approverName",
+          "approverEmail"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "approvalLevel": {
+            "type": "integer"
+          },
+          "approverRole": {
+            "type": "string",
+            "enum": [
+              "MANAGER",
+              "HR",
+              "FINANCE",
+              "DEPARTMENT_HEAD",
+              "ADMIN"
+            ]
+          },
+          "approverId": {
+            "type": "string"
+          },
+          "approverName": {
+            "type": "string"
+          },
+          "approverEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Order approval created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "description": "Validation error",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/orderApproval/{id}/approve",
+    "method": "POST",
+    "url": "/api/orderApproval/{id}/approve",
+    "summary": "Approve an order approval",
+    "description": "Approve an order approval and advance to next level or complete order",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Order Approval ID"
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": false,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "string",
+            "description": "Optional approval comments"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Order approval approved successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Order approval not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/orderApproval/{id}/reject",
+    "method": "POST",
+    "url": "/api/orderApproval/{id}/reject",
+    "summary": "Reject an order approval",
+    "description": "Reject an order approval and update order status to rejected",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Order Approval ID"
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "comments"
+        ],
+        "properties": {
+          "comments": {
+            "type": "string",
+            "description": "Reason for rejection (required)"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Order approval rejected successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "description": "Rejection reason required",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Order approval not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/orderApproval/summary/{orderId}",
+    "method": "GET",
+    "url": "/api/orderApproval/summary/{orderId}",
+    "summary": "Get approval summary for an order",
+    "description": "Get a summary of all approvals for an order including count of approved approvers and their details",
+    "tags": [
+      "OrderApproval"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "orderId",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Order ID to get approval summary for"
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Approval summary retrieved successfully",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                },
+                "orderNumber": {
+                  "type": "string"
+                },
+                "approvalSummary": {
+                  "type": "object",
+                  "properties": {
+                    "totalRequired": {
+                      "type": "integer"
+                    },
+                    "approvedCount": {
+                      "type": "integer"
+                    },
+                    "pendingCount": {
+                      "type": "integer"
+                    },
+                    "progress": {
+                      "type": "string"
+                    },
+                    "percentageComplete": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "approvedApprovers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "contentTypes": [
+          "application/json"
+        ]
+      },
+      "404": {
+        "description": "Order not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

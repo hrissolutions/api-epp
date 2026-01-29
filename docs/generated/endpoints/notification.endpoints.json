@@ -1,0 +1,391 @@
+[
+  {
+    "id": "GET /api/notification/test-reminder",
+    "method": "GET",
+    "url": "/api/notification/test-reminder",
+    "summary": "Test booking dropoff reminder",
+    "description": "Manually trigger the booking dropoff reminder cron job for testing purposes",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "testTime",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": "Optional custom time for testing (ISO 8601 format)"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Reminder test completed successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/notification/{id}",
+    "method": "GET",
+    "url": "/api/notification/{id}",
+    "summary": "Get notification by ID",
+    "description": "Retrieve a specific notification by its unique identifier",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Notification ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Notification retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/notification/{id}",
+    "method": "PATCH",
+    "url": "/api/notification/{id}",
+    "summary": "Update notification",
+    "description": "Update notification data by ID",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recipients": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "isDeleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Notification updated successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/notification/{id}",
+    "method": "DELETE",
+    "url": "/api/notification/{id}",
+    "summary": "Delete notification",
+    "description": "Permanently delete a notification by ID",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Notification deleted successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/notification",
+    "method": "GET",
+    "url": "/api/notification",
+    "summary": "Get all notifications",
+    "description": "Retrieve notifications with advanced filtering, pagination, and sorting",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      {
+        "name": "order",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "desc"
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Search query"
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        },
+        "description": "JSON array of filter objects"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Notifications retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": true
+    }
+  },
+  {
+    "id": "POST /api/notification",
+    "method": "POST",
+    "url": "/api/notification",
+    "summary": "Create new notification",
+    "description": "Create a new notification",
+    "tags": [
+      "Notification"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "source",
+          "category",
+          "title",
+          "description"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Source ID (MongoDB ObjectId)"
+          },
+          "category": {
+            "type": "string",
+            "description": "Notification category"
+          },
+          "title": {
+            "type": "string",
+            "description": "Notification title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Notification description"
+          },
+          "recipients": {
+            "type": "object",
+            "description": "Recipients object with read and unread arrays",
+            "properties": {
+              "read": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              },
+              "unread": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Notification created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

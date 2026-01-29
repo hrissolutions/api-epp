@@ -1,19 +1,14 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/cartItem/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/cartItem/{id}",
+    "summary": "Get cartItem by ID",
+    "description": "Retrieve a specific cartItem by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "CartItem"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -23,7 +18,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "CartItem ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +33,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "CartItem retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +45,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "cartItem": {
+                      "$ref": "#/components/schemas/CartItem"
                     }
                   }
                 }
@@ -64,9 +59,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -83,20 +75,15 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/cartItem/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/cartItem/{id}",
+    "summary": "Update cartItem",
+    "description": "Update cartItem data by ID (partial update)",
     "tags": [
-      "Template"
+      "CartItem"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json"
     ],
@@ -108,7 +95,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "CartItem ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,13 +108,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "CartItem name",
+            "example": "Updated Email CartItem"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "CartItem description",
+            "example": "Updated description for the cartItem"
           },
           "type": {
             "type": "string",
@@ -137,7 +124,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "CartItem type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -153,7 +140,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "CartItem updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +152,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "cartItem": {
+                      "$ref": "#/components/schemas/CartItem"
                     }
                   }
                 }
@@ -179,9 +166,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -198,20 +182,15 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/cartItem/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/cartItem/{id}",
+    "summary": "Delete cartItem",
+    "description": "Permanently delete a cartItem by ID",
     "tags": [
-      "Template"
+      "CartItem"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -221,13 +200,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "CartItem ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "CartItem deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -251,9 +230,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "404": {
         "contentTypes": []
       },
@@ -268,20 +244,15 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/cartItem",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/cartItem",
+    "summary": "Get all cartItems",
+    "description": "Retrieve cartItems with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "CartItem"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [],
     "queryParams": [
@@ -368,7 +339,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include cartItem documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +378,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "cartItems": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/CartItem"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +390,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/CartItem"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -445,9 +416,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "500": {
         "contentTypes": []
       }
@@ -459,20 +427,15 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/cartItem",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/cartItem",
+    "summary": "Create new cartItem",
+    "description": "Create a new cartItem with the provided data",
     "tags": [
-      "Template"
+      "CartItem"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json",
       "application/x-www-form-urlencoded",
@@ -491,13 +454,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "CartItem name",
+            "example": "Email Welcome CartItem"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "CartItem description",
+            "example": "Welcome email cartItem for new users"
           },
           "type": {
             "type": "string",
@@ -507,7 +470,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "CartItem type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -525,7 +488,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "CartItem created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +500,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "cartItem": {
+                      "$ref": "#/components/schemas/CartItem"
                     }
                   }
                 }
@@ -553,7 +516,184 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/cartItem/checkout",
+    "method": "POST",
+    "url": "/api/cartItem/checkout",
+    "summary": "Checkout cart items to create an order",
+    "description": "Convert cart items for an employee into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears only the checked-out items from the cart.",
+    "tags": [
+      "CartItem"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "employeeId"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "Employee ID who owns the cart",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "items": {
+            "type": "array",
+            "description": "Optional array of specific items to checkout. If not provided, all cart items will be checked out.",
+            "items": {
+              "type": "object",
+              "required": [
+                "productId",
+                "quantity"
+              ],
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "description": "Product ID to checkout",
+                  "example": "696da7163ff7642054c61734"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Quantity to checkout (must not exceed quantity in cart)",
+                  "example": 2
+                }
+              }
+            },
+            "example": [
+              {
+                "productId": "696da7163ff7642054c61734",
+                "quantity": 2
+              }
+            ]
+          },
+          "paymentType": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "INSTALLMENT",
+              "POINTS",
+              "MIXED"
+            ],
+            "default": "INSTALLMENT",
+            "description": "Payment type for the order",
+            "example": "INSTALLMENT"
+          },
+          "installmentMonths": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of months for installment plan (required if paymentType is INSTALLMENT)",
+            "example": 6
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "PAYROLL_DEDUCTION",
+              "CASH",
+              "CREDIT_CARD",
+              "DEBIT_CARD",
+              "BANK_TRANSFER",
+              "OTHER"
+            ],
+            "default": "PAYROLL_DEDUCTION",
+            "description": "Payment method",
+            "example": "PAYROLL_DEDUCTION"
+          },
+          "discount": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Discount amount",
+            "example": 0
+          },
+          "tax": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Tax amount",
+            "example": 0
+          },
+          "pointsUsed": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Points used for payment",
+            "example": 0
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes for the order",
+            "example": "Order placed via API"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Order created successfully from cart",
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/Success"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
+                    },
+                    "transaction": {
+                      "type": "object",
+                      "description": "Transaction ledger information"
+                    },
+                    "installments": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Installment"
+                      },
+                      "description": "Present when paymentType is INSTALLMENT"
+                    },
+                    "installmentSummary": {
+                      "type": "object",
+                      "description": "Summary of installments (present when paymentType is INSTALLMENT)"
+                    },
+                    "approvalWorkflow": {
+                      "type": "object",
+                      "description": "Approval workflow information"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "contentTypes": [
+          "application/json"
+        ]
+      },
+      "400": {
         "contentTypes": []
       },
       "500": {

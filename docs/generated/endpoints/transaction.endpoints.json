@@ -1,0 +1,497 @@
+[
+  {
+    "id": "GET /api/transaction/unreconciled",
+    "method": "GET",
+    "url": "/api/transaction/unreconciled",
+    "summary": "Get unreconciled transactions",
+    "description": "Retrieve all completed transactions that haven't been reconciled yet",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Unreconciled transactions retrieved successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/transaction/order/{orderId}",
+    "method": "GET",
+    "url": "/api/transaction/order/{orderId}",
+    "summary": "Get transactions by order",
+    "description": "Retrieve all transactions associated with a specific order",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "orderId",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Order ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Order transactions retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/transaction/employee/{employeeId}",
+    "method": "GET",
+    "url": "/api/transaction/employee/{employeeId}",
+    "summary": "Get transactions by employee",
+    "description": "Retrieve all transactions for a specific employee",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "employeeId",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Employee ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Employee transactions retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/transaction/{id}",
+    "method": "GET",
+    "url": "/api/transaction/{id}",
+    "summary": "Get transaction by ID",
+    "description": "Retrieve a specific transaction by its unique identifier",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Transaction ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Transaction retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/transaction/{id}",
+    "method": "PATCH",
+    "url": "/api/transaction/{id}",
+    "summary": "Update transaction",
+    "description": "Update transaction data by ID",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED",
+              "REVERSED"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Transaction updated successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/transaction/{id}",
+    "method": "DELETE",
+    "url": "/api/transaction/{id}",
+    "summary": "Delete transaction",
+    "description": "Permanently delete a transaction by ID",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Transaction deleted successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/transaction",
+    "method": "GET",
+    "url": "/api/transaction",
+    "summary": "Get all transactions",
+    "description": "Retrieve transactions with advanced filtering, pagination, and sorting",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      {
+        "name": "order",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "desc"
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Search query"
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        },
+        "description": "JSON array of filter objects"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Transactions retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": true
+    }
+  },
+  {
+    "id": "POST /api/transaction",
+    "method": "POST",
+    "url": "/api/transaction",
+    "summary": "Create new transaction",
+    "description": "Create a new payment transaction",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "transactionNumber",
+          "employeeId",
+          "orderId",
+          "type",
+          "amount",
+          "paymentMethod"
+        ],
+        "properties": {
+          "transactionNumber": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PURCHASE",
+              "INSTALLMENT",
+              "POINTS_REDEMPTION",
+              "REFUND",
+              "ADJUSTMENT"
+            ]
+          },
+          "amount": {
+            "type": "number"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "INSTALLMENT",
+              "POINTS",
+              "MIXED"
+            ]
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Transaction created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/transaction/{id}/reconcile",
+    "method": "POST",
+    "url": "/api/transaction/{id}/reconcile",
+    "summary": "Reconcile transaction",
+    "description": "Mark a transaction as reconciled",
+    "tags": [
+      "Transaction"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "reconciledBy"
+        ],
+        "properties": {
+          "reconciledBy": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Transaction reconciled successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

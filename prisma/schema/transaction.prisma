@@ -3,10 +3,12 @@ model Transaction {
   organizationId   String? @db.ObjectId
   transactionNumber String @unique
 
-  // Link to employee and order
-  employeeId String @db.ObjectId
-  order      Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId    String @unique @db.ObjectId // One transaction per order
+  // Link to user and order
+  // This replaces employeeId - it's the ID from ADAM SSO
+  userId         String   @db.ObjectId
+  userType       UserType @default(EMPLOYEE) // To know if we check HRIS
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId        String   @unique @db.ObjectId // One transaction per order
 
   // Transaction details
   type   TransactionType
@@ -42,7 +44,7 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([employeeId])
+  @@index([userId])
   @@index([type])
   @@index([status])
   @@index([paymentMethod])

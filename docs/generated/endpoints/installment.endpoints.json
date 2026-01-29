@@ -1,19 +1,14 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/installment/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/installment/{id}",
+    "summary": "Get installment by ID",
+    "description": "Retrieve a specific installment by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "Installment"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -23,7 +18,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Installment ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +33,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "Installment retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +45,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "installment": {
+                      "$ref": "#/components/schemas/Installment"
                     }
                   }
                 }
@@ -64,9 +59,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -83,20 +75,15 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/installment/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/installment/{id}",
+    "summary": "Update installment",
+    "description": "Update installment data by ID (partial update)",
     "tags": [
-      "Template"
+      "Installment"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json"
     ],
@@ -108,7 +95,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Installment ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,13 +108,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "Installment name",
+            "example": "Updated Email Installment"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "Installment description",
+            "example": "Updated description for the installment"
           },
           "type": {
             "type": "string",
@@ -137,7 +124,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Installment type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -153,7 +140,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "Installment updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +152,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "installment": {
+                      "$ref": "#/components/schemas/Installment"
                     }
                   }
                 }
@@ -179,9 +166,6 @@
         ]
       },
       "400": {
-        "contentTypes": []
-      },
-      "401": {
         "contentTypes": []
       },
       "404": {
@@ -198,20 +182,15 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/installment/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/installment/{id}",
+    "summary": "Delete installment",
+    "description": "Permanently delete a installment by ID",
     "tags": [
-      "Template"
+      "Installment"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [
       {
@@ -221,13 +200,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Installment ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "Installment deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -251,9 +230,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "404": {
         "contentTypes": []
       },
@@ -268,20 +244,15 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/installment",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/installment",
+    "summary": "Get all installments",
+    "description": "Retrieve installments with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "Installment"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [],
     "pathParams": [],
     "queryParams": [
@@ -368,7 +339,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include installment documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +378,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "installments": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/Installment"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +390,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/Installment"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -445,9 +416,6 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
-        "contentTypes": []
-      },
       "500": {
         "contentTypes": []
       }
@@ -459,20 +427,15 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/installment",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/installment",
+    "summary": "Create new installment",
+    "description": "Create a new installment with the provided data",
     "tags": [
-      "Template"
+      "Installment"
     ],
     "deprecated": false,
-    "security": [
-      {
-        "bearerAuth": []
-      }
-    ],
     "contentTypes": [
       "application/json",
       "application/x-www-form-urlencoded",
@@ -491,13 +454,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "Installment name",
+            "example": "Email Welcome Installment"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "Installment description",
+            "example": "Welcome email installment for new users"
           },
           "type": {
             "type": "string",
@@ -507,7 +470,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Installment type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -525,7 +488,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "Installment created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +500,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "installment": {
+                      "$ref": "#/components/schemas/Installment"
                     }
                   }
                 }
@@ -553,7 +516,210 @@
       "400": {
         "contentTypes": []
       },
-      "401": {
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/installment/{id}/deduct",
+    "method": "POST",
+    "url": "/api/installment/{id}/deduct",
+    "summary": "Mark installment as deducted",
+    "description": "Mark an installment as deducted from payroll with optional batch and reference tracking",
+    "tags": [
+      "Installment"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Installment ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": false,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "payrollBatchId": {
+            "type": "string",
+            "description": "Payroll batch identifier",
+            "example": "BATCH-2024-01-15"
+          },
+          "deductionReference": {
+            "type": "string",
+            "description": "Deduction reference number",
+            "example": "DED-2024-001234"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Installment marked as deducted successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/installment/pending-payroll",
+    "method": "GET",
+    "url": "/api/installment/pending-payroll",
+    "summary": "Get pending installments for payroll",
+    "description": "Retrieve all pending installments that are due for deduction based on cutoff date",
+    "tags": [
+      "Installment"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "cutoffDate",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Cutoff date for filtering (defaults to today)"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Pending installments retrieved successfully",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cutoffDate": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "totalPending": {
+              "type": "integer"
+            },
+            "totalAmount": {
+              "type": "number"
+            },
+            "installments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Installment"
+              }
+            }
+          }
+        },
+        "contentTypes": [
+          "application/json"
+        ]
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/installment/order/{orderId}/summary",
+    "method": "GET",
+    "url": "/api/installment/order/{orderId}/summary",
+    "summary": "Get installment summary for order",
+    "description": "Retrieve a comprehensive summary of all installments for a specific order",
+    "tags": [
+      "Installment"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "orderId",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Order ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Installment summary retrieved successfully",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "totalInstallments": {
+              "type": "integer"
+            },
+            "paidCount": {
+              "type": "integer"
+            },
+            "pendingCount": {
+              "type": "integer"
+            },
+            "failedCount": {
+              "type": "integer"
+            },
+            "totalAmount": {
+              "type": "number"
+            },
+            "paidAmount": {
+              "type": "number"
+            },
+            "remainingAmount": {
+              "type": "number"
+            },
+            "installments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Installment"
+              }
+            }
+          }
+        },
+        "contentTypes": [
+          "application/json"
+        ]
+      },
+      "400": {
         "contentTypes": []
       },
       "500": {

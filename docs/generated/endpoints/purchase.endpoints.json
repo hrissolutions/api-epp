@@ -1,12 +1,12 @@
 [
   {
-    "id": "GET /api/template/{id}",
+    "id": "GET /api/purchase/{id}",
     "method": "GET",
-    "url": "/api/template/{id}",
-    "summary": "Get template by ID",
-    "description": "Retrieve a specific template by its unique identifier with optional field selection",
+    "url": "/api/purchase/{id}",
+    "summary": "Get purchase by ID",
+    "description": "Retrieve a specific purchase by its unique identifier with optional field selection",
     "tags": [
-      "Template"
+      "Purchase"
     ],
     "deprecated": false,
     "security": [
@@ -23,7 +23,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Purchase ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [
@@ -38,7 +38,7 @@
     ],
     "responses": {
       "200": {
-        "description": "Template retrieved successfully",
+        "description": "Purchase retrieved successfully",
         "schema": {
           "allOf": [
             {
@@ -50,8 +50,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "purchase": {
+                      "$ref": "#/components/schemas/Purchase"
                     }
                   }
                 }
@@ -83,13 +83,13 @@
     }
   },
   {
-    "id": "PATCH /api/template/{id}",
+    "id": "PATCH /api/purchase/{id}",
     "method": "PATCH",
-    "url": "/api/template/{id}",
-    "summary": "Update template",
-    "description": "Update template data by ID (partial update)",
+    "url": "/api/purchase/{id}",
+    "summary": "Update purchase",
+    "description": "Update purchase data by ID (partial update)",
     "tags": [
-      "Template"
+      "Purchase"
     ],
     "deprecated": false,
     "security": [
@@ -108,7 +108,7 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Purchase ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
@@ -121,13 +121,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Updated Email Template"
+            "description": "Purchase name",
+            "example": "Updated Email Purchase"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Updated description for the template"
+            "description": "Purchase description",
+            "example": "Updated description for the purchase"
           },
           "type": {
             "type": "string",
@@ -137,7 +137,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Purchase type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -153,7 +153,7 @@
     },
     "responses": {
       "200": {
-        "description": "Template updated successfully",
+        "description": "Purchase updated successfully",
         "schema": {
           "allOf": [
             {
@@ -165,8 +165,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "purchase": {
+                      "$ref": "#/components/schemas/Purchase"
                     }
                   }
                 }
@@ -198,13 +198,13 @@
     }
   },
   {
-    "id": "DELETE /api/template/{id}",
+    "id": "DELETE /api/purchase/{id}",
     "method": "DELETE",
-    "url": "/api/template/{id}",
-    "summary": "Delete template",
-    "description": "Permanently delete a template by ID",
+    "url": "/api/purchase/{id}",
+    "summary": "Delete purchase",
+    "description": "Permanently delete a purchase by ID",
     "tags": [
-      "Template"
+      "Purchase"
     ],
     "deprecated": false,
     "security": [
@@ -221,13 +221,13 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{24}$"
         },
-        "description": "Template ID (MongoDB ObjectId format)"
+        "description": "Purchase ID (MongoDB ObjectId format)"
       }
     ],
     "queryParams": [],
     "responses": {
       "200": {
-        "description": "Template deleted successfully",
+        "description": "Purchase deleted successfully",
         "schema": {
           "allOf": [
             {
@@ -268,13 +268,13 @@
     }
   },
   {
-    "id": "GET /api/template",
+    "id": "GET /api/purchase",
     "method": "GET",
-    "url": "/api/template",
-    "summary": "Get all templates",
-    "description": "Retrieve templates with advanced filtering, pagination, sorting, field selection, and optional grouping",
+    "url": "/api/purchase",
+    "summary": "Get all purchases",
+    "description": "Retrieve purchases with advanced filtering, pagination, sorting, field selection, and optional grouping",
     "tags": [
-      "Template"
+      "Purchase"
     ],
     "deprecated": false,
     "security": [
@@ -368,7 +368,7 @@
             "true"
           ]
         },
-        "description": "Include template documents in response"
+        "description": "Include purchase documents in response"
       },
       {
         "name": "pagination",
@@ -407,10 +407,10 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "purchases": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Template"
+                        "$ref": "#/components/schemas/Purchase"
                       },
                       "description": "Present when document=\"true\" and no groupBy"
                     },
@@ -419,7 +419,7 @@
                       "additionalProperties": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/Template"
+                          "$ref": "#/components/schemas/Purchase"
                         }
                       },
                       "description": "Present when groupBy is used and document=\"true\""
@@ -459,13 +459,13 @@
     }
   },
   {
-    "id": "POST /api/template",
+    "id": "POST /api/purchase",
     "method": "POST",
-    "url": "/api/template",
-    "summary": "Create new template",
-    "description": "Create a new template with the provided data",
+    "url": "/api/purchase",
+    "summary": "Create new purchase",
+    "description": "Create a new purchase with the provided data",
     "tags": [
-      "Template"
+      "Purchase"
     ],
     "deprecated": false,
     "security": [
@@ -491,13 +491,13 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Template name",
-            "example": "Email Welcome Template"
+            "description": "Purchase name",
+            "example": "Email Welcome Purchase"
           },
           "description": {
             "type": "string",
-            "description": "Template description",
-            "example": "Welcome email template for new users"
+            "description": "Purchase description",
+            "example": "Welcome email purchase for new users"
           },
           "type": {
             "type": "string",
@@ -507,7 +507,7 @@
               "push",
               "form"
             ],
-            "description": "Template type for categorization",
+            "description": "Purchase type for categorization",
             "example": "email"
           },
           "isDeleted": {
@@ -525,7 +525,7 @@
     },
     "responses": {
       "201": {
-        "description": "Template created successfully",
+        "description": "Purchase created successfully",
         "schema": {
           "allOf": [
             {
@@ -537,8 +537,8 @@
                 "data": {
                   "type": "object",
                   "properties": {
-                    "template": {
-                      "$ref": "#/components/schemas/Template"
+                    "purchase": {
+                      "$ref": "#/components/schemas/Purchase"
                     }
                   }
                 }
