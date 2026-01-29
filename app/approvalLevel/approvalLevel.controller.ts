@@ -264,8 +264,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!approvalLevel) {
-				const query: Prisma.ApprovalLevelFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.ApprovalLevelFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

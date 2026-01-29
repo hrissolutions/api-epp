@@ -346,8 +346,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!cartItem) {
-				const query: Prisma.CartItemFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.CartItemFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

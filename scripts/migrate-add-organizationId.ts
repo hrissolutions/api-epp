@@ -144,17 +144,34 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 				if (!dryRun) {
 					// Use raw MongoDB updateMany command to update all records
 					// This properly handles fields that don't exist
+					// Note: We'll use a script approach to convert strings to ObjectId
 					try {
+						// First, try to update all documents using aggregation pipeline
+						// This converts string organizationId to ObjectId type
 						const updateResult = await prisma.$runCommandRaw({
 							update: model.collection,
 							updates: [
 								{
 									q: {}, // Empty query = match all documents
-									u: {
-										$set: {
-											organizationId: organizationId,
+									u: [
+										{
+											$set: {
+												organizationId: {
+													$cond: {
+														if: { $eq: [{ $type: "$organizationId" }, "string"] },
+														then: { $toObjectId: "$organizationId" },
+														else: {
+															$cond: {
+																if: { $eq: [{ $type: "$organizationId" }, "missing"] },
+																then: { $toObjectId: organizationId },
+																else: "$organizationId",
+															},
+														},
+													},
+												},
+											},
 										},
-									},
+									],
 									multi: true, // Update multiple documents
 								},
 							],

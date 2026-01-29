@@ -269,8 +269,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!wishlistItem) {
-				const query: Prisma.WishlistItemFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.WishlistItemFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

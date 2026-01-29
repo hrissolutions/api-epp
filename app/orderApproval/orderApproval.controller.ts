@@ -244,8 +244,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!orderApproval) {
-				const query: Prisma.OrderApprovalFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.OrderApprovalFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

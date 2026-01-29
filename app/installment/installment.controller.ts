@@ -264,8 +264,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!installment) {
-				const query: Prisma.InstallmentFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.InstallmentFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

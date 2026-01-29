@@ -12,6 +12,7 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
+import { addOrganizationFilter } from "../../helper/organization-filter";
 import { CreateItemSchema, UpdateItemSchema, ItemImageType } from "../../zod/items.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
@@ -276,7 +277,7 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			// Base where clause
-			const whereClause: Prisma.ItemWhereInput = {};
+			let whereClause: Prisma.ItemWhereInput = {};
 
 			// search fields for items (name, description, category, brand)
 			const searchFields = ["name", "description"];
@@ -304,6 +305,14 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			}
 
+			// Add organizationId filter from authenticated user
+			whereClause = addOrganizationFilter(req, whereClause);
+
+			// Debug logging
+			const orgId = (req as any).organizationId;
+			itemsLogger.info(`[DEBUG] OrganizationId from token: ${orgId}`);
+			itemsLogger.info(`[DEBUG] Where clause before filter: ${JSON.stringify(whereClause, null, 2)}`);
+
 			// Only show approved and available items by default
 			// Admin/internal endpoints can still override this via explicit filters if needed
 			// const statusVisibilityFilter: any = {
@@ -322,12 +331,58 @@ export const controller = (prisma: PrismaClient) => {
 			// }
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
+			// Debug: Check total items and items with matching organizationId
+			const totalWithoutFilter = await prisma.item.count();
+			
+			// Test with raw MongoDB query to see actual data
+			let rawMongoCount = 0;
+			let rawMongoSample: any = null;
+			try {
+				const rawCountResult = await prisma.$runCommandRaw({
+					count: "items",
+					query: {
+						organizationId: orgId,
+					},
+				});
+				rawMongoCount = (rawCountResult as any).n || 0;
+				
+				// Get a sample document to see the actual type
+				const rawFindResult = await prisma.$runCommandRaw({
+					find: "items",
+					filter: {
+						organizationId: orgId,
+					},
+					limit: 1,
+				});
+				const docs = (rawFindResult as any).cursor?.firstBatch || [];
+				if (docs.length > 0) {
+					rawMongoSample = docs[0];
+					itemsLogger.info(`[DEBUG] Sample document organizationId type: ${typeof rawMongoSample.organizationId}, value: ${JSON.stringify(rawMongoSample.organizationId)}`);
+				}
+			} catch (error) {
+				itemsLogger.warn(`[DEBUG] Raw MongoDB query error: ${error}`);
+			}
+			
+			const totalWithOrgId = await prisma.item.count({
+				where: { organizationId: orgId || undefined },
+			});
+			const totalWithNullOrgId = await prisma.item.count({
+				where: { organizationId: null },
+			});
+			
+			itemsLogger.info(`[DEBUG] Total items in database (no filter): ${totalWithoutFilter}`);
+			itemsLogger.info(`[DEBUG] Raw MongoDB count with organizationId="${orgId}": ${rawMongoCount}`);
+			itemsLogger.info(`[DEBUG] Prisma count with organizationId="${orgId}": ${totalWithOrgId}`);
+			itemsLogger.info(`[DEBUG] Items with organizationId=null: ${totalWithNullOrgId}`);
+			itemsLogger.info(`[DEBUG] Final where clause: ${JSON.stringify(whereClause, null, 2)}`);
+
 			const [items, total] = await Promise.all([
 				document ? prisma.item.findMany(findManyQuery) : [],
 				count ? prisma.item.count({ where: whereClause }) : 0,
 			]);
 
-			itemsLogger.info(`Retrieved ${items.length} items`);
+			itemsLogger.info(`[DEBUG] Retrieved ${items.length} items with organizationId filter`);
+			itemsLogger.info(`[DEBUG] Total count with filter: ${total}`);
 			const processedData =
 				groupBy && document ? groupDataByField(items, groupBy as string) : items;
 
@@ -391,10 +446,11 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!item) {
+				let whereClause: Prisma.ItemWhereInput = { id };
+				whereClause = addOrganizationFilter(req, whereClause);
+
 				const query: Prisma.ItemFindFirstArgs = {
-					where: {
-						id,
-					} as any,
+					where: whereClause as any,
 				};
 
 				query.select = getNestedFields(fields);
@@ -997,7 +1053,8 @@ export const controller = (prisma: PrismaClient) => {
 					const item = await prisma.item.create({
 						data: {
 							...validation.data,
-							organizationId: (req as any).organizationId || validation.data.organizationId,
+							organizationId:
+								(req as any).organizationId || validation.data.organizationId,
 						} as any,
 					});
 

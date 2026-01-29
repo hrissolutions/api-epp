@@ -289,8 +289,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!orderItem) {
-				const query: Prisma.OrderItemFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.OrderItemFindFirstArgs = { where: { id } };
 
 				const normalizedFields = normalizeOrderItemFields(fields);
 				query.select = getNestedFields(normalizedFields);

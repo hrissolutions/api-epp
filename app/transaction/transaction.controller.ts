@@ -271,8 +271,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!transaction) {
-				const query: Prisma.TransactionFindFirstArgs = { where: { id },
-				};
+				const query: Prisma.TransactionFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 
