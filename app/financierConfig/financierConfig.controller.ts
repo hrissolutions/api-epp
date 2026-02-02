@@ -76,10 +76,15 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
+			const data = validation.data as any;
+			// New config: availableCredits = maxCreditLimit (full credit), usedCredits = 0
+			const availableCredits = data.availableCredits ?? data.maxCreditLimit ?? 0;
 			const financierConfig = await prisma.financierConfig.create({
 				data: {
-					...validation.data,
-					organizationId: (req as any).organizationId || validation.data.organizationId,
+					...data,
+					organizationId: (req as any).organizationId || data.organizationId,
+					availableCredits,
+					usedCredits: 0,
 				} as any,
 			});
 			financierConfigLogger.info(
@@ -179,8 +184,9 @@ export const controller = (prisma: PrismaClient) => {
 			]);
 
 			financierConfigLogger.info(`Retrieved ${financierConfigs.length} financier configs`);
+
 			const processedData =
-				groupBy && document
+				groupBy && document && financierConfigs.length > 0
 					? groupDataByField(financierConfigs, groupBy as string)
 					: financierConfigs;
 

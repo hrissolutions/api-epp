@@ -20,7 +20,11 @@ import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
 import { createTransactionForOrder } from "../../helper/transactionService";
-import { createApprovalChain } from "../../helper/approvalService";
+import { createApprovalChain, findMatchingWorkflow } from "../../helper/approvalService";
+import {
+	getFinancierConfigForWorkflow,
+	getRateForInstallmentCount,
+} from "../../helper/financierHelper";
 import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { calculateOrderTotals } from "../../helper/calculateOrderTotals.helper";
 
@@ -250,9 +254,42 @@ export const controller = (prisma: PrismaClient) => {
 						`Set default installmentMonths to ${installmentMonths} for order ${order.id}`,
 					);
 				}
+
+				// Resolve financier rate for interest: interest = principal × (rate/100), totalPayable = principal + interest, then split by installments
+				const installmentCount = installmentMonths * 2;
+				let interestRatePercent = 0;
+				try {
+					const workflow = await findMatchingWorkflow(
+						prisma,
+						order.total,
+						order.paymentType,
+					);
+					if (workflow) {
+						const financierConfig = await getFinancierConfigForWorkflow(
+							prisma,
+							workflow,
+						);
+						if (financierConfig) {
+							interestRatePercent = getRateForInstallmentCount(
+								installmentCount,
+								financierConfig,
+							);
+							orderLogger.info(
+								`Using financier rate for order ${order.id}: ${interestRatePercent}% for ${installmentCount} installments`,
+							);
+						}
+					}
+				} catch (rateError) {
+					orderLogger.warn(
+						`Could not resolve financier rate for installments (using 0%):`,
+						rateError,
+					);
+				}
+
 				try {
 					orderLogger.info(
-						`Generating installments for order ${order.id}: ${installmentMonths} months`,
+						`Generating installments for order ${order.id}: ${installmentMonths} months` +
+							(interestRatePercent > 0 ? `, rate ${interestRatePercent}%` : ""),
 					);
 
 					generatedInstallments = await generateInstallments(
@@ -261,6 +298,7 @@ export const controller = (prisma: PrismaClient) => {
 						installmentMonths,
 						order.total,
 						order.orderDate || new Date(),
+						interestRatePercent > 0 ? { interestRatePercent } : undefined,
 					);
 
 					// Update order with installment details

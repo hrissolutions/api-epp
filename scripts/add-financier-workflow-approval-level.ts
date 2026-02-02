@@ -1,15 +1,18 @@
 /**
- * Script to add the FINANCIER approval level to WorkflowApprovalLevel for all
- * approval workflows that apply to orders of 1000 or above, and to update
- * existing FINANCIER workflow approval levels with approver details.
+ * Script: Add FINANCIER to all approval workflows in WorkflowApprovalLevel.
+ * - Adds FINANCIER level to every active approval workflow that doesn't already have it.
+ * - Optionally updates existing FINANCIER levels with null approver fields (--update-existing).
+ *
+ * When creating an order: if the approver is a financier and order total <= FinancierConfig.autoApproveLimit
+ * (e.g. 5000) and within maxCreditLimit (e.g. 1000000), the OrderApproval is created with status APPROVED
+ * (see approvalService.createApprovalChain).
  *
  * Usage:
  *   npx ts-node scripts/add-financier-workflow-approval-level.ts
  *
  * Options:
- *   --dry-run              Preview changes without creating/updating records
+ *   --dry-run              Preview changes without creating records
  *   --approval-level-id ID Use this ApprovalLevel id (default: 69800e5e16324ea0fcba22bc)
- *   --threshold N          Min order amount to consider "1000 above" (default: 1000)
  *   --update-existing      Also update existing FINANCIER workflow levels with null approver fields
  *   --approver-id ID       Financier userId / approverId (default: 697845e3479eaa6d2f796b7d)
  *   --approver-email EMAIL Financier email (default: bryangabrielberja25@gmail.com)
@@ -23,7 +26,6 @@ const logger = getLogger();
 const scriptLogger = logger.child({ module: "addFinancierWorkflowApprovalLevel" });
 
 const DEFAULT_FINANCIER_APPROVAL_LEVEL_ID = "69800e5e16324ea0fcba22bc";
-const DEFAULT_THRESHOLD = 1000;
 const DEFAULT_FINANCIER_APPROVER = {
 	approverId: "697845e3479eaa6d2f796b7d",
 	approverName: "Financier",
@@ -33,7 +35,6 @@ const DEFAULT_FINANCIER_APPROVER = {
 function parseArgs(): {
 	dryRun: boolean;
 	approvalLevelId: string;
-	threshold: number;
 	updateExisting: boolean;
 	approverId: string;
 	approverName: string;
@@ -42,7 +43,6 @@ function parseArgs(): {
 	const args = process.argv.slice(2);
 	let dryRun = false;
 	let approvalLevelId = DEFAULT_FINANCIER_APPROVAL_LEVEL_ID;
-	let threshold = DEFAULT_THRESHOLD;
 	let updateExisting = false;
 	let approverId = DEFAULT_FINANCIER_APPROVER.approverId;
 	let approverName = DEFAULT_FINANCIER_APPROVER.approverName;
@@ -53,11 +53,6 @@ function parseArgs(): {
 		if (args[i] === "--update-existing") updateExisting = true;
 		if (args[i] === "--approval-level-id" && args[i + 1]) {
 			approvalLevelId = args[i + 1];
-			i++;
-		}
-		if (args[i] === "--threshold" && args[i + 1]) {
-			const n = parseInt(args[i + 1], 10);
-			if (!isNaN(n)) threshold = n;
 			i++;
 		}
 		if (args[i] === "--approver-id" && args[i + 1]) {
@@ -73,7 +68,6 @@ function parseArgs(): {
 	return {
 		dryRun,
 		approvalLevelId,
-		threshold,
 		updateExisting,
 		approverId,
 		approverName,
@@ -86,25 +80,17 @@ function isValidObjectId(id: string): boolean {
 }
 
 async function main() {
-	const {
-		dryRun,
-		approvalLevelId,
-		threshold,
-		updateExisting,
-		approverId,
-		approverName,
-		approverEmail,
-	} = parseArgs();
+	const { dryRun, approvalLevelId, updateExisting, approverId, approverName, approverEmail } =
+		parseArgs();
 	const prisma = new PrismaClient();
 
 	try {
 		await connectAllDatabases();
 
 		scriptLogger.info("============================================================");
-		scriptLogger.info("Add FINANCIER to WorkflowApprovalLevel (workflows >= threshold)");
+		scriptLogger.info("Add FINANCIER to all approval workflows (WorkflowApprovalLevel)");
 		scriptLogger.info("============================================================");
 		scriptLogger.info(`Approval level ID (FINANCIER): ${approvalLevelId}`);
-		scriptLogger.info(`Threshold (min order amount): ${threshold}`);
 		scriptLogger.info(`Approver: ${approverName} <${approverEmail}> (id: ${approverId})`);
 		scriptLogger.info(`Update existing: ${updateExisting}`);
 		scriptLogger.info(`Mode: ${dryRun ? "DRY RUN (no changes)" : "LIVE"}`);
@@ -136,25 +122,17 @@ async function main() {
 			`Found approval level: ${financierApprovalLevel.role} - ${financierApprovalLevel.description ?? "(no description)"}`,
 		);
 
-		// 2) Find approval workflows that apply to order total >= threshold
-		//    A workflow applies to amount X when: (minOrderAmount is null or X >= minOrderAmount) and (maxOrderAmount is null or X <= maxOrderAmount)
-		//    So it applies to "threshold and above" when: (minOrderAmount is null or minOrderAmount <= threshold) AND (maxOrderAmount is null or maxOrderAmount >= threshold)
+		// 2) ADD: Add FINANCIER to all active approval workflows that don't already have it
+		scriptLogger.info("");
+		scriptLogger.info("Adding FINANCIER to all active workflows (if missing)...");
 		const workflows = await prisma.approvalWorkflow.findMany({
-			where: {
-				isActive: true,
-				AND: [
-					{ OR: [{ maxOrderAmount: null }, { maxOrderAmount: { gte: threshold } }] },
-					{ OR: [{ minOrderAmount: null }, { minOrderAmount: { lte: threshold } }] },
-				],
-			},
+			where: { isActive: true },
 			include: {
 				workflowLevels: { orderBy: { level: "asc" } },
 			},
 		});
 
-		scriptLogger.info(
-			`Found ${workflows.length} active workflow(s) that apply to order amount >= ${threshold}.`,
-		);
+		scriptLogger.info(`Found ${workflows.length} active workflow(s).`);
 
 		let created = 0;
 		let skipped = 0;
