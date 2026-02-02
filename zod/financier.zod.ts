@@ -26,7 +26,15 @@ export const InstallmentRateConfigSchema = z.array(InstallmentRateTierSchema);
 export type InstallmentRateTier = z.infer<typeof InstallmentRateTierSchema>;
 export type InstallmentRateConfig = z.infer<typeof InstallmentRateConfigSchema>;
 
-export const UserTypeEnum = z.enum(["EMPLOYEE", "INDIVIDUAL", "WHOLESALER"]);
+export const UserTypeEnum = z.enum([
+	"ADMIN",
+	"EMPLOYEE",
+	"INDIVIDUAL",
+	"RETAILER",
+	"WHOLESALER",
+	"FINANCIER",
+	"VENDOR",
+]);
 export type UserType = z.infer<typeof UserTypeEnum>;
 
 export const FinancierConfigSchema = z.object({

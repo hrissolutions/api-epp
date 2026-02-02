@@ -16,7 +16,11 @@ datasource db {
 }
 
 enum UserType {
+  ADMIN
   EMPLOYEE
   INDIVIDUAL
+  RETAILER
   WHOLESALER
+  FINANCIER
+  VENDOR
 }
