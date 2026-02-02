@@ -1,52 +1,55 @@
 model OrderApproval {
-  id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId         String          @db.ObjectId
-  
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId        String  @db.ObjectId
+
   // Approval level and role
-  approvalLevel   Int             // 1 = Manager, 2 = HR, 3 = Finance, etc.
-  approverRole    ApproverRole
-  
+  approvalLevel Int // 1 = Manager, 2 = HR, 3 = Finance, etc.
+  approverRole  ApproverRole
+
   // Approver details
-  approverId      String          // Employee ID of approver
-  approverName    String
-  approverEmail   String
-  
+  approverId    String // Employee ID of approver
+  approverName  String
+  approverEmail String
+
   // Approval status
-  status          ApprovalStatus  @default(PENDING)
-  
+  status ApprovalStatus @default(PENDING)
+
   // Decision details
-  approvedAt      DateTime?
-  rejectedAt      DateTime?
-  comments        String?
-  
+  approvedAt DateTime?
+  rejectedAt DateTime?
+  comments   String?
+
   // Notification tracking
-  notifiedAt      DateTime?
-  reminderSentAt  DateTime?
-  
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  notifiedAt     DateTime?
+  reminderSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([orderId, approvalLevel])
   @@index([orderId])
   @@index([approverId])
   @@index([status])
   @@index([approvalLevel])
+  @@index([organizationId])
   @@map("orderApprovals")
 }
 
 enum ApproverRole {
-  MANAGER           // Direct manager
-  HR                // HR department
-  FINANCE           // Finance department
-  DEPARTMENT_HEAD   // Department head
-  ADMIN             // System admin
+  MANAGER // Direct manager
+  HR // HR department
+  FINANCE // Finance department
+  DEPARTMENT_HEAD // Department head
+  ADMIN // System admin
+  FINANCIER // Financier: sets threshold, auto-approval, earns % per installment
 }
 
 enum ApprovalStatus {
-  PENDING           // Waiting for approval
-  APPROVED          // Approved
-  REJECTED          // Rejected
-  EXPIRED           // Timeout expired
-  SKIPPED           // Skipped (auto-approved)
+  PENDING // Waiting for approval
+  APPROVED // Approved
+  REJECTED // Rejected
+  EXPIRED // Timeout expired
+  SKIPPED // Skipped (auto-approved)
 }

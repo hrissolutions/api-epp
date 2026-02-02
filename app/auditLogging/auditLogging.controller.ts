@@ -11,10 +11,7 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import {
-	CreateAuditLoggingSchema,
-	UpdateAuditLoggingSchema,
-} from "../../zod/auditLogging.zod";
+import { CreateAuditLoggingSchema, UpdateAuditLoggingSchema } from "../../zod/auditLogging.zod";
 import { config } from "../../config/constant";
 import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
@@ -43,7 +40,12 @@ export const controller = (prisma: PrismaClient) => {
 				data.timestamp = new Date();
 			}
 
-			const logEntry = await prisma.auditLogging.create({ data });
+			const logEntry = await prisma.auditLogging.create({
+				data: {
+					...data,
+					organizationId: (req as any).organizationId || data.organizationId,
+				} as any,
+			});
 			auditLogger.info(`Audit log created: ${logEntry.id}`);
 
 			try {
@@ -138,14 +140,14 @@ export const controller = (prisma: PrismaClient) => {
 				...(groupBy && { groupedBy: groupBy }),
 			};
 
-			res
-				.status(200)
-				.json(buildSuccessResponse("Audit logs retrieved successfully", responseData, 200));
+			res.status(200).json(
+				buildSuccessResponse("Audit logs retrieved successfully", responseData, 200),
+			);
 		} catch (error) {
 			auditLogger.error(`Failed to get audit logs: ${error}`);
-			res
-				.status(500)
-				.json(buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500));
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
 		}
 	};
 
@@ -194,16 +196,11 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			} catch (cacheError) {
-				auditLogger.warn(
-					`Redis cache retrieval failed for audit log ${id}:`,
-					cacheError,
-				);
+				auditLogger.warn(`Redis cache retrieval failed for audit log ${id}:`, cacheError);
 			}
 
 			if (!logEntry) {
-				const query: Prisma.AuditLoggingFindFirstArgs = {
-					where: { id },
-				};
+				const query: Prisma.AuditLoggingFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fieldsStr);
 
@@ -214,10 +211,7 @@ export const controller = (prisma: PrismaClient) => {
 						await redisClient.setJSON(cacheKey, logEntry, 3600);
 						auditLogger.info(`Audit log ${id} stored in cache`);
 					} catch (cacheError) {
-						auditLogger.warn(
-							`Failed to store audit log ${id} in cache:`,
-							cacheError,
-						);
+						auditLogger.warn(`Failed to store audit log ${id} in cache:`, cacheError);
 					}
 				}
 			}
@@ -304,10 +298,7 @@ export const controller = (prisma: PrismaClient) => {
 				await invalidateCache.byPattern("cache:auditLogging:list:*");
 				auditLogger.info(`Cache invalidated after audit log ${id} update`);
 			} catch (cacheError) {
-				auditLogger.warn(
-					"Failed to invalidate cache after audit log update:",
-					cacheError,
-				);
+				auditLogger.warn("Failed to invalidate cache after audit log update:", cacheError);
 			}
 
 			auditLogger.info(`Audit log updated: ${updatedLog.id}`);
@@ -391,4 +382,3 @@ export const controller = (prisma: PrismaClient) => {
 
 	return { create, getAll, getById, update, remove };
 };
-

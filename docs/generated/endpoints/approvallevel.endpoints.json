@@ -1,0 +1,281 @@
+[
+  {
+    "id": "GET /api/approvalLevel/{id}",
+    "method": "GET",
+    "url": "/api/approvalLevel/{id}",
+    "summary": "Get approval level by ID",
+    "description": "Retrieve a specific approval level by its unique identifier",
+    "tags": [
+      "ApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Approval Level ID"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Approval level retrieved successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/approvalLevel/{id}",
+    "method": "PATCH",
+    "url": "/api/approvalLevel/{id}",
+    "summary": "Update approval level",
+    "description": "Update an approval level",
+    "tags": [
+      "ApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Approval level updated successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/approvalLevel/{id}",
+    "method": "DELETE",
+    "url": "/api/approvalLevel/{id}",
+    "summary": "Delete approval level",
+    "description": "Delete an approval level",
+    "tags": [
+      "ApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Approval level deleted successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval level not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/approvalLevel",
+    "method": "GET",
+    "url": "/api/approvalLevel",
+    "summary": "Get all approval levels",
+    "description": "Retrieve approval levels with filtering, pagination, and sorting",
+    "tags": [
+      "ApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Approval levels retrieved successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/approvalLevel",
+    "method": "POST",
+    "url": "/api/approvalLevel",
+    "summary": "Create new approval level",
+    "description": "Create a new approval level for a workflow",
+    "tags": [
+      "ApprovalLevel"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "workflowId",
+          "level",
+          "role"
+        ],
+        "properties": {
+          "workflowId": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MANAGER",
+              "HR",
+              "FINANCE",
+              "DEPARTMENT_HEAD",
+              "ADMIN"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "autoApproveUnder": {
+            "type": "number"
+          },
+          "timeoutDays": {
+            "type": "integer"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Approval level created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "description": "Validation error",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

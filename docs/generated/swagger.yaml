@@ -72,9 +72,1268 @@ components:
         - lastName
         - role
 paths:
+  "500":
+    $ref: "#/components/responses/InternalServerError"
   security:
     "0":
       bearerAuth: []
+  /api/approvalLevel/{id}:
+    get:
+      summary: Get approval level by ID
+      description: Retrieve a specific approval level by its unique identifier
+      tags:
+        - ApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Approval Level ID
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Approval level retrieved successfully
+        "404":
+          description: Approval level not found
+        "500":
+          description: Internal server error
+    patch:
+      summary: Update approval level
+      description: Update an approval level
+      tags:
+        - ApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Approval level updated successfully
+        "404":
+          description: Approval level not found
+        "500":
+          description: Internal server error
+    delete:
+      summary: Delete approval level
+      description: Delete an approval level
+      tags:
+        - ApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval level deleted successfully
+        "404":
+          description: Approval level not found
+        "500":
+          description: Internal server error
+  /api/approvalLevel:
+    get:
+      summary: Get all approval levels
+      description: Retrieve approval levels with filtering, pagination, and sorting
+      tags:
+        - ApprovalLevel
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: filter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval levels retrieved successfully
+        "500":
+          description: Internal server error
+    post:
+      summary: Create new approval level
+      description: Create a new approval level for a workflow
+      tags:
+        - ApprovalLevel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workflowId
+                - level
+                - role
+              properties:
+                workflowId:
+                  type: string
+                level:
+                  type: integer
+                role:
+                  type: string
+                  enum:
+                    - MANAGER
+                    - HR
+                    - FINANCE
+                    - DEPARTMENT_HEAD
+                    - ADMIN
+                description:
+                  type: string
+                isRequired:
+                  type: boolean
+                autoApproveUnder:
+                  type: number
+                timeoutDays:
+                  type: integer
+      responses:
+        "201":
+          description: Approval level created successfully
+        "400":
+          description: Validation error
+        "500":
+          description: Internal server error
+  /api/approvalWorkflow/{id}:
+    get:
+      summary: Get approval workflow by ID
+      description: Retrieve a specific approval workflow by its unique identifier
+      tags:
+        - ApprovalWorkflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Approval Workflow ID
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Approval workflow retrieved successfully
+        "404":
+          description: Approval workflow not found
+        "500":
+          description: Internal server error
+    patch:
+      summary: Update approval workflow
+      description: Update an approval workflow
+      tags:
+        - ApprovalWorkflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Approval workflow updated successfully
+        "404":
+          description: Approval workflow not found
+        "500":
+          description: Internal server error
+    delete:
+      summary: Delete approval workflow
+      description: Delete an approval workflow
+      tags:
+        - ApprovalWorkflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval workflow deleted successfully
+        "404":
+          description: Approval workflow not found
+        "500":
+          description: Internal server error
+  /api/approvalWorkflow:
+    get:
+      summary: Get all approval workflows
+      description: Retrieve approval workflows with filtering, pagination, and sorting
+      tags:
+        - ApprovalWorkflow
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: filter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval workflows retrieved successfully
+        "500":
+          description: Internal server error
+    post:
+      summary: Create new approval workflow
+      description: Create a new approval workflow
+      tags:
+        - ApprovalWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                isActive:
+                  type: boolean
+                minOrderAmount:
+                  type: number
+                maxOrderAmount:
+                  type: number
+                requiresInstallment:
+                  type: boolean
+      responses:
+        "201":
+          description: Approval workflow created successfully
+        "400":
+          description: Validation error
+        "500":
+          description: Internal server error
+  /api/auditLogging/{id}:
+    get:
+      summary: Get audit log by ID
+      description: Retrieve a specific audit log entry by its unique identifier
+      tags:
+        - AuditLogging
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Audit log ID (MongoDB ObjectId format)
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Audit log retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update audit log entry
+      description: Update archive flags or deletion status of an audit log entry
+      tags:
+        - AuditLogging
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Audit log updated successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete audit log entry
+      description: Soft-delete an audit log entry by ID (sets isDeleted=true)
+      tags:
+        - AuditLogging
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit log deleted successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/auditLogging:
+    get:
+      summary: Get all audit logs
+      description: Retrieve audit logs with filtering, pagination, and sorting
+      tags:
+        - AuditLogging
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Search query (type, severity, description)
+        - in: query
+          name: filter
+          schema:
+            type: string
+          description: JSON array or key:value filter string
+      responses:
+        "200":
+          description: Audit logs retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create audit log entry
+      description: Manually create an audit log entry (normally created by backend
+        utilities)
+      tags:
+        - AuditLogging
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Audit log created successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/cartItem/{id}:
+    get:
+      summary: Get cartItem by ID
+      description: Retrieve a specific cartItem by its unique identifier with optional
+        field selection
+      tags:
+        - CartItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: CartItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: CartItem retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cartItem:
+                            $ref: "#/components/schemas/CartItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update cartItem
+      description: Update cartItem data by ID (partial update)
+      tags:
+        - CartItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: CartItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: CartItem name
+                  example: Updated Email CartItem
+                description:
+                  type: string
+                  description: CartItem description
+                  example: Updated description for the cartItem
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: CartItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: CartItem updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cartItem:
+                            $ref: "#/components/schemas/CartItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete cartItem
+      description: Permanently delete a cartItem by ID
+      tags:
+        - CartItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: CartItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: CartItem deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/cartItem:
+    get:
+      summary: Get all cartItems
+      description: Retrieve cartItems with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - CartItem
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include cartItem documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cartItems:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/CartItem"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/CartItem"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new cartItem
+      description: Create a new cartItem with the provided data
+      tags:
+        - CartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: CartItem name
+                  example: Email Welcome CartItem
+                description:
+                  type: string
+                  description: CartItem description
+                  example: Welcome email cartItem for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: CartItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: CartItem created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cartItem:
+                            $ref: "#/components/schemas/CartItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/cartItem/checkout:
+    post:
+      summary: Checkout cart items to create an order
+      description: Convert cart items for an employee into an order with optional
+        installment payment. If items array is provided, only those specific
+        items will be checked out. Otherwise, all cart items will be checked
+        out. Calculates totals, creates order items, generates installments if
+        payment type is INSTALLMENT, and clears only the checked-out items from
+        the cart.
+      tags:
+        - CartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employeeId
+              properties:
+                employeeId:
+                  type: string
+                  description: Employee ID who owns the cart
+                  example: 507f1f77bcf86cd799439011
+                items:
+                  type: array
+                  description: Optional array of specific items to checkout. If not provided, all
+                    cart items will be checked out.
+                  items:
+                    type: object
+                    required:
+                      - productId
+                      - quantity
+                    properties:
+                      productId:
+                        type: string
+                        description: Product ID to checkout
+                        example: 696da7163ff7642054c61734
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        description: Quantity to checkout (must not exceed quantity in cart)
+                        example: 2
+                  example:
+                    - productId: 696da7163ff7642054c61734
+                      quantity: 2
+                paymentType:
+                  type: string
+                  enum:
+                    - CASH
+                    - INSTALLMENT
+                    - POINTS
+                    - MIXED
+                  default: INSTALLMENT
+                  description: Payment type for the order
+                  example: INSTALLMENT
+                installmentMonths:
+                  type: integer
+                  minimum: 1
+                  description: Number of months for installment plan (required if paymentType is
+                    INSTALLMENT)
+                  example: 6
+                paymentMethod:
+                  type: string
+                  enum:
+                    - PAYROLL_DEDUCTION
+                    - CASH
+                    - CREDIT_CARD
+                    - DEBIT_CARD
+                    - BANK_TRANSFER
+                    - OTHER
+                  default: PAYROLL_DEDUCTION
+                  description: Payment method
+                  example: PAYROLL_DEDUCTION
+                discount:
+                  type: number
+                  minimum: 0
+                  default: 0
+                  description: Discount amount
+                  example: 0
+                tax:
+                  type: number
+                  minimum: 0
+                  default: 0
+                  description: Tax amount
+                  example: 0
+                pointsUsed:
+                  type: number
+                  minimum: 0
+                  description: Points used for payment
+                  example: 0
+                notes:
+                  type: string
+                  description: Additional notes for the order
+                  example: Order placed via API
+      responses:
+        "201":
+          description: Order created successfully from cart
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+                          transaction:
+                            type: object
+                            description: Transaction ledger information
+                          installments:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Installment"
+                            description: Present when paymentType is INSTALLMENT
+                          installmentSummary:
+                            type: object
+                            description: Summary of installments (present when paymentType is INSTALLMENT)
+                          approvalWorkflow:
+                            type: object
+                            description: Approval workflow information
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/category/{id}:
+    get:
+      summary: Get category by ID
+      description: Retrieve a specific category by its unique identifier with optional
+        field selection
+      tags:
+        - Category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Category ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Category retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update category
+      description: Update category data by ID (partial update)
+      tags:
+        - Category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Category ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Category name
+                  example: Updated Email Category
+                description:
+                  type: string
+                  description: Category description
+                  example: Updated description for the category
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Category type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete category
+      description: Permanently delete a category by ID
+      tags:
+        - Category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Category ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/category:
+    get:
+      summary: Get all categorys
+      description: Retrieve categorys with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - Category
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include category documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          categorys:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Category"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Category"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      summary: Create new category
+      description: Create a new category with the provided data
+      tags:
+        - Category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Category name
+                  example: Email Welcome Category
+                description:
+                  type: string
+                  description: Category description
+                  example: Welcome email category for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Category type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/docs/api-list:
     get:
       summary: Get API endpoints list
@@ -225,6 +1484,2465 @@ paths:
                 description: XML representation of the iml data
         "500":
           description: Internal server error
+  /api/installment/{id}:
+    get:
+      summary: Get installment by ID
+      description: Retrieve a specific installment by its unique identifier with
+        optional field selection
+      tags:
+        - Installment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Installment ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Installment retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          installment:
+                            $ref: "#/components/schemas/Installment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update installment
+      description: Update installment data by ID (partial update)
+      tags:
+        - Installment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Installment ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Installment name
+                  example: Updated Email Installment
+                description:
+                  type: string
+                  description: Installment description
+                  example: Updated description for the installment
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Installment type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: Installment updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          installment:
+                            $ref: "#/components/schemas/Installment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete installment
+      description: Permanently delete a installment by ID
+      tags:
+        - Installment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Installment ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Installment deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/installment:
+    get:
+      summary: Get all installments
+      description: Retrieve installments with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - Installment
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include installment documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          installments:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Installment"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Installment"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new installment
+      description: Create a new installment with the provided data
+      tags:
+        - Installment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Installment name
+                  example: Email Welcome Installment
+                description:
+                  type: string
+                  description: Installment description
+                  example: Welcome email installment for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Installment type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Installment created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          installment:
+                            $ref: "#/components/schemas/Installment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/installment/{id}/deduct:
+    post:
+      summary: Mark installment as deducted
+      description: Mark an installment as deducted from payroll with optional batch
+        and reference tracking
+      tags:
+        - Installment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Installment ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payrollBatchId:
+                  type: string
+                  description: Payroll batch identifier
+                  example: BATCH-2024-01-15
+                deductionReference:
+                  type: string
+                  description: Deduction reference number
+                  example: DED-2024-001234
+      responses:
+        "200":
+          description: Installment marked as deducted successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/installment/pending-payroll:
+    get:
+      summary: Get pending installments for payroll
+      description: Retrieve all pending installments that are due for deduction based
+        on cutoff date
+      tags:
+        - Installment
+      parameters:
+        - in: query
+          name: cutoffDate
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Cutoff date for filtering (defaults to today)
+          example: 2024-01-15
+      responses:
+        "200":
+          description: Pending installments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cutoffDate:
+                    type: string
+                    format: date-time
+                  totalPending:
+                    type: integer
+                  totalAmount:
+                    type: number
+                  installments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Installment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/installment/order/{orderId}/summary:
+    get:
+      summary: Get installment summary for order
+      description: Retrieve a comprehensive summary of all installments for a specific order
+      tags:
+        - Installment
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Order ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Installment summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalInstallments:
+                    type: integer
+                  paidCount:
+                    type: integer
+                  pendingCount:
+                    type: integer
+                  failedCount:
+                    type: integer
+                  totalAmount:
+                    type: number
+                  paidAmount:
+                    type: number
+                  remainingAmount:
+                    type: number
+                  installments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Installment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/items/{id}:
+    get:
+      summary: Get items by ID
+      description: Retrieve a specific item by its unique identifier with optional
+        field selection
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Item ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Item retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update item
+      description: Update item data by ID (partial update)
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Item ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Item name
+                  example: Updated Item
+                description:
+                  type: string
+                  description: Item description
+                  example: Updated description for the item
+                itemType:
+                  type: string
+                  enum:
+                    - PRODUCT
+                    - LOAN
+                  description: Item type
+                  example: PRODUCT
+      responses:
+        "200":
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete item
+      description: Permanently delete an item by ID
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Item ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Item deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/items:
+    get:
+      summary: Get all items
+      description: Retrieve items with advanced filtering, pagination, sorting, field
+        selection, and optional grouping
+      tags:
+        - Items
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include items documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Item"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Item"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new item
+      description: Create a new item with the provided data
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Item name
+                  example: Sample Item
+                description:
+                  type: string
+                  description: Item description
+                  example: Description for the item
+                itemType:
+                  type: string
+                  enum:
+                    - PRODUCT
+                    - LOAN
+                  description: Item type
+                  example: PRODUCT
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/items/import:
+    post:
+      summary: Import items from CSV
+      description: Bulk import items from a CSV file
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing item data
+      responses:
+        "201":
+          description: Items imported successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          summary:
+                            type: object
+                            properties:
+                              totalRows:
+                                type: integer
+                              processed:
+                                type: integer
+                              successful:
+                                type: integer
+                              failed:
+                                type: integer
+                          errors:
+                            type: array
+                            items:
+                              type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/notification/test-reminder:
+    get:
+      summary: Test booking dropoff reminder
+      description: Manually trigger the booking dropoff reminder cron job for testing
+        purposes
+      tags:
+        - Notification
+      parameters:
+        - in: query
+          name: testTime
+          schema:
+            type: string
+            format: date-time
+          description: Optional custom time for testing (ISO 8601 format)
+      responses:
+        "200":
+          description: Reminder test completed successfully
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/notification/{id}:
+    get:
+      summary: Get notification by ID
+      description: Retrieve a specific notification by its unique identifier
+      tags:
+        - Notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Notification ID (MongoDB ObjectId format)
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Notification retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update notification
+      description: Update notification data by ID
+      tags:
+        - Notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                title:
+                  type: string
+                description:
+                  type: string
+                recipients:
+                  type: object
+                metadata:
+                  type: object
+                isDeleted:
+                  type: boolean
+      responses:
+        "200":
+          description: Notification updated successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete notification
+      description: Permanently delete a notification by ID
+      tags:
+        - Notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notification deleted successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/notification:
+    get:
+      summary: Get all notifications
+      description: Retrieve notifications with advanced filtering, pagination, and sorting
+      tags:
+        - Notification
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Search query
+        - in: query
+          name: filter
+          schema:
+            type: string
+          description: JSON array of filter objects
+      responses:
+        "200":
+          description: Notifications retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new notification
+      description: Create a new notification
+      tags:
+        - Notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source
+                - category
+                - title
+                - description
+              properties:
+                source:
+                  type: string
+                  description: Source ID (MongoDB ObjectId)
+                category:
+                  type: string
+                  description: Notification category
+                title:
+                  type: string
+                  description: Notification title
+                description:
+                  type: string
+                  description: Notification description
+                recipients:
+                  type: object
+                  description: Recipients object with read and unread arrays
+                  properties:
+                    read:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          user:
+                            type: string
+                          date:
+                            type: string
+                            format: date-time
+                    unread:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          user:
+                            type: string
+                          date:
+                            type: string
+                            format: date-time
+                metadata:
+                  type: object
+                  description: Additional metadata
+                isDeleted:
+                  type: boolean
+                  default: false
+      responses:
+        "201":
+          description: Notification created successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/order/{id}:
+    get:
+      summary: Get order by ID
+      description: Retrieve a specific order by its unique identifier with optional
+        field selection
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Order ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update order
+      description: Update order data by ID (partial update)
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Order ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Order name
+                  example: Updated Email Order
+                description:
+                  type: string
+                  description: Order description
+                  example: Updated description for the order
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Order type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: Order updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete order
+      description: Permanently delete a order by ID
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Order ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Order deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/order:
+    get:
+      summary: Get all orders
+      description: Retrieve orders with advanced filtering, pagination, sorting, field
+        selection, and optional grouping
+      tags:
+        - Order
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include order documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orders:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Order"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Order"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new order
+      description: Create a new order with the provided data
+      tags:
+        - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Order name
+                  example: Email Welcome Order
+                description:
+                  type: string
+                  description: Order description
+                  example: Welcome email order for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Order type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/orderApproval/{id}:
+    get:
+      summary: Get order approval by ID
+      description: Retrieve a specific order approval by its unique identifier
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Order Approval ID
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Order approval retrieved successfully
+        "404":
+          description: Order approval not found
+        "500":
+          description: Internal server error
+    patch:
+      summary: Update order approval
+      description: Update an order approval record
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Order approval updated successfully
+        "404":
+          description: Order approval not found
+        "500":
+          description: Internal server error
+    delete:
+      summary: Delete order approval
+      description: Delete an order approval record
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order approval deleted successfully
+        "404":
+          description: Order approval not found
+        "500":
+          description: Internal server error
+  /api/orderApproval:
+    get:
+      summary: Get all order approvals
+      description: Retrieve order approvals with filtering, pagination, and sorting
+      tags:
+        - OrderApproval
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: filter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order approvals retrieved successfully
+        "500":
+          description: Internal server error
+    post:
+      summary: Create new order approval
+      description: Create a new order approval record
+      tags:
+        - OrderApproval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - approvalLevel
+                - approverRole
+                - approverId
+                - approverName
+                - approverEmail
+              properties:
+                orderId:
+                  type: string
+                approvalLevel:
+                  type: integer
+                approverRole:
+                  type: string
+                  enum:
+                    - MANAGER
+                    - HR
+                    - FINANCE
+                    - DEPARTMENT_HEAD
+                    - ADMIN
+                approverId:
+                  type: string
+                approverName:
+                  type: string
+                approverEmail:
+                  type: string
+      responses:
+        "201":
+          description: Order approval created successfully
+        "400":
+          description: Validation error
+        "500":
+          description: Internal server error
+  /api/orderApproval/{id}/approve:
+    post:
+      summary: Approve an order approval
+      description: Approve an order approval and advance to next level or complete order
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Order Approval ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comments:
+                  type: string
+                  description: Optional approval comments
+      responses:
+        "200":
+          description: Order approval approved successfully
+        "404":
+          description: Order approval not found
+        "500":
+          description: Internal server error
+  /api/orderApproval/{id}/reject:
+    post:
+      summary: Reject an order approval
+      description: Reject an order approval and update order status to rejected
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Order Approval ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comments
+              properties:
+                comments:
+                  type: string
+                  description: Reason for rejection (required)
+      responses:
+        "200":
+          description: Order approval rejected successfully
+        "400":
+          description: Rejection reason required
+        "404":
+          description: Order approval not found
+        "500":
+          description: Internal server error
+  /api/orderApproval/summary/{orderId}:
+    get:
+      summary: Get approval summary for an order
+      description: Get a summary of all approvals for an order including count of
+        approved approvers and their details
+      tags:
+        - OrderApproval
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+          description: Order ID to get approval summary for
+      responses:
+        "200":
+          description: Approval summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      orderId:
+                        type: string
+                      orderNumber:
+                        type: string
+                      approvalSummary:
+                        type: object
+                        properties:
+                          totalRequired:
+                            type: integer
+                          approvedCount:
+                            type: integer
+                          pendingCount:
+                            type: integer
+                          progress:
+                            type: string
+                          percentageComplete:
+                            type: integer
+                      approvedApprovers:
+                        type: array
+                        items:
+                          type: object
+        "404":
+          description: Order not found
+        "500":
+          description: Internal server error
+  /api/orderItem/{id}:
+    get:
+      summary: Get orderItem by ID
+      description: Retrieve a specific orderItem by its unique identifier with
+        optional field selection
+      tags:
+        - OrderItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: OrderItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: OrderItem retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderItem:
+                            $ref: "#/components/schemas/OrderItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update orderItem
+      description: Update orderItem data by ID (partial update)
+      tags:
+        - OrderItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: OrderItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: OrderItem name
+                  example: Updated Email OrderItem
+                description:
+                  type: string
+                  description: OrderItem description
+                  example: Updated description for the orderItem
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: OrderItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: OrderItem updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderItem:
+                            $ref: "#/components/schemas/OrderItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete orderItem
+      description: Permanently delete a orderItem by ID
+      tags:
+        - OrderItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: OrderItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: OrderItem deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/orderItem:
+    get:
+      summary: Get all orderItems
+      description: Retrieve orderItems with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - OrderItem
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include orderItem documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderItems:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/OrderItem"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/OrderItem"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new orderItem
+      description: Create a new orderItem with the provided data
+      tags:
+        - OrderItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: OrderItem name
+                  example: Email Welcome OrderItem
+                description:
+                  type: string
+                  description: OrderItem description
+                  example: Welcome email orderItem for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: OrderItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: OrderItem created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderItem:
+                            $ref: "#/components/schemas/OrderItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/purchase/{id}:
+    get:
+      summary: Get purchase by ID
+      description: Retrieve a specific purchase by its unique identifier with optional
+        field selection
+      tags:
+        - Purchase
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Purchase ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Purchase retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          purchase:
+                            $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update purchase
+      description: Update purchase data by ID (partial update)
+      tags:
+        - Purchase
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Purchase ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Purchase name
+                  example: Updated Email Purchase
+                description:
+                  type: string
+                  description: Purchase description
+                  example: Updated description for the purchase
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Purchase type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: Purchase updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          purchase:
+                            $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete purchase
+      description: Permanently delete a purchase by ID
+      tags:
+        - Purchase
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Purchase ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Purchase deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/purchase:
+    get:
+      summary: Get all purchases
+      description: Retrieve purchases with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - Purchase
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include purchase documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          purchases:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Purchase"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Purchase"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new purchase
+      description: Create a new purchase with the provided data
+      tags:
+        - Purchase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Purchase name
+                  example: Email Welcome Purchase
+                description:
+                  type: string
+                  description: Purchase description
+                  example: Welcome email purchase for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Purchase type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Purchase created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          purchase:
+                            $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/template/{id}:
     get:
       summary: Get template by ID
@@ -605,3 +4323,1119 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /api/transaction/unreconciled:
+    get:
+      summary: Get unreconciled transactions
+      description: Retrieve all completed transactions that haven't been reconciled yet
+      tags:
+        - Transaction
+      responses:
+        "200":
+          description: Unreconciled transactions retrieved successfully
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/transaction/order/{orderId}:
+    get:
+      summary: Get transactions by order
+      description: Retrieve all transactions associated with a specific order
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Order ID (MongoDB ObjectId format)
+      responses:
+        "200":
+          description: Order transactions retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/transaction/employee/{employeeId}:
+    get:
+      summary: Get transactions by employee
+      description: Retrieve all transactions for a specific employee
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Employee ID (MongoDB ObjectId format)
+      responses:
+        "200":
+          description: Employee transactions retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/transaction/{id}:
+    get:
+      summary: Get transaction by ID
+      description: Retrieve a specific transaction by its unique identifier
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Transaction ID (MongoDB ObjectId format)
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Transaction retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update transaction
+      description: Update transaction data by ID
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - PENDING
+                    - PROCESSING
+                    - COMPLETED
+                    - FAILED
+                    - CANCELLED
+                    - REVERSED
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Transaction updated successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete transaction
+      description: Permanently delete a transaction by ID
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction deleted successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/transaction:
+    get:
+      summary: Get all transactions
+      description: Retrieve transactions with advanced filtering, pagination, and sorting
+      tags:
+        - Transaction
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Search query
+        - in: query
+          name: filter
+          schema:
+            type: string
+          description: JSON array of filter objects
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new transaction
+      description: Create a new payment transaction
+      tags:
+        - Transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionNumber
+                - employeeId
+                - orderId
+                - type
+                - amount
+                - paymentMethod
+              properties:
+                transactionNumber:
+                  type: string
+                employeeId:
+                  type: string
+                orderId:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - PURCHASE
+                    - INSTALLMENT
+                    - POINTS_REDEMPTION
+                    - REFUND
+                    - ADJUSTMENT
+                amount:
+                  type: number
+                paymentMethod:
+                  type: string
+                  enum:
+                    - CASH
+                    - INSTALLMENT
+                    - POINTS
+                    - MIXED
+      responses:
+        "201":
+          description: Transaction created successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/transaction/{id}/reconcile:
+    post:
+      summary: Reconcile transaction
+      description: Mark a transaction as reconciled
+      tags:
+        - Transaction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reconciledBy
+              properties:
+                reconciledBy:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Transaction reconciled successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/vendor/{id}:
+    get:
+      summary: Get vendor by ID
+      description: Retrieve a specific vendor by its unique identifier with optional
+        field selection
+      tags:
+        - Vendor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Vendor ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: Vendor retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          vendor:
+                            $ref: "#/components/schemas/Vendor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update vendor
+      description: Update vendor data by ID (partial update)
+      tags:
+        - Vendor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Vendor ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Vendor name
+                  example: Updated Email Vendor
+                description:
+                  type: string
+                  description: Vendor description
+                  example: Updated description for the vendor
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Vendor type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: Vendor updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          vendor:
+                            $ref: "#/components/schemas/Vendor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete vendor
+      description: Permanently delete a vendor by ID
+      tags:
+        - Vendor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: Vendor ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Vendor deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/vendor:
+    get:
+      summary: Get all vendors
+      description: Retrieve vendors with advanced filtering, pagination, sorting,
+        field selection, and optional grouping
+      tags:
+        - Vendor
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include vendor documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          vendors:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Vendor"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Vendor"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new vendor
+      description: Create a new vendor with the provided data
+      tags:
+        - Vendor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Vendor name
+                  example: Email Welcome Vendor
+                description:
+                  type: string
+                  description: Vendor description
+                  example: Welcome email vendor for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: Vendor type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: Vendor created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          vendor:
+                            $ref: "#/components/schemas/Vendor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/wishlistItem/{id}:
+    get:
+      summary: Get wishlistItem by ID
+      description: Retrieve a specific wishlistItem by its unique identifier with
+        optional field selection
+      tags:
+        - WishlistItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: WishlistItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports nested fields
+            with dot notation)
+          example: id,name,description,type
+      responses:
+        "200":
+          description: WishlistItem retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlistItem:
+                            $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      summary: Update wishlistItem
+      description: Update wishlistItem data by ID (partial update)
+      tags:
+        - WishlistItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: WishlistItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: WishlistItem name
+                  example: Updated Email WishlistItem
+                description:
+                  type: string
+                  description: WishlistItem description
+                  example: Updated description for the wishlistItem
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: WishlistItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  example: false
+      responses:
+        "200":
+          description: WishlistItem updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlistItem:
+                            $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete wishlistItem
+      description: Permanently delete a wishlistItem by ID
+      tags:
+        - WishlistItem
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-fA-F]{24}$
+          description: WishlistItem ID (MongoDB ObjectId format)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: WishlistItem deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Empty object for successful deletion
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/wishlistItem:
+    get:
+      summary: Get all wishlistItems
+      description: Retrieve wishlistItems with advanced filtering, pagination,
+        sorting, field selection, and optional grouping
+      tags:
+        - WishlistItem
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of records per page
+          example: 10
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Sort order for results
+          example: desc
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          description: Field to sort by or JSON object for multi-field sorting
+          example: createdAt
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include (supports dot notation)
+          example: id,name,description,type
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Search query to filter by name or description
+          example: welcome email
+        - in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+          description: JSON array of filter objects for advanced filtering
+          example: '[{"type":"email"},{"isDeleted":false}]'
+        - in: query
+          name: groupBy
+          required: false
+          schema:
+            type: string
+          description: Group results by a field name
+          example: type
+        - in: query
+          name: document
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include wishlistItem documents in response
+        - in: query
+          name: pagination
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include pagination metadata in response
+        - in: query
+          name: count
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Include total count in response
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlistItems:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/WishlistItem"
+                            description: Present when document="true" and no groupBy
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/WishlistItem"
+                            description: Present when groupBy is used and document="true"
+                          count:
+                            type: integer
+                            description: Present when count="true"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+                            description: Present when pagination="true"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create new wishlistItem
+      description: Create a new wishlistItem with the provided data
+      tags:
+        - WishlistItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: WishlistItem name
+                  example: Email Welcome WishlistItem
+                description:
+                  type: string
+                  description: WishlistItem description
+                  example: Welcome email wishlistItem for new users
+                type:
+                  type: string
+                  enum:
+                    - email
+                    - sms
+                    - push
+                    - form
+                  description: WishlistItem type for categorization
+                  example: email
+                isDeleted:
+                  type: boolean
+                  description: Soft delete flag
+                  default: false
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                type:
+                  type: string
+                isDeleted:
+                  type: boolean
+      responses:
+        "201":
+          description: WishlistItem created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlistItem:
+                            $ref: "#/components/schemas/WishlistItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/workflowApprovalLevel/{id}:
+    get:
+      summary: Get workflow approval level by ID
+      description: Retrieve a specific workflow approval level by its unique identifier
+      tags:
+        - WorkflowApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Workflow Approval Level ID
+        - in: query
+          name: fields
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include
+      responses:
+        "200":
+          description: Workflow approval level retrieved successfully
+        "404":
+          description: Workflow approval level not found
+        "500":
+          description: Internal server error
+    patch:
+      summary: Update workflow approval level
+      description: Update a workflow approval level
+      tags:
+        - WorkflowApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Workflow approval level updated successfully
+        "404":
+          description: Workflow approval level not found
+        "500":
+          description: Internal server error
+    delete:
+      summary: Delete workflow approval level
+      description: Delete a workflow approval level
+      tags:
+        - WorkflowApprovalLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow approval level deleted successfully
+        "404":
+          description: Workflow approval level not found
+        "500":
+          description: Internal server error
+  /api/workflowApprovalLevel:
+    get:
+      summary: Get all workflow approval levels
+      description: Retrieve workflow approval levels with filtering, pagination, and sorting
+      tags:
+        - WorkflowApprovalLevel
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: filter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow approval levels retrieved successfully
+        "500":
+          description: Internal server error
+    post:
+      summary: Create new workflow approval level
+      description: Create a new workflow approval level linking a workflow to an
+        approval level
+      tags:
+        - WorkflowApprovalLevel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workflowId
+                - approvalLevelId
+                - level
+              properties:
+                workflowId:
+                  type: string
+                approvalLevelId:
+                  type: string
+                level:
+                  type: integer
+      responses:
+        "201":
+          description: Workflow approval level created successfully
+        "400":
+          description: Validation error
+        "500":
+          description: Internal server error

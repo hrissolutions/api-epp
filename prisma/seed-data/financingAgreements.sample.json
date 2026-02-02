@@ -1,0 +1,24 @@
+[
+	{
+		"orderId": "507f1f77bcf86cd799439011",
+		"financierConfigId": "507f1f77bcf86cd799439012",
+		"principalAmount": 12000,
+		"totalPayable": 12360,
+		"installmentCount": 6,
+		"installmentAmount": 2060,
+		"interestRate": 2,
+		"status": "PENDING",
+		"approvedAt": null
+	},
+	{
+		"orderId": "507f1f77bcf86cd799439013",
+		"financierConfigId": "507f1f77bcf86cd799439012",
+		"principalAmount": 5000,
+		"totalPayable": 5150,
+		"installmentCount": 3,
+		"installmentAmount": 1716.67,
+		"interestRate": 1.5,
+		"status": "APPROVED",
+		"approvedAt": "2025-02-01T10:00:00.000Z"
+	}
+]

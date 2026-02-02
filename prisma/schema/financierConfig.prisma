@@ -1,0 +1,37 @@
+// FinancierConfig: configuration for a user with financier role (credit limit, rates, auto-approval).
+// Only that user can configure it. userId/userType reference the user from another microservice.
+
+model FinancierConfig {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?  @db.ObjectId
+  userId         String   // User id from other microservice; owns this config
+  userType       UserType // EMPLOYEE | INDIVIDUAL | WHOLESALER
+
+  name     String
+  code     String? // e.g. FIN-001
+  isActive Boolean @default(true)
+
+  // Credit rules
+  maxCreditLimit   Float // Total credit limit (e.g. 1_000_000)
+  autoApproveLimit Float // Orders at or below this amount get auto-approved by this config
+
+  // Tiered rate by installment count: e.g. [{ installmentCount: 3, rate: 1.5 }, { installmentCount: 6, rate: 2 }, { installmentCount: 12, rate: 3 }]
+  installmentRateConfig InstallmentRateTier[]
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  financingAgreements FinancingAgreement[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("financierConfigs")
+}
+
+type InstallmentRateTier {
+  installmentCount Int // Number of installments (e.g. 3, 6, 12)
+  rate             Float // Interest rate percentage (e.g. 1.5 = 1.5%)
+}

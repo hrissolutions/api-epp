@@ -83,7 +83,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const wishlistItem = await prisma.wishlistItem.create({ data: validation.data as any });
+			const wishlistItem = await prisma.wishlistItem.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			wishlistItemLogger.info(`WishlistItem created successfully: ${wishlistItem.id}`);
 
 			logActivity(req, {
@@ -106,7 +111,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesBefore: null,
 				changesAfter: {
 					id: wishlistItem.id,
-					employeeId: wishlistItem.employeeId,
+					userId: wishlistItem.userId,
 					itemId: wishlistItem.itemId,
 					createdAt: wishlistItem.createdAt,
 				},
@@ -184,6 +189,7 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
 			const [wishlistItems, total] = await Promise.all([
@@ -263,9 +269,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!wishlistItem) {
-				const query: Prisma.WishlistItemFindFirstArgs = {
-					where: { id },
-				};
+				const query: Prisma.WishlistItemFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 

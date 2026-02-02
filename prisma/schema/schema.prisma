@@ -14,3 +14,9 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+enum UserType {
+  EMPLOYEE
+  INDIVIDUAL
+  WHOLESALER
+}

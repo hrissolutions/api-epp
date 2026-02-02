@@ -83,7 +83,12 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const category = await prisma.category.create({ data: validation.data as any });
+			const category = await prisma.category.create({
+				data: {
+					...validation.data,
+					organizationId: (req as any).organizationId || validation.data.organizationId,
+				} as any,
+			});
 			categoryLogger.info(`Category created successfully: ${category.id}`);
 
 			logActivity(req, {

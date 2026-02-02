@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
-import type { User } from "./user.zod";
-
 // GenderType Enum
 export const GenderType = z.enum([
 	"male",
@@ -181,6 +179,4 @@ export const UpdatePersonSchema = PersonSchema.omit({
 
 export type UpdatePerson = z.infer<typeof UpdatePersonSchema>;
 
-export type PersonWithRelations = Person & {
-	users: User[];
-};
+export type PersonWithRelations = Person;

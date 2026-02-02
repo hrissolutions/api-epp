@@ -37,6 +37,10 @@ export const CreateOrderItemSchema = OrderItemSchema.omit({
 	createdAt: true,
 }).partial({
 	discount: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateOrderItem = z.infer<typeof CreateOrderItemSchema>;

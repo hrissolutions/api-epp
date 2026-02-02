@@ -44,6 +44,10 @@ export const CreateOrderApprovalSchema = OrderApprovalSchema.omit({
 	comments: true,
 	notifiedAt: true,
 	reminderSentAt: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateOrderApproval = z.infer<typeof CreateOrderApprovalSchema>;

@@ -83,20 +83,30 @@ export const CreateTransactionSchema = TransactionSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
-}).partial({
-	status: true,
-	paidAmount: true,
-	paymentHistory: true,
-	pointsUsed: true,
-	pointsTransactionId: true,
-	cashAmount: true,
-	receiptNumber: true,
-	isReconciled: true,
-	reconciledAt: true,
-	reconciledBy: true,
-	notes: true,
-	metadata: true,
-});
+})
+	.partial({
+		status: true,
+		paidAmount: true,
+		paymentHistory: true,
+		pointsUsed: true,
+		pointsTransactionId: true,
+		cashAmount: true,
+		receiptNumber: true,
+		isReconciled: true,
+		reconciledAt: true,
+		reconciledBy: true,
+		notes: true,
+		metadata: true,
+	})
+	.extend({
+		organizationId: z
+			.string()
+			.refine((val) => !val || isValidObjectId(val), {
+				message: "Invalid organizationId ObjectId format",
+			})
+			.optional()
+			.nullable(),
+	});
 
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;
 

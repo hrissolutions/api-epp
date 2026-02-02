@@ -1,0 +1,266 @@
+[
+  {
+    "id": "GET /api/auditLogging/{id}",
+    "method": "GET",
+    "url": "/api/auditLogging/{id}",
+    "summary": "Get audit log by ID",
+    "description": "Retrieve a specific audit log entry by its unique identifier",
+    "tags": [
+      "AuditLogging"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        },
+        "description": "Audit log ID (MongoDB ObjectId format)"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Audit log retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/auditLogging/{id}",
+    "method": "PATCH",
+    "url": "/api/auditLogging/{id}",
+    "summary": "Update audit log entry",
+    "description": "Update archive flags or deletion status of an audit log entry",
+    "tags": [
+      "AuditLogging"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Audit log updated successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/auditLogging/{id}",
+    "method": "DELETE",
+    "url": "/api/auditLogging/{id}",
+    "summary": "Delete audit log entry",
+    "description": "Soft-delete an audit log entry by ID (sets isDeleted=true)",
+    "tags": [
+      "AuditLogging"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Audit log deleted successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "404": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/auditLogging",
+    "method": "GET",
+    "url": "/api/auditLogging",
+    "summary": "Get all audit logs",
+    "description": "Retrieve audit logs with filtering, pagination, and sorting",
+    "tags": [
+      "AuditLogging"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      {
+        "name": "order",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "desc"
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Search query (type, severity, description)"
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        },
+        "description": "JSON array or key:value filter string"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Audit logs retrieved successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": true
+    }
+  },
+  {
+    "id": "POST /api/auditLogging",
+    "method": "POST",
+    "url": "/api/auditLogging",
+    "summary": "Create audit log entry",
+    "description": "Manually create an audit log entry (normally created by backend utilities)",
+    "tags": [
+      "AuditLogging"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Audit log created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "contentTypes": []
+      },
+      "500": {
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

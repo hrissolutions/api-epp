@@ -27,6 +27,77 @@ import { calculateOrderTotals } from "../../helper/calculateOrderTotals.helper";
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
 
+/** Include for order detail (orderItems, transaction, installments, workflow, approvals) */
+const ORDER_DETAIL_INCLUDE = {
+	orderItems: true,
+	transaction: true,
+	installments: { orderBy: { installmentNumber: "asc" as const } },
+	workflow: true,
+	approvals: { orderBy: { approvalLevel: "asc" as const } },
+} as const;
+
+/**
+ * Build the same response shape as create: order, orderItems, transaction,
+ * installments, installmentSummary, approvalWorkflow.
+ */
+function buildOrderDetailResponse(order: any): Record<string, unknown> {
+	const items = order.items ?? [];
+	const orderItems = order.orderItems ?? [];
+	const transaction = order.transaction;
+	const installments = order.installments ?? [];
+	const workflow = order.workflow;
+	const approvals = order.approvals ?? [];
+
+	const response: Record<string, unknown> = {
+		order: {
+			...order,
+			items,
+			orderItems: undefined,
+			transaction: undefined,
+			installments: undefined,
+			workflow: undefined,
+			approvals: undefined,
+		},
+		orderItems: orderItems.length > 0 ? orderItems : undefined,
+		transaction: transaction
+			? {
+					transactionNumber: transaction.transactionNumber,
+					totalAmount: transaction.totalAmount,
+					paidAmount: transaction.paidAmount,
+					balance: transaction.balance,
+					status: transaction.status,
+				}
+			: null,
+	};
+	if (installments.length > 0) {
+		(response as any).installments = installments;
+		(response as any).installmentSummary = {
+			totalInstallments: installments.length,
+			installmentAmount: installments[0]?.amount ?? 0,
+			firstPayment: installments[0]?.scheduledDate ?? null,
+			lastPayment: installments[installments.length - 1]?.scheduledDate ?? null,
+		};
+	}
+	if (workflow && approvals.length > 0) {
+		(response as any).approvalWorkflow = {
+			workflowId: workflow.id,
+			workflowName: workflow.name,
+			totalLevels: approvals.length,
+			currentLevel: order.currentApprovalLevel ?? 1,
+			approvalChain: approvals.map((a: any) => ({
+				approvalId: a.id,
+				level: a.approvalLevel,
+				role: a.approverRole,
+				approverId: a.approverId,
+				approverName: a.approverName,
+				approverEmail: a.approverEmail,
+				status: a.status,
+			})),
+		};
+	}
+	return response;
+}
+
 // Helper function to convert string numbers to actual numbers for form data
 const convertStringNumbers = (obj: any): any => {
 	if (obj === null || obj === undefined) {
@@ -95,8 +166,10 @@ export const controller = (prisma: PrismaClient) => {
 			const totals = await calculateOrderTotals(prisma, validation.data.items);
 
 			// Prepare order data with embedded items array and calculated totals
+			const { userId, ...restValidation } = validation.data;
 			const orderData = {
-				...validation.data,
+				...restValidation,
+				userId,
 				orderNumber,
 				items: totals.items, // Use calculated items with discount and subtotal
 				subtotal: totals.subtotal,
@@ -106,7 +179,12 @@ export const controller = (prisma: PrismaClient) => {
 			};
 
 			// Create the order first
-			const order = await prisma.order.create({ data: orderData as any });
+			const order = await prisma.order.create({
+				data: {
+					...orderData,
+					organizationId: (req as any).organizationId || orderData.organizationId,
+				} as any,
+			});
 			orderLogger.info(`Order created successfully: ${order.id}`);
 
 			// Create OrderItem records for each item
@@ -121,6 +199,7 @@ export const controller = (prisma: PrismaClient) => {
 							unitPrice: item.unitPrice,
 							discount: item.discount,
 							subtotal: item.subtotal,
+							organizationId: (req as any).organizationId || order.organizationId,
 						},
 					});
 					createdOrderItems.push(orderItem);
@@ -142,7 +221,7 @@ export const controller = (prisma: PrismaClient) => {
 				transaction = await createTransactionForOrder(
 					prisma,
 					order.id,
-					order.employeeId,
+					order.userId,
 					order.total,
 					order.paymentType,
 					order.paymentMethod,
@@ -234,7 +313,7 @@ export const controller = (prisma: PrismaClient) => {
 					prisma,
 					order.id,
 					order.orderNumber,
-					order.employeeId,
+					order.userId,
 					employeeName,
 					order.total,
 					order.paymentType,
@@ -294,7 +373,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesAfter: {
 					id: order.id,
 					orderNumber: order.orderNumber,
-					employeeId: order.employeeId,
+					userId: order.userId,
 					status: order.status,
 					total: order.total,
 					installmentMonths: order.installmentMonths,
@@ -398,8 +477,8 @@ export const controller = (prisma: PrismaClient) => {
 			// Base where clause
 			const whereClause: Prisma.OrderWhereInput = {};
 
-			// search fields for orders (orderNumber, employeeId, status, trackingNumber)
-			const searchFields = ["orderNumber", "employeeId", "status", "trackingNumber", "notes"];
+			// search fields for orders (orderNumber, userId, status, trackingNumber)
+			const searchFields = ["orderNumber", "userId", "status", "trackingNumber", "notes"];
 			if (query) {
 				const searchConditions = buildSearchConditions("Order", query, searchFields);
 				if (searchConditions.length > 0) {
@@ -413,18 +492,30 @@ export const controller = (prisma: PrismaClient) => {
 					whereClause.AND = filterConditions;
 				}
 			}
+
+			// When returning documents, use full detail include (orderItems, transaction, installments, approvals) for same shape as create/getById
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
+			const useDetailInclude = document && !fields;
 
 			const [orders, total] = await Promise.all([
-				document ? prisma.order.findMany(findManyQuery) : [],
+				document
+					? useDetailInclude
+						? prisma.order.findMany({
+								where: whereClause,
+								skip,
+								take: limit,
+								orderBy: findManyQuery.orderBy,
+								include: ORDER_DETAIL_INCLUDE,
+							})
+						: prisma.order.findMany(findManyQuery)
+					: [],
 				count ? prisma.order.count({ where: whereClause }) : 0,
 			]);
 
-			// Normalize null items to empty array for backward compatibility
-			const normalizedOrders = orders.map((order: any) => ({
-				...order,
-				items: order.items || [],
-			}));
+			// Same shape as create/getById: order, orderItems, transaction, installments, installmentSummary, approvalWorkflow
+			const normalizedOrders = useDetailInclude
+				? (orders as any[]).map((o) => buildOrderDetailResponse(o))
+				: (orders as any[]).map((o) => ({ ...o, items: o.items ?? [] }));
 
 			orderLogger.info(`Retrieved ${orders.length} orders`);
 			const processedData =
@@ -476,8 +567,8 @@ export const controller = (prisma: PrismaClient) => {
 
 			orderLogger.info(`${config.SUCCESS.ORDER.GETTING_BY_ID}: ${id}`);
 
-			const cacheKey = `cache:order:byId:${id}:${fields || "full"}`;
-			let order = null;
+			const cacheKey = `cache:order:byId:${id}:${fields || "detail"}`;
+			let order: any = null;
 
 			try {
 				if (redisClient.isClientConnected()) {
@@ -491,13 +582,15 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (!order) {
-				const query: Prisma.OrderFindFirstArgs = {
-					where: { id },
-				};
-
-				query.select = getNestedFields(fields);
-
-				order = await prisma.order.findFirst(query);
+				order = fields
+					? await prisma.order.findFirst({
+							where: { id },
+							select: getNestedFields(fields),
+						})
+					: await prisma.order.findFirst({
+							where: { id },
+							include: ORDER_DETAIL_INCLUDE,
+						});
 
 				if (order && redisClient.isClientConnected()) {
 					try {
@@ -516,16 +609,15 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			// Normalize null items to empty array for backward compatibility
-			const normalizedOrder = {
-				...order,
-				items: (order as any).items || [],
-			};
+			// Return same shape as create: order, orderItems, transaction, installments, installmentSummary, approvalWorkflow
+			const responseData = fields
+				? { ...order, items: order.items ?? [] }
+				: buildOrderDetailResponse(order);
 
-			orderLogger.info(`${config.SUCCESS.ORDER.RETRIEVED}: ${(order as any).id}`);
+			orderLogger.info(`${config.SUCCESS.ORDER.RETRIEVED}: ${order.id}`);
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.ORDER.RETRIEVED,
-				normalizedOrder,
+				responseData,
 				200,
 			);
 			res.status(200).json(successResponse);

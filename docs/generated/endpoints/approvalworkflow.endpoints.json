@@ -1,0 +1,269 @@
+[
+  {
+    "id": "GET /api/approvalWorkflow/{id}",
+    "method": "GET",
+    "url": "/api/approvalWorkflow/{id}",
+    "summary": "Get approval workflow by ID",
+    "description": "Retrieve a specific approval workflow by its unique identifier",
+    "tags": [
+      "ApprovalWorkflow"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Approval Workflow ID"
+      }
+    ],
+    "queryParams": [
+      {
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Comma-separated list of fields to include"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Approval workflow retrieved successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval workflow not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "PATCH /api/approvalWorkflow/{id}",
+    "method": "PATCH",
+    "url": "/api/approvalWorkflow/{id}",
+    "summary": "Update approval workflow",
+    "description": "Update an approval workflow",
+    "tags": [
+      "ApprovalWorkflow"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object"
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "200": {
+        "description": "Approval workflow updated successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval workflow not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "DELETE /api/approvalWorkflow/{id}",
+    "method": "DELETE",
+    "url": "/api/approvalWorkflow/{id}",
+    "summary": "Delete approval workflow",
+    "description": "Delete an approval workflow",
+    "tags": [
+      "ApprovalWorkflow"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [
+      {
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "queryParams": [],
+    "responses": {
+      "200": {
+        "description": "Approval workflow deleted successfully",
+        "contentTypes": []
+      },
+      "404": {
+        "description": "Approval workflow not found",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "GET /api/approvalWorkflow",
+    "method": "GET",
+    "url": "/api/approvalWorkflow",
+    "summary": "Get all approval workflows",
+    "description": "Retrieve approval workflows with filtering, pagination, and sorting",
+    "tags": [
+      "ApprovalWorkflow"
+    ],
+    "deprecated": false,
+    "contentTypes": [],
+    "pathParams": [],
+    "queryParams": [
+      {
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      {
+        "name": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "filter",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Approval workflows retrieved successfully",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": true,
+      "hasSearchParam": true,
+      "hasSortParams": false
+    }
+  },
+  {
+    "id": "POST /api/approvalWorkflow",
+    "method": "POST",
+    "url": "/api/approvalWorkflow",
+    "summary": "Create new approval workflow",
+    "description": "Create a new approval workflow",
+    "tags": [
+      "ApprovalWorkflow"
+    ],
+    "deprecated": false,
+    "contentTypes": [
+      "application/json"
+    ],
+    "pathParams": [],
+    "queryParams": [],
+    "requestBody": {
+      "required": true,
+      "schema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "minOrderAmount": {
+            "type": "number"
+          },
+          "maxOrderAmount": {
+            "type": "number"
+          },
+          "requiresInstallment": {
+            "type": "boolean"
+          }
+        }
+      },
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "responses": {
+      "201": {
+        "description": "Approval workflow created successfully",
+        "contentTypes": []
+      },
+      "400": {
+        "description": "Validation error",
+        "contentTypes": []
+      },
+      "500": {
+        "description": "Internal server error",
+        "contentTypes": []
+      }
+    },
+    "paginationHints": {
+      "hasPaginationParams": false,
+      "hasSearchParam": false,
+      "hasSortParams": false
+    }
+  }
+]

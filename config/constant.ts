@@ -75,19 +75,6 @@ export const config = {
 			ERROR_UPDATING: "Error updating products",
 			ORDER_MUST_BE_ASC_OR_DESC: "Order must be asc or desc",
 		},
-		PURCHASE: {
-			VALIDATION_FAILED: "Purchase validation failed",
-			INVALID_ID_FORMAT: "Invalid purchase ID format",
-			NOT_FOUND: "Purchase not found",
-			CREATE_FAILED: "Error creating purchase",
-			UPDATE_FAILED: "Error updating purchase",
-			DELETE_FAILED: "Error deleting purchase",
-			GET_FAILED: "Error getting purchase",
-			GET_ALL_FAILED: "Error getting purchases",
-			ERROR_GETTING: "Error getting purchase",
-			ERROR_UPDATING: "Error updating purchase",
-			ORDER_MUST_BE_ASC_OR_DESC: "Order must be asc or desc",
-		},
 		CATEGORY: {
 			VALIDATION_FAILED: "Category validation failed",
 			INVALID_ID_FORMAT: "Invalid category ID format",
@@ -222,14 +209,6 @@ export const config = {
 			RETRIEVED: "Products retrieved successfully",
 			RETRIEVED_ALL: "Productss retrieved successfully",
 			GETTING_BY_ID: "Getting products by ID",
-		},
-		PURCHASE: {
-			CREATED: "Purchase created successfully",
-			UPDATED: "Purchase updated successfully",
-			DELETED: "Purchase deleted successfully",
-			RETRIEVED: "Purchase retrieved successfully",
-			RETRIEVED_ALL: "Purchases retrieved successfully",
-			GETTING_BY_ID: "Getting purchase by ID",
 		},
 		CATEGORY: {
 			CREATED: "Category created successfully",
@@ -482,29 +461,6 @@ export const config = {
 				CATEGORY_LIST: "Category List",
 			},
 		},
-		PURCHASE: {
-			ACTIONS: {
-				CREATE_PURCHASE: "CREATE_PURCHASE",
-				GET_ALL_PURCHASE: "GET_ALL_PURCHASE",
-				GET_PURCHASE: "GET_PURCHASE",
-				UPDATE_PURCHASE: "UPDATE_PURCHASE",
-				DELETE_PURCHASE: "DELETE_PURCHASE",
-			},
-			DESCRIPTIONS: {
-				PURCHASE_CREATED: "Created new purchase",
-				PURCHASE_UPDATED: "Updated purchase",
-				PURCHASE_DELETED: "Deleted purchase",
-				PURCHASE_RETRIEVED: "Retrieved purchase details",
-				PURCHASES_RETRIEVED: "Retrieved purchase list",
-			},
-			PAGES: {
-				PURCHASE_CREATION: "Purchase Creation",
-				PURCHASE_UPDATE: "Purchase Update",
-				PURCHASE_DELETION: "Purchase Deletion",
-				PURCHASE_DETAILS: "Purchase Details",
-				PURCHASE_LIST: "Purchase List",
-			},
-		},
 		PRODUCTS: {
 			ACTIONS: {
 				CREATE_PRODUCTS: "CREATE_PRODUCTS",
@@ -580,7 +536,6 @@ export const config = {
 			ORGANIZATIONS: "organizations",
 			AUTH: "auth",
 			PRODUCTS: "products",
-			PURCHASE: "purchase",
 			CATEGORY: "category",
 			WISHLISTITEM: "wishlistitem",
 			CARTITEM: "cartitem",
@@ -601,7 +556,6 @@ export const config = {
 			USER: "user",
 			ORGANIZATION: "organization",
 			PRODUCTS: "products",
-			PURCHASE: "purchase",
 			CATEGORY: "category",
 			WISHLISTITEM: "wishlistitem",
 			CARTITEM: "cartitem",
@@ -616,13 +570,6 @@ export const config = {
 				PRODUCTS_CREATED: "Created new products",
 				PRODUCTS_UPDATED: "Updated products",
 				PRODUCTS_DELETED: "Deleted products",
-			},
-		},
-		PURCHASE: {
-			DESCRIPTIONS: {
-				PURCHASE_CREATED: "Created new purchase",
-				PURCHASE_UPDATED: "Updated purchase",
-				PURCHASE_DELETED: "Deleted purchase",
 			},
 		},
 		CATEGORY: {

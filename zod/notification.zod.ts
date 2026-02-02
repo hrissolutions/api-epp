@@ -44,6 +44,10 @@ export const CreateNotificationSchema = NotificationSchema.omit({
 	recipients: true,
 	metadata: true,
 	isDeleted: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateNotification = z.infer<typeof CreateNotificationSchema>;

@@ -58,6 +58,10 @@ export const CreateAuditLoggingSchema = AuditLoggingSchema.omit({
 	archiveStatus: true,
 	archiveDate: true,
 	isDeleted: true,
+}).extend({
+	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
+		message: "Invalid organizationId ObjectId format",
+	}).optional().nullable(),
 });
 
 export type CreateAuditLogging = z.infer<typeof CreateAuditLoggingSchema>;
