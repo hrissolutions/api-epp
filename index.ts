@@ -7,7 +7,6 @@ import swaggerUi from "swagger-ui-express";
 import { PrismaClient } from "./generated/prisma";
 import { config } from "./config/config";
 import openApiSpecs from "./docs/openApiSpecs";
-import verifyToken from "./middleware/verifyToken";
 import { connectAllDatabases, disconnectAllDatabases } from "./config/database";
 import { securityMiddleware, devSecurityMiddleware } from "./middleware/security";
 import { authSecurityMiddleware } from "./middleware/security";
@@ -41,7 +40,6 @@ if (process.env.NODE_ENV === "production") {
 
 const template = require("./app/template")(prisma);
 const items = require("./app/item")(prisma);
-const purchase = require("./app/purchase")(prisma);
 const category = require("./app/category")(prisma);
 const wishlistitem = require("./app/wishlistItem")(prisma);
 const cartitem = require("./app/cartItem")(prisma);
@@ -51,6 +49,8 @@ const vendor = require("./app/vendor")(prisma);
 const installment = require("./app/installment")(prisma);
 const transaction = require("./app/transaction")(prisma);
 const orderApproval = require("./app/orderApproval")(prisma);
+const purchaseOrder = require("./app/purchaseOrder")(prisma);
+const deliveryDocument = require("./app/deliveryDocument")(prisma);
 const approvalWorkflow = require("./app/approvalWorkflow")(prisma);
 const approvalLevel = require("./app/approvalLevel")(prisma);
 const workflowApprovalLevel = require("./app/workflowApprovalLevel")(prisma);
@@ -134,25 +134,13 @@ if (process.env.NODE_ENV !== "production") {
 // Apply authentication-specific security middleware
 app.use(`${config.baseApiPath}/auth`, authSecurityMiddleware);
 
-// Apply middleware for protected routes, only excluding /docs and /auth (for API documentation and authentication endpoints)
+// All endpoints are public (no authentication required)
 app.use(config.baseApiPath, (req: Request, res: Response, next: NextFunction) => {
-	if (
-		req.path.startsWith("/docs") ||
-		req.path.startsWith("/auth") ||
-		req.path.startsWith("/swagger")
-	) {
-		// Skip middleware for docs, auth, and swagger routes (public access)
-		return next();
-	}
-	// All other routes require authentication
-	verifyToken(req, res, () => {
-		next();
-	});
+	next();
 });
 
 app.use(config.baseApiPath, template);
 app.use(config.baseApiPath, items);
-app.use(config.baseApiPath, purchase);
 app.use(config.baseApiPath, category);
 app.use(config.baseApiPath, wishlistitem);
 app.use(config.baseApiPath, cartitem);
@@ -162,6 +150,8 @@ app.use(config.baseApiPath, vendor);
 app.use(config.baseApiPath, installment);
 app.use(config.baseApiPath, transaction);
 app.use(config.baseApiPath, orderApproval);
+app.use(config.baseApiPath, purchaseOrder);
+app.use(config.baseApiPath, deliveryDocument);
 app.use(config.baseApiPath, approvalWorkflow);
 app.use(config.baseApiPath, approvalLevel);
 app.use(config.baseApiPath, workflowApprovalLevel);

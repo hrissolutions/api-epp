@@ -32,9 +32,13 @@ export const CreateWorkflowApprovalLevelSchema = WorkflowApprovalLevelSchema.omi
 	createdAt: true,
 	updatedAt: true,
 }).extend({
-	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid organizationId ObjectId format",
-	}).optional().nullable(),
+	organizationId: z
+		.string()
+		.refine((val) => !val || isValidObjectId(val), {
+			message: "Invalid organizationId ObjectId format",
+		})
+		.optional()
+		.nullable(),
 });
 
 export type CreateWorkflowApprovalLevel = z.infer<typeof CreateWorkflowApprovalLevelSchema>;

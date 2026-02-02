@@ -241,7 +241,7 @@ export async function getPendingInstallmentsForPayroll(
 					select: {
 						id: true,
 						orderNumber: true,
-						employeeId: true,
+						userId: true,
 						total: true,
 					},
 				},

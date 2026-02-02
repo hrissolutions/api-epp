@@ -1,21 +1,21 @@
 model Order {
-  id             String @id @default(auto()) @map("_id") @db.ObjectId
-  organizationId String? @db.ObjectId
-  orderNumber    String @unique
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String?  @db.ObjectId
+  orderNumber    String   @unique
   // This replaces employeeId - it's the ID from ADAM SSO
   userId         String   @db.ObjectId
   userType       UserType @default(EMPLOYEE) // To know if we check HRIS
 
   // Order details
-  status OrderStatus @default(PENDING_APPROVAL)
-  items  Json? // Embedded array of order items (nullable for backward compatibility)
+  status     OrderStatus @default(PENDING_APPROVAL)
+  items      Json? // Embedded array of order items (nullable for backward compatibility)
   orderItems OrderItem[]
 
   // Pricing
-  subtotal     Float
-  discount     Float @default(0)
-  tax          Float @default(0)
-  total        Float
+  subtotal Float
+  discount Float @default(0)
+  tax      Float @default(0)
+  total    Float
 
   // Payment Type
   paymentType PaymentType @default(INSTALLMENT)
@@ -30,7 +30,7 @@ model Order {
   pointsUsed Float?
 
   // Tracking
-  trackingNumber  String?
+  trackingNumber String?
 
   // Payment
   paymentMethod PaymentMethod @default(PAYROLL_DEDUCTION)
@@ -58,6 +58,14 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // When approved: Admin orders/requests items from Vendor (one PO per order, no bulk)
+  purchaseOrders    PurchaseOrder[]
+  // Delivery docs: Admin DO (fulfilling this order) and Client DR (completing delivery)
+  deliveryDocuments DeliveryDocument[]
+
+  // Financier: pays Admin upfront; Client repays in installments (optional, for INSTALLMENT orders)
+  financingAgreement FinancingAgreement?
+
   @@index([userId])
   @@index([status])
   @@index([orderDate])
@@ -67,14 +75,14 @@ model Order {
 }
 
 enum OrderStatus {
-  PENDING_APPROVAL  // Waiting for approvals
-  APPROVED          // All approvals completed
-  REJECTED          // Rejected by an approver
-  PROCESSING        // Being prepared/packed
-  SHIPPED           // Out for delivery
-  DELIVERED         // Successfully delivered
-  CANCELLED         // Cancelled by employee or system
-  RETURNED          // Returned by employee
+  PENDING_APPROVAL // Waiting for approvals
+  APPROVED // All approvals completed
+  REJECTED // Rejected by an approver
+  PROCESSING // Being prepared/packed
+  SHIPPED // Out for delivery
+  DELIVERED // Successfully delivered
+  CANCELLED // Cancelled by employee or system
+  RETURNED // Returned by employee
 }
 
 enum PaymentMethod {
@@ -97,8 +105,6 @@ enum PaymentStatus {
 }
 
 enum PaymentType {
-  CASH
+  FULL
   INSTALLMENT
-  POINTS
-  MIXED
 }

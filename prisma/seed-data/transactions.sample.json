@@ -1,0 +1,49 @@
+[
+	{
+		"transactionNumber": "TXN-2025-00001",
+		"userId": "507f1f77bcf86cd799439011",
+		"userType": "EMPLOYEE",
+		"orderId": "507f1f77bcf86cd799439012",
+		"type": "PURCHASE",
+		"status": "COMPLETED",
+		"totalAmount": 1500,
+		"paidAmount": 1500,
+		"balance": 0,
+		"paymentMethod": "CASH",
+		"cashAmount": 1500,
+		"receiptNumber": "RCP-001",
+		"isReconciled": false,
+		"notes": "Full payment at checkout"
+	},
+	{
+		"transactionNumber": "TXN-2025-00002",
+		"userId": "507f1f77bcf86cd799439013",
+		"userType": "EMPLOYEE",
+		"orderId": "507f1f77bcf86cd799439014",
+		"type": "INSTALLMENT",
+		"status": "COMPLETED",
+		"totalAmount": 12000,
+		"paidAmount": 2060,
+		"balance": 9940,
+		"paymentMethod": "PAYROLL_DEDUCTION",
+		"paymentHistory": [{ "date": "2025-01-15", "amount": 2060, "installmentNumber": 1 }],
+		"isReconciled": false,
+		"notes": null
+	},
+	{
+		"transactionNumber": "TXN-2025-00003",
+		"userId": "507f1f77bcf86cd799439015",
+		"userType": "INDIVIDUAL",
+		"orderId": "507f1f77bcf86cd799439016",
+		"type": "PURCHASE",
+		"status": "PENDING",
+		"totalAmount": 500,
+		"paidAmount": 0,
+		"balance": 500,
+		"paymentMethod": "POINTS",
+		"pointsUsed": 500,
+		"pointsTransactionId": "pts_txn_abc123",
+		"isReconciled": false,
+		"notes": null
+	}
+]

@@ -162,6 +162,58 @@ npm run build
 - **Containerization** - Production-ready Docker configuration with optimized Dockerfile and docker-compose setup
 - **Interface Mapping** - IML-based generation for comprehensive services and React Query hooks from specifications
 
+## 📋 Procurement flow
+
+End-to-end flow from client order to delivery. This section describes **what is generated** at each step.
+
+### When the client places an order
+
+**API:** `POST /api/order` (or checkout from cart: `POST /api/cartItem/checkout`)
+
+| Generated          | Description                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Order**          | One record: `orderNumber`, `userId`, `status: PENDING_APPROVAL`, `subtotal`, `discount`, `tax`, `total`, `paymentType`, `paymentMethod`, `items` (JSON), etc.    |
+| **OrderItem**      | One record per line item: `orderId`, `itemId`, `quantity`, `unitPrice`, `discount`, `subtotal`.                                                                  |
+| **Approval chain** | A workflow is matched by order total and payment type. **OrderApproval** records are created (one per approval level), and the first-level approver is notified. |
+| **Transaction**    | One ledger record for the order: `orderId`, `userId`, `totalAmount`, `balance`, `paymentMethod`, `status: PENDING`.                                              |
+| **Installment**    | If `paymentType === "INSTALLMENT"`, installment records are created (one per scheduled payment).                                                                 |
+
+Nothing is sent to vendors yet; the order waits for admin approval.
+
+---
+
+### When admin approves the order
+
+**API:** `PATCH /api/orderApproval/:id/approve` (when the last required approver approves)
+
+| Generated / Updated | Description                                                                                                                                                                                                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Order**           | `status` → `APPROVED`, `isFullyApproved` → `true`, `approvedAt` set.                                                                                                                                                                                                             |
+| **OrderApproval**   | The approval record is updated to `status: APPROVED`, `approvedAt` set.                                                                                                                                                                                                          |
+| **PurchaseOrder**   | **One PO per vendor** for that order. Created automatically: `orderId`, `vendorId`, `poNumber` (e.g. `PO-YYYYMMDD-A0001`), `status: PENDING`, `items` (from the order’s items for that vendor), `approvedBy`, `approvedAt`. Admin can then send these POs to vendors (Step 4–7). |
+| **Notification**    | An “order approved” notification is created for the client (employee).                                                                                                                                                                                                           |
+| **Stock**           | Inventory is deducted for each product in the order (`Item.stockQuantity` reduced).                                                                                                                                                                                              |
+
+If approval is **rejected**, the order is set to `REJECTED`, `rejectedBy` and `rejectionReason` are set, and no PurchaseOrder or stock deduction is done.
+
+---
+
+### Flow summary (steps 1–7)
+
+| Step | What                      | Generated / API                                                                                                                                                                                                |
+| ---- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Client places order       | Order, OrderItems, OrderApproval(s), Transaction, Installments (if applicable).                                                                                                                                |
+| 2    | Admin approves or rejects | Order status updated; if approved → see below.                                                                                                                                                                 |
+| 3    | **If approved**           | PurchaseOrder(s) created (one per vendor).                                                                                                                                                                     |
+| 4    | Vendor ships to Admin     | Create **DeliveryDocument** (Vendor DO): `POST /api/deliveryDocument` with `documentType: DELIVERY_ORDER`, `transferStage: VENDOR_TO_ADMIN`, `purchaseOrderId`, `vendorId`, `items`.                           |
+| 5    | Admin receives            | Create **DeliveryDocument** (Admin DR): `documentType: DELIVERY_RECEIPT`, `transferStage: VENDOR_TO_ADMIN`, `correspondingDocumentId` = Vendor DO id, `receiverName`, `receiverSignature`, `conditionOfGoods`. |
+| 6    | Admin delivers to Client  | Create **DeliveryDocument** (Admin DO): `documentType: DELIVERY_ORDER`, `transferStage: ADMIN_TO_CLIENT`, `orderId`, `fromLocation`, `toName`, `toAddress`, `items`.                                           |
+| 7    | Client signs              | Create **DeliveryDocument** (Client DR): `documentType: DELIVERY_RECEIPT`, `transferStage: ADMIN_TO_CLIENT`, `correspondingDocumentId` = Admin DO id, `clientUserId`, `receiverName`, `receiverSignature`.     |
+
+Steps 4–7 use the **Delivery document** APIs (`/api/deliveryDocument`, `/api/purchaseOrder`). Steps 1–3 are driven by order creation and order-approval actions.
+
+---
+
 ## 🔧 Command Reference
 
 ### Core CLI Commands

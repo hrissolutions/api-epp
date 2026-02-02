@@ -89,14 +89,15 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			const { employeeId, itemId, quantity = 1 } = validation.data;
+			const userId = employeeId; // API uses employeeId; Prisma model uses userId
 
 			// Ensure quantity is at least 1
 			const quantityToAdd = quantity || 1;
 
-			// Check if cart item already exists for this employee and item
+			// Check if cart item already exists for this user and item
 			const existingCartItem = await prisma.cartItem.findFirst({
 				where: {
-					employeeId: employeeId,
+					userId,
 					itemId: itemId,
 				},
 			});
@@ -123,11 +124,11 @@ export const controller = (prisma: PrismaClient) => {
 				// Create new cart item with quantity (default to 1 if not provided)
 				cartItem = await prisma.cartItem.create({
 					data: {
-						employeeId: employeeId,
+						userId,
 						itemId: itemId,
 						quantity: quantityToAdd,
 						organizationId: (req as any).organizationId,
-					} as any,
+					},
 				});
 				cartItemLogger.info(`CartItem created successfully: ${cartItem.id}`);
 			}
@@ -158,14 +159,14 @@ export const controller = (prisma: PrismaClient) => {
 				changesBefore: isUpdate
 					? {
 							id: existingCartItem!.id,
-							employeeId: existingCartItem!.employeeId,
+							userId: existingCartItem!.userId,
 							itemId: existingCartItem!.itemId,
 							quantity: existingCartItem!.quantity,
 						}
 					: null,
 				changesAfter: {
 					id: cartItem.id,
-					employeeId: cartItem.employeeId,
+					userId: cartItem.userId,
 					itemId: cartItem.itemId,
 					quantity: cartItem.quantity,
 					createdAt: cartItem.createdAt,
@@ -202,7 +203,7 @@ export const controller = (prisma: PrismaClient) => {
 			cartItemLogger.error(`${config.ERROR.CARTITEM.CREATE_FAILED}: ${error}`);
 
 			// Handle unique constraint error specifically
-			if (error.code === "P2002" && error.meta?.target?.includes("employeeId_itemId")) {
+			if (error.code === "P2002" && error.meta?.target?.includes("userId_itemId")) {
 				// This shouldn't happen now, but handle it gracefully
 				cartItemLogger.warn(
 					`Duplicate cart item detected for employee ${validation.data.employeeId} and item ${validation.data.itemId}, attempting update`,
@@ -259,8 +260,8 @@ export const controller = (prisma: PrismaClient) => {
 			// Base where clause
 			const whereClause: Prisma.CartItemWhereInput = {};
 
-			// search fields for cart items (employeeId, itemId)
-			const searchFields = ["employeeId", "itemId"];
+			// search fields for cart items (userId, itemId)
+			const searchFields = ["userId", "itemId"];
 			if (query) {
 				const searchConditions = buildSearchConditions("CartItem", query, searchFields);
 				if (searchConditions.length > 0) {
@@ -624,7 +625,7 @@ export const controller = (prisma: PrismaClient) => {
 			let allCartItems: any[] = [];
 			try {
 				allCartItems = await prisma.cartItem.findMany({
-					where: { employeeId },
+					where: { userId: employeeId },
 				});
 				// Filter out any items with null itemId (safety check)
 				allCartItems = allCartItems.filter((item) => item.itemId != null);
@@ -922,7 +923,7 @@ export const controller = (prisma: PrismaClient) => {
 			const order = await prisma.order.create({
 				data: {
 					orderNumber,
-					employeeId,
+					userId: employeeId,
 					subtotal,
 					discount,
 					tax,
@@ -946,7 +947,7 @@ export const controller = (prisma: PrismaClient) => {
 				transaction = await createTransactionForOrder(
 					prisma,
 					order.id,
-					order.employeeId,
+					order.userId,
 					order.total,
 					order.paymentType,
 					order.paymentMethod,
@@ -1009,7 +1010,7 @@ export const controller = (prisma: PrismaClient) => {
 					prisma,
 					order.id,
 					order.orderNumber,
-					order.employeeId,
+					order.userId,
 					employeeName,
 					order.total,
 					order.paymentType,
@@ -1139,7 +1140,7 @@ export const controller = (prisma: PrismaClient) => {
 				changesAfter: {
 					id: order.id,
 					orderNumber: order.orderNumber,
-					employeeId: order.employeeId,
+					userId: order.userId,
 					status: order.status,
 					total: order.total,
 					installmentMonths: order.installmentMonths,

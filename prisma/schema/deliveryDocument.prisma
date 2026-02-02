@@ -1,0 +1,84 @@
+// Unified model for Delivery Order (DO) and Delivery Receipt (DR).
+// Same table, discriminated by documentType and transferStage.
+// Stage 1: Vendor→Admin (Vendor DO, Admin DR). Stage 2: Admin→Client (Admin DO, Client DR).
+
+model DeliveryDocument {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+
+  // Type discriminator: DO = shipping instruction/manifest, DR = proof of receipt
+  documentType  DeliveryDocumentType
+  // Which leg of the flow: Vendor→Admin or Admin→Client
+  transferStage DeliveryTransferStage
+
+  // --- Document info (both DO and DR) ---
+  documentNumber String    @unique // DO Number or DR Number (internal)
+  documentDate   DateTime // Date of issue (DO) or date of receipt (DR)
+  documentTime   DateTime? // Time of receipt (used for Client DR)
+
+  // --- Linking to source document ---
+  // For DR: the DO being acknowledged. Vendor DO/Admin DR: the PO (Admin order to vendor) this shipment is for.
+  correspondingDocumentId String? @db.ObjectId // DR → DO (same model)
+  purchaseOrderId         String? @db.ObjectId // Vendor DO / Admin DR: the PO (Admin order to vendor for this client order). No bulk.
+  orderId                 String? @db.ObjectId // Admin DO only: the Client Order being fulfilled.
+
+  // --- Parties (DO: shipper/receiver; DR: implied by stage) ---
+  vendorId     String? @db.ObjectId // Vendor DO: shipper; Admin DR: which vendor's shipment
+  fromLocation String? // Admin DO: dispatch location (warehouse, office)
+  toName       String? // Recipient name (Admin or Client)
+  toAddress    String? // Recipient address
+  clientUserId String? @db.ObjectId // Client DR: receiver (Employee/User ID)
+
+  // --- Shipment / logistics (DO) ---
+  carrierInfo               String? // Carrier name and tracking
+  trackingNumber            String?
+  expectedDeliveryDate      DateTime?
+  expectedDeliveryTime      String? // Time window (Admin DO)
+  internalDeliveryPersonnel String? // Admin DO: staff/courier name
+
+  // --- Receipt confirmation (DR only) ---
+  receiverName      String? // Person who physically accepted (Admin staff or Client)
+  receiverSignature String? // Proof of acceptance (e.g. stored URL or reference)
+  conditionOfGoods  String? // Discrepancies, damages, or "received in good order"
+
+  // Line items (DO: shipped; DR: delivered). Embedded array of item objects.
+  items DeliveryDocumentItem[]
+
+  // Relations
+  order             Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  vendor            Vendor?            @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  purchaseOrder     PurchaseOrder?     @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  correspondingDo   DeliveryDocument?  @relation("DRToDO", fields: [correspondingDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  receiptsForThisDo DeliveryDocument[] @relation("DRToDO")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([documentType])
+  @@index([transferStage])
+  @@index([documentDate])
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([purchaseOrderId])
+  @@index([correspondingDocumentId])
+  @@map("deliveryDocuments")
+}
+
+// Embedded line-item object (composite type). One per SKU per document.
+type DeliveryDocumentItem {
+  itemId      String? // Optional link to Item (ObjectId as string)
+  sku         String // Product code
+  description String? // Item name/specs
+  quantity    Int // Quantity shipped (DO) or delivered (DR)
+}
+
+enum DeliveryDocumentType {
+  DELIVERY_ORDER // DO: authorizes release, details contents
+  DELIVERY_RECEIPT // DR: acknowledges receipt
+}
+
+enum DeliveryTransferStage {
+  VENDOR_TO_ADMIN // Stage 1: Vendor ships to Admin; Admin signs DR
+  ADMIN_TO_CLIENT // Stage 2: Admin delivers to Client; Client signs DR
+}

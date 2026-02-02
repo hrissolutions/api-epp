@@ -1,14 +1,14 @@
 model Transaction {
-  id                String @id @default(auto()) @map("_id") @db.ObjectId
-  organizationId   String? @db.ObjectId
-  transactionNumber String @unique
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId    String? @db.ObjectId
+  transactionNumber String  @unique
 
   // Link to user and order
   // This replaces employeeId - it's the ID from ADAM SSO
-  userId         String   @db.ObjectId
-  userType       UserType @default(EMPLOYEE) // To know if we check HRIS
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId        String   @unique @db.ObjectId // One transaction per order
+  userId   String   @db.ObjectId
+  userType UserType @default(EMPLOYEE) // To know if we check HRIS
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId  String   @unique @db.ObjectId // One transaction per order
 
   // Transaction details
   type   TransactionType

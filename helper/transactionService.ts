@@ -10,7 +10,7 @@ const transactionLogger = logger.child({ module: "transactionService" });
 export async function createTransactionForOrder(
 	prisma: PrismaClient,
 	orderId: string,
-	employeeId: string,
+	userId: string,
 	totalAmount: number,
 	paymentType: string,
 	paymentMethod: any,
@@ -21,7 +21,7 @@ export async function createTransactionForOrder(
 		const transaction = await prisma.transaction.create({
 			data: {
 				transactionNumber,
-				employeeId,
+				userId,
 				orderId,
 				type: paymentType === "INSTALLMENT" ? "INSTALLMENT" : "PURCHASE",
 				status: "PENDING",

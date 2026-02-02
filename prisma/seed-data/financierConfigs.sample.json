@@ -1,0 +1,34 @@
+[
+	{
+    "organizationId": "org_corporate_001",
+		"userId": "usr_financier_001",
+		"userType": "EMPLOYEE",
+		"name": "Corporate Credit - Standard",
+		"code": "FIN-001",
+		"isActive": true,
+		"maxCreditLimit": 1000000,
+		"autoApproveLimit": 50000,
+		"installmentRateConfig": [
+			{ "installmentCount": 3, "rate": 1.5 },
+			{ "installmentCount": 6, "rate": 2 },
+			{ "installmentCount": 12, "rate": 3 }
+		],
+		"notes": "Default tiered rates for employee financing"
+	},
+	{
+    "organizationId": "org_corporate_001",
+		"userId": "usr_financier_001",
+		"userType": "INDIVIDUAL",
+		"name": "Retail Installment Plan",
+		"code": "FIN-002",
+		"isActive": true,
+		"maxCreditLimit": 500000,
+		"autoApproveLimit": 25000,
+		"installmentRateConfig": [
+			{ "installmentCount": 3, "rate": 2 },
+			{ "installmentCount": 6, "rate": 2.5 },
+			{ "installmentCount": 12, "rate": 3.5 }
+		],
+		"notes": null
+	}
+]

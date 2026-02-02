@@ -1,0 +1,40 @@
+// FinancingAgreement: ties Order to FinancierConfig. Financier (Person) pays Admin upfront; Client repays in installments.
+// Immutable snapshot of principal, interest rate, and schedule at time of approval.
+
+model FinancingAgreement {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId    String? @db.ObjectId
+
+  orderId           String  @unique @db.ObjectId
+  financierConfigId String  @db.ObjectId
+
+  // Amounts (snapshot at approval)
+  principalAmount   Float // Amount financier paid to Admin (order total)
+  totalPayable      Float // Principal + total interest (what client repays)
+  installmentCount  Int
+  installmentAmount Float // Per-installment amount (principal + interest share)
+
+  interestRate Float // Snapshot at time of approval (e.g. 2.5 = 2.5%)
+  status       FinancingStatus @default(PENDING)
+
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  financierConfig FinancierConfig @relation(fields: [financierConfigId], references: [id], onDelete: Restrict)
+  installments  Installment[]
+
+  @@index([organizationId])
+  @@index([financierConfigId])
+  @@index([status])
+  @@map("financingAgreements")
+}
+
+enum FinancingStatus {
+  PENDING // Not yet approved by financier
+  APPROVED // Financier approved; pays Admin; installments created
+  ACTIVE // Installments in progress
+  COMPLETED // All installments paid
+  CANCELLED
+}

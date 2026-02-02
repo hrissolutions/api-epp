@@ -8,6 +8,7 @@ import {
 } from "./email.helper";
 import { deductStockForOrder, restoreStockForOrder, validateStockForOrder } from "./stockService";
 import { invalidateCache } from "../middleware/cache";
+import { createPurchaseOrdersForApprovedOrder } from "./purchaseOrderService";
 
 const logger = getLogger();
 const approvalLogger = logger.child({ module: "approvalService" });
@@ -25,7 +26,7 @@ export const createOrderApprovedNotificationIfNeeded = async (
 			select: {
 				id: true,
 				orderNumber: true,
-				employeeId: true,
+				userId: true,
 				total: true,
 				status: true,
 				isFullyApproved: true,
@@ -55,7 +56,7 @@ export const createOrderApprovedNotificationIfNeeded = async (
 				description: `Your order ${order.orderNumber} has been approved.`,
 				recipients: {
 					read: [],
-					unread: [{ user: order.employeeId, date: new Date() }],
+					unread: [{ user: order.userId, date: new Date() }],
 				},
 				metadata: {
 					orderId: order.id,
@@ -393,41 +394,103 @@ export const checkAllApprovalsComplete = async (
 			(approval) => approval.status === "APPROVED",
 		).length;
 
-		// Determine total required approvals
-		let totalRequiredLevels: number;
-
-		if (order.workflow && order.workflow.workflowLevels.length > 0) {
-			// Use workflow levels if workflow exists
-			totalRequiredLevels = order.workflow.workflowLevels.length;
-		} else {
-			// Fallback: use total number of approval records created for this order
-			// This handles cases where workflow wasn't assigned but approvals exist
-			totalRequiredLevels = order.approvals.length;
-			if (totalRequiredLevels === 0) {
-				approvalLogger.warn(`Order ${orderId} has no approvals and no workflow`);
-				return false;
-			}
-			approvalLogger.info(
-				`Order ${order.orderNumber} has no workflow assigned, using approval count (${totalRequiredLevels}) as total required`,
-			);
+		// Total required = number of approval records for this order (not workflow level count).
+		// When all existing OrderApproval records are APPROVED, the order is fully approved.
+		const totalRequired = order.approvals.length;
+		if (totalRequired === 0) {
+			approvalLogger.warn(`Order ${orderId} has no approval records`);
+			return false;
 		}
 
 		approvalLogger.info(
-			`Order ${order.orderNumber}: ${approvedCount}/${totalRequiredLevels} approvals completed`,
+			`Order ${order.orderNumber}: ${approvedCount}/${totalRequired} approvals completed`,
 		);
 
-		// Check if all required approvals are completed
-		const allApproved = approvedCount >= totalRequiredLevels && totalRequiredLevels > 0;
+		// Order is fully approved when every approval record for this order is APPROVED
+		const allApproved = approvedCount >= totalRequired;
 
 		if (allApproved) {
 			approvalLogger.info(
-				`All ${totalRequiredLevels} required approvals completed for order ${order.orderNumber}`,
+				`All ${totalRequired} required approvals completed for order ${order.orderNumber}`,
 			);
 		}
 
 		return allApproved;
 	} catch (error) {
 		approvalLogger.error(`Error checking approvals for order ${orderId}: ${error}`);
+		return false;
+	}
+};
+
+/**
+ * If all order approvals are APPROVED and order is still PENDING_APPROVAL,
+ * update order to APPROVED and run notification, PO creation, stock deduction.
+ * Call this after approving an approval (e.g. from approve endpoint or PATCH update).
+ * Returns true if order was finalized, false otherwise.
+ */
+export const tryFinalizeOrderWhenAllApproved = async (
+	prisma: PrismaClient,
+	orderId: string,
+): Promise<boolean> => {
+	try {
+		const order = await prisma.order.findUnique({
+			where: { id: orderId },
+			include: {
+				approvals: { orderBy: { approvalLevel: "asc" } },
+			},
+		});
+		if (!order || order.status !== "PENDING_APPROVAL" || order.isFullyApproved) {
+			return false;
+		}
+		const total = order.approvals.length;
+		if (total === 0) return false;
+		const approvedCount = order.approvals.filter((a) => a.status === "APPROVED").length;
+		if (approvedCount < total) return false;
+
+		const insufficientStock = await validateStockForOrder(prisma, orderId);
+		if (insufficientStock.length > 0) {
+			approvalLogger.warn(
+				`Cannot finalize order ${order.orderNumber}: insufficient stock for ${insufficientStock.length} item(s)`,
+			);
+			await prisma.order.update({
+				where: { id: orderId },
+				data: {
+					notes: `Order cannot be approved due to insufficient stock. ${insufficientStock.map((i) => `${i.itemName}: Available ${i.availableStock}, Need ${i.requestedQuantity}`).join("; ")}`,
+				},
+			});
+			return false;
+		}
+
+		await prisma.order.update({
+			where: { id: orderId },
+			data: {
+				status: "APPROVED",
+				isFullyApproved: true,
+				approvedAt: new Date(),
+			},
+		});
+		await createOrderApprovedNotificationIfNeeded(prisma, orderId);
+		try {
+			const pos = await createPurchaseOrdersForApprovedOrder(prisma, orderId);
+			approvalLogger.info(
+				`Created ${pos.length} purchase order(s) for order ${order.orderNumber}`,
+			);
+		} catch (poError) {
+			approvalLogger.error(`Failed to create POs for order ${order.orderNumber}:`, poError);
+		}
+		try {
+			await deductStockForOrder(prisma, orderId);
+			approvalLogger.info(`Stock deducted for order ${order.orderNumber}`);
+		} catch (stockError) {
+			approvalLogger.error(
+				`Failed to deduct stock for order ${order.orderNumber}:`,
+				stockError,
+			);
+		}
+		approvalLogger.info(`Order ${order.orderNumber} finalized (all approvals approved).`);
+		return true;
+	} catch (error) {
+		approvalLogger.error(`Error finalizing order ${orderId}: ${error}`);
 		return false;
 	}
 };
@@ -575,6 +638,24 @@ export const processApproval = async (
 
 				// Create "order approved" notification for the employee
 				await createOrderApprovedNotificationIfNeeded(prisma, approval.orderId);
+
+				// Step 3: Create PurchaseOrder(s) to Vendor (one per vendor for this order's items)
+				try {
+					const pos = await createPurchaseOrdersForApprovedOrder(
+						prisma,
+						approval.orderId,
+						approval.approverId,
+					);
+					approvalLogger.info(
+						`Created ${pos.length} purchase order(s) for order ${approval.order.orderNumber}`,
+					);
+				} catch (poError) {
+					approvalLogger.error(
+						`Failed to create purchase orders for order ${approval.order.orderNumber}:`,
+						poError,
+					);
+					// Don't fail the approval; PO can be created manually later
+				}
 
 				// Deduct stock for all products in the order
 				try {

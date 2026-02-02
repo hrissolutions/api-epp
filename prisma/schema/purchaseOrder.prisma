@@ -1,0 +1,46 @@
+// Admin's order/request to Vendor. Created when Admin approves a client Order.
+// Flow: Client Order → Admin approves → Admin creates PO to Vendor (for that order's items) → Vendor DO → Admin DR → Admin DO → Client DR.
+// No bulk: each client order, when approved, triggers Admin to order those items from the Vendor.
+
+model PurchaseOrder {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String? @db.ObjectId
+
+  poNumber String @unique // Admin's PO number (e.g. PO-2025-001)
+  orderId  String @db.ObjectId // Client order that was approved; we request/order these items from vendor
+  vendorId String @db.ObjectId
+
+  status PurchaseOrderStatus @default(PENDING)
+
+  // Items requested from vendor (from approved order's orderItems, or derived)
+  items Json? // e.g. [{ itemId, sku, description, quantity, unitPrice }]
+
+  approvedBy     String?   @db.ObjectId // Admin who approved the client order (or who created PO)
+  approvedAt     DateTime? // When client order was approved
+  sentToVendorAt DateTime? // When PO was sent to vendor
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor            Vendor             @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  deliveryDocuments DeliveryDocument[] // Vendor DO(s) and Admin DR for this PO
+
+  @@index([organizationId])
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("purchaseOrders")
+}
+
+enum PurchaseOrderStatus {
+  PENDING // Created, not yet approved
+  APPROVED // Admin approved PO (sent to vendor)
+  CONFIRMED // Vendor confirmed; Vendor DO is auto-created
+  SENT // Sent to vendor (optional)
+  SHIPPED // Vendor shipped
+  RECEIVED // Admin received (Admin DR signed)
+  CANCELLED
+}

@@ -23,8 +23,15 @@ export const InstallmentSchema = z.object({
 	orderId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid orderId ObjectId format",
 	}),
+	financingAgreementId: z
+		.string()
+		.refine((val) => !val || isValidObjectId(val), { message: "Invalid financingAgreementId" })
+		.optional()
+		.nullable(),
 	installmentNumber: z.number().int().min(1, "installmentNumber must be at least 1"),
 	amount: decimalSchema,
+	principalAmount: decimalSchema.optional().nullable(),
+	interestAmount: decimalSchema.optional().nullable(),
 	status: InstallmentStatusEnum.default("PENDING"),
 	cutOffDate: z.coerce.date(),
 	scheduledDate: z.coerce.date(),
@@ -43,17 +50,26 @@ export const CreateInstallmentSchema = InstallmentSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
-}).partial({
-	deductedDate: true,
-	payrollBatchId: true,
-	deductionReference: true,
-	notes: true,
-	status: true,
-}).extend({
-	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid organizationId ObjectId format",
-	}).optional().nullable(),
-});
+})
+	.partial({
+		deductedDate: true,
+		payrollBatchId: true,
+		deductionReference: true,
+		notes: true,
+		status: true,
+		financingAgreementId: true,
+		principalAmount: true,
+		interestAmount: true,
+	})
+	.extend({
+		organizationId: z
+			.string()
+			.refine((val) => !val || isValidObjectId(val), {
+				message: "Invalid organizationId ObjectId format",
+			})
+			.optional()
+			.nullable(),
+	});
 
 export type CreateInstallment = z.infer<typeof CreateInstallmentSchema>;
 

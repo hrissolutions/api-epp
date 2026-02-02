@@ -1,8 +1,8 @@
 /**
  * Migration script to add organizationId to all existing records
  *
- * This script updates all records in the database to have organizationId: "6944c22f1ba0ef821cb257d9"
- * for records that don't have it set.
+ * This script updates all records to have organizationId stored as MongoDB ObjectId
+ * (default: 697845e3479eaa6d2f796b7c), not as string.
  *
  * Usage:
  *   npx ts-node scripts/migrate-add-organizationId.ts
@@ -13,9 +13,10 @@
  * Options:
  *   --dry-run    : Preview changes without applying them
  *   --force      : Skip confirmation prompt
- *   --org-id     : Specify a different organizationId (default: 6944c22f1ba0ef821cb257d9)
+ *   --org-id     : Specify a different organizationId (default: 697845e3479eaa6d2f796b7c)
  */
 
+import { ObjectId } from "mongodb";
 import { PrismaClient } from "../generated/prisma";
 import { getLogger } from "../helper/logger";
 import { connectAllDatabases, disconnectAllDatabases } from "../config/database";
@@ -23,7 +24,7 @@ import { connectAllDatabases, disconnectAllDatabases } from "../config/database"
 const logger = getLogger();
 const migrationLogger = logger.child({ module: "migrateOrganizationId" });
 
-const DEFAULT_ORGANIZATION_ID = "6944c22f1ba0ef821cb257d9";
+const DEFAULT_ORGANIZATION_ID = "697845e3479eaa6d2f796b7c";
 
 interface MigrationOptions {
 	dryRun?: boolean;
@@ -72,6 +73,9 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 			process.exit(1);
 		}
 
+		// Use ObjectId so we write/query as BSON ObjectId, not string
+		const orgIdObjectId = new ObjectId(organizationId);
+
 		if (!force && !dryRun) {
 			migrationLogger.warn("⚠️  WARNING: This will update ALL records in the database!");
 			migrationLogger.warn("Press Ctrl+C within 5 seconds to cancel...");
@@ -89,7 +93,6 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 			{ name: "WishlistItem", prismaModel: prisma.wishlistItem, collection: "wishlistItems" },
 			{ name: "Order", prismaModel: prisma.order, collection: "orders" },
 			{ name: "OrderItem", prismaModel: prisma.orderItem, collection: "orderItems" },
-			{ name: "Purchase", prismaModel: prisma.purchase, collection: "purchases" },
 			{ name: "Transaction", prismaModel: prisma.transaction, collection: "transactions" },
 			{ name: "Installment", prismaModel: prisma.installment, collection: "installments" },
 			{
@@ -97,16 +100,23 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 				prismaModel: prisma.approvalWorkflow,
 				collection: "approvalWorkflows",
 			},
-			{ name: "ApprovalLevel", prismaModel: prisma.approvalLevel, collection: "approvalLevels" },
+			{
+				name: "ApprovalLevel",
+				prismaModel: prisma.approvalLevel,
+				collection: "approvalLevels",
+			},
 			{
 				name: "WorkflowApprovalLevel",
 				prismaModel: prisma.workflowApprovalLevel,
 				collection: "workflowApprovalLevels",
 			},
-			{ name: "OrderApproval", prismaModel: prisma.orderApproval, collection: "orderApprovals" },
+			{
+				name: "OrderApproval",
+				prismaModel: prisma.orderApproval,
+				collection: "orderApprovals",
+			},
 			{ name: "Notification", prismaModel: prisma.notification, collection: "notifications" },
 			{ name: "AuditLogging", prismaModel: prisma.auditLogging, collection: "auditLogs" },
-			{ name: "User", prismaModel: prisma.user, collection: "users" },
 			{ name: "Template", prismaModel: prisma.template, collection: "templates" },
 		];
 
@@ -146,45 +156,27 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 					// This properly handles fields that don't exist
 					// Note: We'll use a script approach to convert strings to ObjectId
 					try {
-						// First, try to update all documents using aggregation pipeline
-						// This converts string organizationId to ObjectId type
+						// Set organizationId to target ObjectId on ALL documents (overwrite any existing value)
 						const updateResult = await prisma.$runCommandRaw({
 							update: model.collection,
 							updates: [
 								{
 									q: {}, // Empty query = match all documents
-									u: [
-										{
-											$set: {
-												organizationId: {
-													$cond: {
-														if: { $eq: [{ $type: "$organizationId" }, "string"] },
-														then: { $toObjectId: "$organizationId" },
-														else: {
-															$cond: {
-																if: { $eq: [{ $type: "$organizationId" }, "missing"] },
-																then: { $toObjectId: organizationId },
-																else: "$organizationId",
-															},
-														},
-													},
-												},
-											},
-										},
-									],
-									multi: true, // Update multiple documents
+									u: { $set: { organizationId: orgIdObjectId } },
+									multi: true,
 								},
 							],
 						});
 
 						// Count how many were actually modified
-						const modifiedCount = (updateResult as any).nModified || (updateResult as any).n || 0;
+						const modifiedCount =
+							(updateResult as any).nModified || (updateResult as any).n || 0;
 						updated = modifiedCount;
 
-						// Count how many already had the correct organizationId
+						// Count how many already had the correct organizationId (ObjectId)
 						const countWithCorrectId = await delegate.count({
 							where: {
-								organizationId: organizationId,
+								organizationId: orgIdObjectId,
 							},
 						});
 
@@ -197,7 +189,7 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 						const updateResult = await delegate.updateMany({
 							where: {}, // Empty where clause = update all records
 							data: {
-								organizationId: organizationId,
+								organizationId: orgIdObjectId,
 							},
 						});
 
@@ -213,7 +205,7 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 								$or: [
 									{ organizationId: { $exists: false } }, // Field doesn't exist
 									{ organizationId: null }, // Field is null
-									{ organizationId: { $ne: organizationId } }, // Field is different
+									{ organizationId: { $ne: orgIdObjectId } }, // Field is different (compare ObjectId)
 								],
 							},
 						});
@@ -227,7 +219,7 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 						);
 						const countWithCorrectId = await delegate.count({
 							where: {
-								organizationId: organizationId,
+								organizationId: orgIdObjectId,
 							},
 						});
 

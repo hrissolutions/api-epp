@@ -174,7 +174,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Search fields for transactions
 			const searchFields = [
 				"transactionNumber",
-				"employeeId",
+				"userId",
 				"orderId",
 				"type",
 				"status",
@@ -620,7 +620,7 @@ export const controller = (prisma: PrismaClient) => {
 			transactionLogger.info(`Getting transactions for employee: ${employeeId}`);
 
 			const transactions = await prisma.transaction.findMany({
-				where: { employeeId },
+				where: { userId: employeeId },
 				orderBy: { createdAt: "desc" },
 			});
 
