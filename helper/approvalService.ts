@@ -88,7 +88,7 @@ export const findMatchingWorkflow = async (
 ) => {
 	try {
 		// Find all active workflows
-		const workflows = await prisma.approvalWorkflow.findMany({
+		const workflowsRaw = await prisma.approvalWorkflow.findMany({
 			where: { isActive: true },
 			include: {
 				workflowLevels: {
@@ -96,6 +96,15 @@ export const findMatchingWorkflow = async (
 					orderBy: { level: "asc" },
 				},
 			},
+		});
+
+		// Sort so narrowest range wins: ascending by maxOrderAmount, nulls last.
+		// Then for order total 1000 we try Small (max 1000) first, then Medium (max 5000), etc.
+		const workflows = [...workflowsRaw].sort((a, b) => {
+			if (a.maxOrderAmount == null && b.maxOrderAmount == null) return 0;
+			if (a.maxOrderAmount == null) return 1;
+			if (b.maxOrderAmount == null) return -1;
+			return a.maxOrderAmount - b.maxOrderAmount;
 		});
 
 		// Match workflow based on conditions
@@ -196,6 +205,11 @@ export const getApproverForRole = async (
 			id: "admin_001",
 			name: "System Admin",
 			email: "admin@company.com",
+		},
+		FINANCIER: {
+			id: "financier_001",
+			name: "Financier",
+			email: "financier@company.com",
 		},
 	};
 

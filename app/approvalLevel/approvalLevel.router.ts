@@ -121,7 +121,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                 type: integer
 	 *               role:
 	 *                 type: string
-	 *                 enum: [MANAGER, HR, FINANCE, DEPARTMENT_HEAD, ADMIN]
+	 *                 enum: [MANAGER, HR, FINANCE, DEPARTMENT_HEAD, ADMIN, FINANCIER]
 	 *               description:
 	 *                 type: string
 	 *               isRequired:
