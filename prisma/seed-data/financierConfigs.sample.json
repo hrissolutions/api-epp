@@ -1,6 +1,6 @@
 [
 	{
-    "organizationId": "org_corporate_001",
+		"organizationId": "697845e3479eaa6d2f796b7c",
 		"userId": "usr_financier_001",
 		"userType": "EMPLOYEE",
 		"name": "Corporate Credit - Standard",
@@ -16,8 +16,8 @@
 		"notes": "Default tiered rates for employee financing"
 	},
 	{
-    "organizationId": "org_corporate_001",
-		"userId": "usr_financier_001",
+		"organizationId": "697845e3479eaa6d2f796b7c",
+		"userId": "usr_financier_002",
 		"userType": "INDIVIDUAL",
 		"name": "Retail Installment Plan",
 		"code": "FIN-002",
@@ -30,5 +30,51 @@
 			{ "installmentCount": 12, "rate": 3.5 }
 		],
 		"notes": null
+	},
+	{
+		"organizationId": "697845e3479eaa6d2f796b7c",
+		"userId": "usr_financier_003",
+		"userType": "WHOLESALER",
+		"name": "Wholesale Financing",
+		"code": "FIN-003",
+		"isActive": true,
+		"maxCreditLimit": 2000000,
+		"autoApproveLimit": 100000,
+		"installmentRateConfig": [
+			{ "installmentCount": 3, "rate": 1.2 },
+			{ "installmentCount": 6, "rate": 1.5 },
+			{ "installmentCount": 12, "rate": 2 }
+		],
+		"notes": "Preferred rates for wholesale partners"
+	},
+	{
+		"organizationId": "697845e3479eaa6d2f796b7c",
+		"userId": "usr_financier_004",
+		"userType": "EMPLOYEE",
+		"name": "Legacy Config (Inactive)",
+		"code": "FIN-004",
+		"isActive": false,
+		"maxCreditLimit": 100000,
+		"autoApproveLimit": 5000,
+		"installmentRateConfig": [
+			{ "installmentCount": 3, "rate": 2.5 },
+			{ "installmentCount": 6, "rate": 3 }
+		],
+		"notes": "Deprecated; kept for reference"
+	},
+	{
+		"organizationId": "697845e3479eaa6d2f796b7c",
+		"userId": "usr_financier_005",
+		"userType": "INDIVIDUAL",
+		"name": "No-Code Config Example",
+		"code": null,
+		"isActive": true,
+		"maxCreditLimit": 200000,
+		"autoApproveLimit": 10000,
+		"installmentRateConfig": [
+			{ "installmentCount": 3, "rate": 2 },
+			{ "installmentCount": 12, "rate": 4 }
+		],
+		"notes": "Config without code (code is optional)"
 	}
 ]

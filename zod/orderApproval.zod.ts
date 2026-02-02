@@ -2,7 +2,14 @@ import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 
 // Enums
-export const ApproverRoleEnum = z.enum(["MANAGER", "HR", "FINANCE", "DEPARTMENT_HEAD", "ADMIN"]);
+export const ApproverRoleEnum = z.enum([
+	"MANAGER",
+	"HR",
+	"FINANCE",
+	"DEPARTMENT_HEAD",
+	"ADMIN",
+	"FINANCIER",
+]);
 
 export const ApprovalStatusEnum = z.enum(["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SKIPPED"]);
 
@@ -37,18 +44,24 @@ export const CreateOrderApprovalSchema = OrderApprovalSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
-}).partial({
-	status: true,
-	approvedAt: true,
-	rejectedAt: true,
-	comments: true,
-	notifiedAt: true,
-	reminderSentAt: true,
-}).extend({
-	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid organizationId ObjectId format",
-	}).optional().nullable(),
-});
+})
+	.partial({
+		status: true,
+		approvedAt: true,
+		rejectedAt: true,
+		comments: true,
+		notifiedAt: true,
+		reminderSentAt: true,
+	})
+	.extend({
+		organizationId: z
+			.string()
+			.refine((val) => !val || isValidObjectId(val), {
+				message: "Invalid organizationId ObjectId format",
+			})
+			.optional()
+			.nullable(),
+	});
 
 export type CreateOrderApproval = z.infer<typeof CreateOrderApprovalSchema>;
 

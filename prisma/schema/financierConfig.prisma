@@ -13,6 +13,8 @@ model FinancierConfig {
 
   // Credit rules
   maxCreditLimit   Float // Total credit limit (e.g. 1_000_000)
+  usedCredits      Float @default(0) // Sum of principal from approved financing; incremented when creating FinancingAgreement
+  availableCredits Float @default(0) // Remaining credit; decremented when creating FinancingAgreement; availableCredits = maxCreditLimit - usedCredits
   autoApproveLimit Float // Orders at or below this amount get auto-approved by this config
 
   // Tiered rate by installment count: e.g. [{ installmentCount: 3, rate: 1.5 }, { installmentCount: 6, rate: 2 }, { installmentCount: 12, rate: 3 }]

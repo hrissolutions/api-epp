@@ -121,7 +121,9 @@ export const CreateOrderSchema = z.object({
 	tax: decimalSchema.optional(), // Will be calculated
 	total: decimalSchema.optional(), // Will be calculated
 	paymentType: PaymentTypeEnum.optional(),
-	installmentMonths: z.number().int().optional().nullable(),
+	/** Number of installments (e.g. 3, 6, 12). 3 = 1.5 months bi-monthly, 6 = 3 months. Replaces installmentMonths in API. */
+	installments: z.number().int().min(1, "Installments must be at least 1").max(24).optional().nullable(),
+	installmentMonths: z.number().int().optional().nullable(), // deprecated: use installments
 	installmentCount: z.number().int().optional().nullable(),
 	installmentAmount: decimalSchema.optional().nullable(),
 	pointsUsed: decimalSchema.optional().nullable(),

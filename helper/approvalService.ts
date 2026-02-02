@@ -9,6 +9,11 @@ import {
 import { deductStockForOrder, restoreStockForOrder, validateStockForOrder } from "./stockService";
 import { invalidateCache } from "../middleware/cache";
 import { createPurchaseOrdersForApprovedOrder } from "./purchaseOrderService";
+import {
+	getFinancierConfigByUserId,
+	getUsedCreditForFinancierConfig,
+	getRateForInstallmentCount,
+} from "./financierHelper";
 
 const logger = getLogger();
 const approvalLogger = logger.child({ module: "approvalService" });
@@ -88,7 +93,7 @@ export const findMatchingWorkflow = async (
 ) => {
 	try {
 		// Find all active workflows
-		const workflows = await prisma.approvalWorkflow.findMany({
+		const workflowsRaw = await prisma.approvalWorkflow.findMany({
 			where: { isActive: true },
 			include: {
 				workflowLevels: {
@@ -96,6 +101,15 @@ export const findMatchingWorkflow = async (
 					orderBy: { level: "asc" },
 				},
 			},
+		});
+
+		// Sort so narrowest range wins: ascending by maxOrderAmount, nulls last.
+		// Then for order total 1000 we try Small (max 1000) first, then Medium (max 5000), etc.
+		const workflows = [...workflowsRaw].sort((a, b) => {
+			if (a.maxOrderAmount == null && b.maxOrderAmount == null) return 0;
+			if (a.maxOrderAmount == null) return 1;
+			if (b.maxOrderAmount == null) return -1;
+			return a.maxOrderAmount - b.maxOrderAmount;
 		});
 
 		// Match workflow based on conditions
@@ -197,6 +211,11 @@ export const getApproverForRole = async (
 			name: "System Admin",
 			email: "admin@company.com",
 		},
+		FINANCIER: {
+			id: "financier_001",
+			name: "Financier",
+			email: "financier@company.com",
+		},
 	};
 
 	return roleMap[role] || roleMap["MANAGER"];
@@ -296,6 +315,34 @@ export const createApprovalChain = async (
 				// Continue anyway, but log the warning
 			}
 
+			// Financier level (WorkflowApprovalLevel.approverId === FinancierConfig.userId):
+			// If order total <= FinancierConfig.autoApproveLimit (e.g. 5000) and within
+			// maxCreditLimit (available = maxCreditLimit - used), create OrderApproval as APPROVED.
+			let approvalStatus: "PENDING" | "APPROVED" = "PENDING";
+			let approvedAt: Date | undefined;
+			const financierConfig = await getFinancierConfigByUserId(prisma, approverId);
+			if (financierConfig) {
+				const usedCredit = await getUsedCreditForFinancierConfig(
+					prisma,
+					financierConfig.id,
+				);
+				const availableCredit = financierConfig.maxCreditLimit - usedCredit;
+				if (
+					orderTotal <= financierConfig.autoApproveLimit &&
+					orderTotal <= availableCredit
+				) {
+					approvalStatus = "APPROVED";
+					approvedAt = new Date();
+					approvalLogger.info(
+						`Financier auto-approve: order ${orderNumber} total ${orderTotal} <= autoApproveLimit ${financierConfig.autoApproveLimit} and within credit (available ${availableCredit})`,
+					);
+				} else if (orderTotal > availableCredit) {
+					approvalLogger.warn(
+						`Financier level ${workflowLevel.level}: order total ${orderTotal} exceeds available credit ${availableCredit} (maxCreditLimit ${financierConfig.maxCreditLimit} - used ${usedCredit}). Approval remains PENDING.`,
+					);
+				}
+			}
+
 			// Create approval record with approver email from workflowApprovalLevel
 			const approval = await prisma.orderApproval.create({
 				data: {
@@ -305,14 +352,15 @@ export const createApprovalChain = async (
 					approverId: approverId,
 					approverName: approverName,
 					approverEmail: approverEmail, // Save the email from workflowApprovalLevel
-					status: "PENDING",
+					status: approvalStatus,
+					...(approvalStatus === "APPROVED" && approvedAt && { approvedAt }),
 				},
 			});
 
 			approvals.push(approval);
 			approvalLogger.info(
 				`Created approval level ${workflowLevel.level} (${workflowLevel.approvalLevel.role}) for order ${orderNumber} - ` +
-					`Approver: ${approverName} (${approverEmail}) - Source: ${approverSource}`,
+					`Approver: ${approverName} (${approverEmail}) - Status: ${approvalStatus} - Source: ${approverSource}`,
 			);
 		}
 
@@ -326,27 +374,41 @@ export const createApprovalChain = async (
 
 		approvalLogger.info(`Saved workflow ${workflow.id} to order ${orderNumber}`);
 
-		// Send email to first level approver
-		if (approvals.length > 0) {
-			const firstApproval = approvals[0];
-			await sendApprovalRequestEmail({
-				to: firstApproval.approverEmail,
-				approverName: firstApproval.approverName,
-				approverEmail: firstApproval.approverEmail,
-				employeeName: employeeName,
-				orderNumber: orderNumber,
-				orderTotal: orderTotal,
-				approvalLevel: firstApproval.approvalLevel,
-				approverRole: firstApproval.approverRole,
-				orderDate: orderDate,
-				notes: notes,
-				installments: installments,
-			});
-
+		// If all approvals are already APPROVED (e.g. financier auto-approve), finalize order
+		const allApproved = approvals.every((a) => a.status === "APPROVED");
+		if (allApproved && approvals.length > 0) {
 			approvalLogger.info(
-				`Sent approval request email to ${firstApproval.approverEmail} ` +
-					`(from workflowApprovalLevel for order ${orderNumber})`,
+				`All ${approvals.length} approval level(s) already APPROVED for order ${orderNumber}; finalizing.`,
 			);
+			const finalized = await tryFinalizeOrderWhenAllApproved(prisma, orderId);
+			if (finalized) {
+				approvalLogger.info(
+					`Order ${orderNumber} finalized (all approvals were auto-approved).`,
+				);
+			}
+		} else {
+			// Send email to first PENDING approver (skip any auto-approved financier levels)
+			const firstPendingApproval = approvals.find((a) => a.status === "PENDING");
+			if (firstPendingApproval) {
+				await sendApprovalRequestEmail({
+					to: firstPendingApproval.approverEmail,
+					approverName: firstPendingApproval.approverName,
+					approverEmail: firstPendingApproval.approverEmail,
+					employeeName: employeeName,
+					orderNumber: orderNumber,
+					orderTotal: orderTotal,
+					approvalLevel: firstPendingApproval.approvalLevel,
+					approverRole: firstPendingApproval.approverRole,
+					orderDate: orderDate,
+					notes: notes,
+					installments: installments,
+				});
+
+				approvalLogger.info(
+					`Sent approval request email to ${firstPendingApproval.approverEmail} ` +
+						`(from workflowApprovalLevel for order ${orderNumber})`,
+				);
+			}
 		}
 
 		return {
@@ -470,6 +532,78 @@ export const tryFinalizeOrderWhenAllApproved = async (
 			},
 		});
 		await createOrderApprovedNotificationIfNeeded(prisma, orderId);
+
+		// Create FinancingAgreement when order had a financier in the approval chain (so used credit increases)
+		try {
+			let financierConfigId: string | null = null;
+			for (const a of order.approvals) {
+				const config = await getFinancierConfigByUserId(prisma, a.approverId);
+				if (config) {
+					financierConfigId = config.id;
+					break;
+				}
+			}
+			if (financierConfigId) {
+				const installments = await prisma.installment.findMany({
+					where: { orderId },
+					orderBy: { installmentNumber: "asc" },
+				});
+				const installmentCount = installments.length || 1;
+				const totalPayable =
+					installments.length > 0
+						? installments.reduce((sum, i) => sum + i.amount, 0)
+						: order.total;
+				const installmentAmount =
+					installmentCount > 0
+						? parseFloat((totalPayable / installmentCount).toFixed(2))
+						: order.total;
+				const financierConfig = await prisma.financierConfig.findFirst({
+					where: { id: financierConfigId },
+					select: { installmentRateConfig: true },
+				});
+				const interestRate = financierConfig
+					? getRateForInstallmentCount(installmentCount, financierConfig as any)
+					: 0;
+
+				const agreement = await prisma.financingAgreement.create({
+					data: {
+						orderId,
+						financierConfigId,
+						organizationId: order.organizationId ?? null,
+						principalAmount: order.total,
+						totalPayable,
+						installmentCount,
+						installmentAmount,
+						interestRate,
+						status: "APPROVED",
+						approvedAt: new Date(),
+					},
+				});
+				approvalLogger.info(
+					`Created FinancingAgreement ${agreement.id} for order ${order.orderNumber} (principal ${order.total}, used credit updated)`,
+				);
+				// Update FinancierConfig: increment usedCredits, decrement availableCredits
+				await prisma.financierConfig.update({
+					where: { id: financierConfigId },
+					data: {
+						usedCredits: { increment: order.total },
+						availableCredits: { decrement: order.total },
+					},
+				});
+				if (installments.length > 0) {
+					await prisma.installment.updateMany({
+						where: { orderId },
+						data: { financingAgreementId: agreement.id },
+					});
+				}
+			}
+		} catch (faError) {
+			approvalLogger.error(
+				`Failed to create FinancingAgreement for order ${order.orderNumber}:`,
+				faError,
+			);
+		}
+
 		try {
 			const pos = await createPurchaseOrdersForApprovedOrder(prisma, orderId);
 			approvalLogger.info(

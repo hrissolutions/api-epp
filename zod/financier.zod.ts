@@ -38,6 +38,8 @@ export const FinancierConfigSchema = z.object({
 	code: z.string().optional().nullable(),
 	isActive: z.boolean().default(true),
 	maxCreditLimit: decimalSchema,
+	usedCredits: decimalSchema.optional().default(0), // Stored sum of principal from approved financing
+	availableCredits: decimalSchema.optional().default(0), // Stored remaining credit; decremented on financing
 	autoApproveLimit: decimalSchema,
 	installmentRateConfig: InstallmentRateConfigSchema.optional().nullable(),
 	notes: z.string().optional().nullable(),

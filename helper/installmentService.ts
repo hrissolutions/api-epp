@@ -79,12 +79,24 @@ export function calculateScheduledDate(cutoffDate: Date, daysAfter: number = 5):
 }
 
 /**
- * Generate installment records for an order
+ * Options for installment generation (e.g. financier interest rate).
+ */
+export interface GenerateInstallmentsOptions {
+	/** Interest rate as percentage (e.g. 1.5 = 1.5%). Interest is applied once on principal, then total payable is split into installments. */
+	interestRatePercent?: number;
+}
+
+/**
+ * Generate installment records for an order.
+ * Interest rule: interest = principal × (rate/100), totalPayable = principal + interest, then split totalPayable by installment count.
+ * Example: principal 2000, 3 installments, rate 1.5% → interest = 30, totalPayable = 2030, per installment ≈ 676.67.
+ *
  * @param prisma - PrismaClient instance
  * @param orderId - The order ID
  * @param installmentMonths - Number of months for installment plan
- * @param totalAmount - Total amount to be paid
+ * @param totalAmount - Principal (order total) to be paid
  * @param startDate - Start date for installment calculation (defaults to now)
+ * @param options - Optional: interestRatePercent from financier config (e.g. 1.5 for 1.5%)
  */
 export async function generateInstallments(
 	prisma: PrismaClient,
@@ -92,22 +104,29 @@ export async function generateInstallments(
 	installmentMonths: number,
 	totalAmount: number,
 	startDate: Date = new Date(),
+	options?: GenerateInstallmentsOptions,
 ) {
 	try {
 		// Calculate installment count (2 per month for bi-monthly payroll)
 		const installmentCount = installmentMonths * 2;
 
-		// Calculate amount per installment
-		const installmentAmount = parseFloat((totalAmount / installmentCount).toFixed(2));
+		// Step 1: Apply interest once on principal (if rate provided)
+		const ratePercent = options?.interestRatePercent ?? 0;
+		const interest = parseFloat(((totalAmount * ratePercent) / 100).toFixed(2));
+		const totalPayable = totalAmount + interest;
 
-		// Adjust last installment to account for rounding
+		// Step 2: Split total payable by number of installments
+		const installmentAmount = parseFloat((totalPayable / installmentCount).toFixed(2));
 		const lastInstallmentAmount = parseFloat(
-			(totalAmount - installmentAmount * (installmentCount - 1)).toFixed(2),
+			(totalPayable - installmentAmount * (installmentCount - 1)).toFixed(2),
 		);
 
 		installmentLogger.info(
 			`Generating ${installmentCount} installments for order ${orderId}: ` +
-				`${installmentMonths} months × 2 cutoffs = ${installmentCount} installments`,
+				`${installmentMonths} months × 2 cutoffs = ${installmentCount} installments` +
+				(ratePercent > 0
+					? `, principal=${totalAmount}, rate=${ratePercent}%, interest=${interest}, totalPayable=${totalPayable}`
+					: ""),
 		);
 
 		// Calculate cutoff dates
