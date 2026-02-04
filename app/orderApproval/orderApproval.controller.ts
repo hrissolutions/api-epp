@@ -478,7 +478,13 @@ export const controller = (prisma: PrismaClient) => {
 
 			orderApprovalLogger.info(`Approving order approval: ${id}`);
 
-			const updatedApproval = await processApproval(prisma, id, "APPROVED", comments);
+			const updatedApproval = await processApproval(
+				prisma,
+				id,
+				"APPROVED",
+				comments,
+				(req as any).io,
+			);
 
 			try {
 				await invalidateCache.byPattern(`cache:orderApproval:byId:${id}:*`);
@@ -538,7 +544,13 @@ export const controller = (prisma: PrismaClient) => {
 
 			orderApprovalLogger.info(`Rejecting order approval: ${id}`);
 
-			const updatedApproval = await processApproval(prisma, id, "REJECTED", comments);
+			const updatedApproval = await processApproval(
+				prisma,
+				id,
+				"REJECTED",
+				comments,
+				(req as any).io,
+			);
 
 			try {
 				await invalidateCache.byPattern(`cache:orderApproval:byId:${id}:*`);

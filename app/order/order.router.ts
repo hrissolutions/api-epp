@@ -7,6 +7,7 @@ interface IController {
 	create(req: Request, res: Response, next: NextFunction): Promise<void>;
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
+	createPurchaseOrders(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -363,6 +364,33 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.patch("/:id", controller.update);
+
+	/**
+	 * @openapi
+	 * /api/order/{id}/create-purchase-orders:
+	 *   post:
+	 *     summary: Create purchase orders for an approved order
+	 *     description: Creates one purchase order per supplier for an already-approved order. Use this for orders that were approved before P.O. creation was fixed (e.g. cart checkout orders that only had embedded items). Only allowed when order status is APPROVED and the order has no existing purchase orders.
+	 *     tags: [Order]
+	 *     parameters:
+	 *       - in: path
+	 *         name: id
+	 *         required: true
+	 *         schema:
+	 *           type: string
+	 *           pattern: '^[0-9a-fA-F]{24}$'
+	 *         description: Order ID (MongoDB ObjectId format)
+	 *     responses:
+	 *       201:
+	 *         description: Purchase orders created successfully
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/:id/create-purchase-orders", controller.createPurchaseOrders);
 
 	/**
 	 * @openapi

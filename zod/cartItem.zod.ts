@@ -6,8 +6,8 @@ export const CartItemSchema = z.object({
 	id: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid ObjectId format",
 	}),
-	employeeId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid employeeId ObjectId format",
+	userId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid userId ObjectId format",
 	}),
 	itemId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid itemId ObjectId format",
@@ -24,13 +24,19 @@ export const CreateCartItemSchema = CartItemSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
-}).partial({
-	quantity: true,
-}).extend({
-	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid organizationId ObjectId format",
-	}).optional().nullable(),
-});
+})
+	.partial({
+		quantity: true,
+	})
+	.extend({
+		organizationId: z
+			.string()
+			.refine((val) => !val || isValidObjectId(val), {
+				message: "Invalid organizationId ObjectId format",
+			})
+			.optional()
+			.nullable(),
+	});
 
 export type CreateCartItem = z.infer<typeof CreateCartItemSchema>;
 

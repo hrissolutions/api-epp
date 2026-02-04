@@ -24,6 +24,21 @@ const io = new Server(server, {
 	},
 });
 
+// Socket.IO: allow clients to join user rooms so they receive order-approval notifications
+io.on("connection", (socket) => {
+	socket.on("subscribe:user", (userId: string) => {
+		if (userId && typeof userId === "string") {
+			const room = `user:${userId}`;
+			socket.join(room);
+			socket.data.userId = userId;
+			console.log(`Socket ${socket.id} joined room ${room}`);
+		}
+	});
+	socket.on("disconnect", () => {
+		// Optional: leave user room if you track it
+	});
+});
+
 app.use((req: Request, res: Response, next: NextFunction) => {
 	(req as any).io = io;
 	next();
