@@ -4,12 +4,12 @@ import { getLogger } from "./logger";
 const logger = getLogger();
 const docLogger = logger.child({ module: "generateDeliveryDocumentNumber" });
 
-const PREFIX = "DO-V-"; // Vendor DO prefix
+const PREFIX = "DO-V-"; // Supplier DO prefix (DO-V- kept for backward compatibility)
 
 /**
- * Generates a unique Vendor DO number: DO-V-YYYYMMDD-A0001
+ * Generates a unique Supplier DO number: DO-V-YYYYMMDD-A0001
  */
-export const generateVendorDONumber = async (
+export const generateSupplierDONumber = async (
 	prisma: PrismaClient,
 	date?: Date,
 ): Promise<string> => {
@@ -43,7 +43,7 @@ export const generateVendorDONumber = async (
 
 		if (sequences.length === 0) {
 			const docNumber = `${prefix}A0001`;
-			docLogger.info(`Generated Vendor DO number: ${docNumber}`);
+			docLogger.info(`Generated Supplier DO number: ${docNumber}`);
 			return docNumber;
 		}
 
@@ -59,10 +59,10 @@ export const generateVendorDONumber = async (
 				? String.fromCharCode(highest.letter.charCodeAt(0) + 1)
 				: highest.letter;
 		const docNumber = `${prefix}${nextLetter}${String(nextNumber).padStart(4, "0")}`;
-		docLogger.info(`Generated Vendor DO number: ${docNumber}`);
+		docLogger.info(`Generated Supplier DO number: ${docNumber}`);
 		return docNumber;
 	} catch (error) {
-		docLogger.error(`Error generating Vendor DO number: ${error}`);
+		docLogger.error(`Error generating Supplier DO number: ${error}`);
 		return `${PREFIX}${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 	}
 };

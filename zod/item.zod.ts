@@ -47,8 +47,8 @@ export const ItemSchema = z.object({
 	categoryId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid categoryId ObjectId format",
 	}),
-	vendorId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid vendorId ObjectId format",
+	supplierId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid supplierId ObjectId format",
 	}),
 
 	// Item Type

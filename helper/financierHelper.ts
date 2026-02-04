@@ -83,8 +83,9 @@ export async function getUsedCreditForFinancierConfig(
  */
 export async function getFinancierConfigForWorkflow(
 	prisma: PrismaClient,
-	workflow: { workflowLevels: Array<{ approverId: string | null }> },
+	workflow: { workflowLevels?: Array<{ approverId: string | null }> },
 ): Promise<Awaited<ReturnType<typeof getFinancierConfigByUserId>> | null> {
+	if (!workflow.workflowLevels?.length) return null;
 	for (const wl of workflow.workflowLevels) {
 		if (wl.approverId) {
 			const config = await getFinancierConfigByUserId(prisma, wl.approverId);

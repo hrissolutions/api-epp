@@ -6,21 +6,21 @@ const logger = getLogger();
 const poServiceLogger = logger.child({ module: "purchaseOrderService" });
 
 /**
- * Create PurchaseOrder(s) for an approved order. One PO per vendor (order items grouped by item.vendorId).
+ * Create PurchaseOrder(s) for an approved order. One PO per supplier (order items grouped by item.supplierId).
  * Called when Admin approves a client order (Step 3).
  */
 export const createPurchaseOrdersForApprovedOrder = async (
 	prisma: PrismaClient,
 	orderId: string,
 	approvedBy?: string,
-): Promise<{ id: string; poNumber: string; vendorId: string }[]> => {
+): Promise<{ id: string; poNumber: string; supplierId: string }[]> => {
 	const order = await prisma.order.findUnique({
 		where: { id: orderId },
 		include: {
 			orderItems: {
 				include: {
 					item: {
-						select: { id: true, vendorId: true, sku: true, name: true },
+						select: { id: true, supplierId: true, sku: true, name: true },
 					},
 				},
 			},
@@ -37,11 +37,11 @@ export const createPurchaseOrdersForApprovedOrder = async (
 		return [];
 	}
 
-	// Group order items by vendorId
-	const byVendor = new Map<
+	// Group order items by supplierId
+	const bySupplier = new Map<
 		string,
 		{
-			vendorId: string;
+			supplierId: string;
 			items: {
 				itemId: string;
 				sku: string;
@@ -53,14 +53,14 @@ export const createPurchaseOrdersForApprovedOrder = async (
 	>();
 
 	for (const oi of order.orderItems) {
-		const vid = oi.item.vendorId;
-		if (!byVendor.has(vid)) {
-			byVendor.set(vid, {
-				vendorId: vid,
+		const sid = oi.item.supplierId;
+		if (!bySupplier.has(sid)) {
+			bySupplier.set(sid, {
+				supplierId: sid,
 				items: [],
 			});
 		}
-		byVendor.get(vid)!.items.push({
+		bySupplier.get(sid)!.items.push({
 			itemId: oi.item.id,
 			sku: oi.item.sku,
 			description: oi.item.name,
@@ -69,26 +69,26 @@ export const createPurchaseOrdersForApprovedOrder = async (
 		});
 	}
 
-	const created: { id: string; poNumber: string; vendorId: string }[] = [];
+	const created: { id: string; poNumber: string; supplierId: string }[] = [];
 	const approvedAt = new Date();
 
-	for (const [, group] of byVendor) {
+	for (const [, group] of bySupplier) {
 		const poNumber = await generatePONumber(prisma);
 		const po = await prisma.purchaseOrder.create({
 			data: {
 				organizationId: order.organizationId,
 				poNumber,
 				orderId: order.id,
-				vendorId: group.vendorId,
+				supplierId: group.supplierId,
 				status: "PENDING",
 				items: group.items as any,
 				approvedBy: approvedBy ?? undefined,
 				approvedAt,
 			},
 		});
-		created.push({ id: po.id, poNumber: po.poNumber, vendorId: po.vendorId });
+		created.push({ id: po.id, poNumber: po.poNumber, supplierId: po.supplierId });
 		poServiceLogger.info(
-			`Created PO ${po.poNumber} for order ${order.orderNumber}, vendor ${group.vendorId}`,
+			`Created PO ${po.poNumber} for order ${order.orderNumber}, supplier ${group.supplierId}`,
 		);
 	}
 

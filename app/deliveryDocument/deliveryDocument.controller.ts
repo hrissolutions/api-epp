@@ -33,7 +33,7 @@ export const controller = (prisma: PrismaClient) => {
 					correspondingDocumentId: data.correspondingDocumentId ?? undefined,
 					purchaseOrderId: data.purchaseOrderId ?? undefined,
 					orderId: data.orderId ?? undefined,
-					vendorId: data.vendorId ?? undefined,
+					supplierId: data.supplierId ?? undefined,
 					fromLocation: data.fromLocation ?? undefined,
 					toName: data.toName ?? undefined,
 					toAddress: data.toAddress ?? undefined,
@@ -50,7 +50,7 @@ export const controller = (prisma: PrismaClient) => {
 				},
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true } },
+					supplier: { select: { id: true, name: true } },
 					purchaseOrder: { select: { id: true, poNumber: true } },
 				},
 			});
@@ -108,7 +108,7 @@ export const controller = (prisma: PrismaClient) => {
 					orderBy: { documentDate: "desc" },
 					include: {
 						order: { select: { id: true, orderNumber: true } },
-						vendor: { select: { id: true, name: true } },
+						supplier: { select: { id: true, name: true } },
 						purchaseOrder: { select: { id: true, poNumber: true } },
 					},
 				}),
@@ -141,7 +141,7 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true } },
+					supplier: { select: { id: true, name: true } },
 					purchaseOrder: { select: { id: true, poNumber: true } },
 					correspondingDo: true,
 					receiptsForThisDo: true,
@@ -185,7 +185,7 @@ export const controller = (prisma: PrismaClient) => {
 				data: validation.data,
 				include: {
 					order: { select: { orderNumber: true } },
-					vendor: { select: { name: true } },
+					supplier: { select: { name: true } },
 				},
 			});
 			res.status(200).json(

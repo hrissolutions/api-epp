@@ -50,8 +50,8 @@ export const ItemSchema = z.object({
 	categoryId: z.string().refine((val) => isValidObjectId(val), {
 		message: "Invalid categoryId ObjectId format",
 	}),
-	vendorId: z.string().refine((val) => isValidObjectId(val), {
-		message: "Invalid vendorId ObjectId format",
+	supplierId: z.string().refine((val) => isValidObjectId(val), {
+		message: "Invalid supplierId ObjectId format",
 	}),
 
 	// Item type
@@ -88,23 +88,29 @@ export const CreateItemSchema = ItemSchema.omit({
 	id: true,
 	createdAt: true,
 	updatedAt: true,
-}).partial({
-	description: true,
-	costPrice: true,
-	imageUrl: true,
-	images: true,
-	specifications: true,
-	stockQuantity: true,
-	lowStockThreshold: true,
-	isActive: true,
-	isFeatured: true,
-	isAvailable: true,
-	itemType: true,
-}).extend({
-	organizationId: z.string().refine((val) => !val || isValidObjectId(val), {
-		message: "Invalid organizationId ObjectId format",
-	}).optional().nullable(),
-});
+})
+	.partial({
+		description: true,
+		costPrice: true,
+		imageUrl: true,
+		images: true,
+		specifications: true,
+		stockQuantity: true,
+		lowStockThreshold: true,
+		isActive: true,
+		isFeatured: true,
+		isAvailable: true,
+		itemType: true,
+	})
+	.extend({
+		organizationId: z
+			.string()
+			.refine((val) => !val || isValidObjectId(val), {
+				message: "Invalid organizationId ObjectId format",
+			})
+			.optional()
+			.nullable(),
+	});
 
 export type CreateItem = z.infer<typeof CreateItemSchema>;
 

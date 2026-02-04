@@ -7,16 +7,18 @@ All database queries are now automatically filtered by `organizationId` from the
 ## Implementation Status
 
 ### ✅ Completed:
+
 - Created `helper/organization-filter.ts` with `addOrganizationFilter` helper
 - Updated all controllers to import `addOrganizationFilter`
 - Updated `getAll` methods in all controllers
 - Updated `getById`, `update`, and `remove` methods in:
-  - Item controller
-  - Category controller
-  - Vendor controller
-  - Order controller
+    - Item controller
+    - Category controller
+    - Supplier controller
+    - Order controller
 
 ### ⚠️ Remaining:
+
 - Update `getById`, `update`, and `remove` methods in remaining controllers
 
 ## Pattern to Apply
@@ -24,57 +26,63 @@ All database queries are now automatically filtered by `organizationId` from the
 ### For getById methods:
 
 **Before:**
+
 ```typescript
 const query: Prisma.ModelFindFirstArgs = {
-    where: { id },
+	where: { id },
 };
 ```
 
 **After:**
+
 ```typescript
 let whereClause: Prisma.ModelWhereInput = { id };
 whereClause = addOrganizationFilter(req, whereClause);
 
 const query: Prisma.ModelFindFirstArgs = {
-    where: whereClause,
+	where: whereClause,
 };
 ```
 
 ### For update methods:
 
 **Before:**
+
 ```typescript
 const existingModel = await prisma.model.findFirst({
-    where: { id },
+	where: { id },
 });
 ```
 
 **After:**
+
 ```typescript
 let whereClause: Prisma.ModelWhereInput = { id };
 whereClause = addOrganizationFilter(req, whereClause);
 
 const existingModel = await prisma.model.findFirst({
-    where: whereClause,
+	where: whereClause,
 });
 ```
 
 ### For remove methods:
 
 **Before:**
+
 ```typescript
 const existingModel = await prisma.model.findFirst({
-    where: { id },
+	where: { id },
 });
 ```
 
 **After:**
+
 ```typescript
 let whereClause: Prisma.ModelWhereInput = { id };
 whereClause = addOrganizationFilter(req, whereClause);
 
 const existingModel = await prisma.model.findFirst({
-    where: whereClause,
+	where: whereClause,
 });
 ```
 
@@ -82,7 +90,7 @@ const existingModel = await prisma.model.findFirst({
 
 1. ✅ Item - DONE
 2. ✅ Category - DONE
-3. ✅ Vendor - DONE
+3. ✅ Supplier - DONE
 4. ✅ Order - DONE
 5. ⚠️ CartItem - getAll done, need getById/update/remove
 6. ⚠️ WishlistItem - getAll done, need getById/update/remove
@@ -109,6 +117,7 @@ const existingModel = await prisma.model.findFirst({
 ## Testing
 
 After implementation, test that:
+
 - Users can only see their organization's data
 - Users cannot access other organizations' data
 - Updates/deletes are scoped to user's organization

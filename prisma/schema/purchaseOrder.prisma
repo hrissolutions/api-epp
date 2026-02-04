@@ -1,35 +1,35 @@
-// Admin's order/request to Vendor. Created when Admin approves a client Order.
-// Flow: Client Order → Admin approves → Admin creates PO to Vendor (for that order's items) → Vendor DO → Admin DR → Admin DO → Client DR.
-// No bulk: each client order, when approved, triggers Admin to order those items from the Vendor.
+// Admin's order/request to Supplier. Created when Admin approves a client Order.
+// Flow: Client Order → Admin approves → Admin creates PO to Supplier (for that order's items) → Supplier DO → Admin DR → Admin DO → Client DR.
+// No bulk: each client order, when approved, triggers Admin to order those items from the Supplier.
 
 model PurchaseOrder {
   id             String  @id @default(auto()) @map("_id") @db.ObjectId
   organizationId String? @db.ObjectId
 
   poNumber String @unique // Admin's PO number (e.g. PO-2025-001)
-  orderId  String @db.ObjectId // Client order that was approved; we request/order these items from vendor
-  vendorId String @db.ObjectId
+  orderId  String @db.ObjectId // Client order that was approved; we request/order these items from supplier
+  supplierId String @db.ObjectId
 
   status PurchaseOrderStatus @default(PENDING)
 
-  // Items requested from vendor (from approved order's orderItems, or derived)
+  // Items requested from supplier (from approved order's orderItems, or derived)
   items Json? // e.g. [{ itemId, sku, description, quantity, unitPrice }]
 
-  approvedBy     String?   @db.ObjectId // Admin who approved the client order (or who created PO)
-  approvedAt     DateTime? // When client order was approved
-  sentToVendorAt DateTime? // When PO was sent to vendor
+  approvedBy       String?   @db.ObjectId // Admin who approved the client order (or who created PO)
+  approvedAt       DateTime? // When client order was approved
+  sentToSupplierAt DateTime? // When PO was sent to supplier
 
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendor            Vendor             @relation(fields: [vendorId], references: [id], onDelete: Restrict)
-  deliveryDocuments DeliveryDocument[] // Vendor DO(s) and Admin DR for this PO
+  supplier          Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  deliveryDocuments DeliveryDocument[] // Supplier DO(s) and Admin DR for this PO
 
   @@index([organizationId])
   @@index([orderId])
-  @@index([vendorId])
+  @@index([supplierId])
   @@index([status])
   @@index([createdAt])
   @@map("purchaseOrders")
@@ -37,10 +37,10 @@ model PurchaseOrder {
 
 enum PurchaseOrderStatus {
   PENDING // Created, not yet approved
-  APPROVED // Admin approved PO (sent to vendor)
-  CONFIRMED // Vendor confirmed; Vendor DO is auto-created
-  SENT // Sent to vendor (optional)
-  SHIPPED // Vendor shipped
+  APPROVED // Admin approved PO (sent to supplier)
+  CONFIRMED // Supplier confirmed; Supplier DO is auto-created
+  SENT // Sent to supplier (optional)
+  SHIPPED // Supplier shipped
   RECEIVED // Admin received (Admin DR signed)
   CANCELLED
 }

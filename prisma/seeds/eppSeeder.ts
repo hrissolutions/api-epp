@@ -7,11 +7,11 @@ export async function seedEPP() {
 
 	try {
 		// ==========================================
-		// 1. SEED VENDOR
+		// 1. SEED SUPPLIER
 		// ==========================================
-		console.log("🏢 Creating vendor...");
+		console.log("🏢 Creating supplier...");
 
-		const vendor = await prisma.vendor.upsert({
+		const supplier = await prisma.supplier.upsert({
 			where: { code: "UZARO" },
 			update: {},
 			create: {
@@ -27,7 +27,7 @@ export async function seedEPP() {
 			},
 		});
 
-		console.log(`✅ Vendor created: ${vendor.name} (${vendor.id})`);
+		console.log(`✅ Supplier created: ${supplier.name} (${supplier.id})`);
 
 		// ==========================================
 		// 2. SEED CATEGORIES (Self-referencing hierarchy)
@@ -144,7 +144,7 @@ export async function seedEPP() {
 				description:
 					"Apple's latest flagship smartphone featuring A17 Pro chip, 48MP camera system, and titanium design",
 				categoryId: smartphonesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 79990,
 				sellingPrice: 74990,
 				costPrice: 65000,
@@ -184,7 +184,7 @@ export async function seedEPP() {
 				description:
 					"Samsung's premium flagship with S Pen, 200MP camera, and Galaxy AI features",
 				categoryId: smartphonesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 74990,
 				sellingPrice: 69990,
 				costPrice: 60000,
@@ -224,7 +224,7 @@ export async function seedEPP() {
 				description:
 					"Google's AI-powered smartphone with Tensor G3 chip and advanced computational photography",
 				categoryId: smartphonesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 54990,
 				sellingPrice: 49990,
 				costPrice: 42000,
@@ -259,7 +259,7 @@ export async function seedEPP() {
 				description:
 					"Flagship killer with Snapdragon 8 Gen 3, Hasselblad cameras, and 100W charging",
 				categoryId: smartphonesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 44990,
 				sellingPrice: 41990,
 				costPrice: 35000,
@@ -298,7 +298,7 @@ export async function seedEPP() {
 				description:
 					"Powerful laptop with M3 Pro chip, 18GB unified memory, and 512GB SSD for professionals",
 				categoryId: laptopsCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 129990,
 				sellingPrice: 119990,
 				costPrice: 100000,
@@ -338,7 +338,7 @@ export async function seedEPP() {
 				description:
 					"Premium Windows laptop with Intel Core Ultra 7, 16GB RAM, and stunning OLED display",
 				categoryId: laptopsCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 99990,
 				sellingPrice: 94990,
 				costPrice: 80000,
@@ -378,7 +378,7 @@ export async function seedEPP() {
 				description:
 					"High-performance gaming laptop with RTX 4070, Intel Core i9, and 240Hz display",
 				categoryId: laptopsCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 119990,
 				sellingPrice: 109990,
 				costPrice: 90000,
@@ -413,7 +413,7 @@ export async function seedEPP() {
 				description:
 					"Ultra-light business laptop with Intel vPro, 14-inch 2.8K OLED, and all-day battery",
 				categoryId: laptopsCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 109990,
 				sellingPrice: 99990,
 				costPrice: 85000,
@@ -452,7 +452,7 @@ export async function seedEPP() {
 				description:
 					"Fast charging power adapter compatible with iPhone, iPad, and Apple Watch",
 				categoryId: chargersCablesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 1190,
 				sellingPrice: 999,
 				costPrice: 700,
@@ -484,7 +484,7 @@ export async function seedEPP() {
 				description:
 					"High-capacity power bank with 140W output, perfect for laptops and smartphones",
 				categoryId: chargersCablesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 8990,
 				sellingPrice: 7990,
 				costPrice: 5500,
@@ -521,7 +521,7 @@ export async function seedEPP() {
 				description:
 					"Industry-leading noise canceling wireless headphones with exceptional sound quality",
 				categoryId: accessoriesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 19990,
 				sellingPrice: 17990,
 				costPrice: 14000,
@@ -559,7 +559,7 @@ export async function seedEPP() {
 				name: "Apple AirPods Pro (2nd Gen)",
 				description: "Active Noise Cancellation, Adaptive Audio, and USB-C charging case",
 				categoryId: accessoriesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 14990,
 				sellingPrice: 13490,
 				costPrice: 10000,
@@ -593,7 +593,7 @@ export async function seedEPP() {
 				description:
 					"Advanced wireless mouse with 8K DPI sensor, quiet clicks, and MagSpeed scroll wheel",
 				categoryId: accessoriesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 5990,
 				sellingPrice: 5290,
 				costPrice: 3800,
@@ -630,7 +630,7 @@ export async function seedEPP() {
 				description:
 					"9-in-1 electric pressure cooker with stainless steel inner pot and 15 one-touch programs",
 				categoryId: kitchenCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 6990,
 				sellingPrice: 5990,
 				costPrice: 4000,
@@ -664,7 +664,7 @@ export async function seedEPP() {
 				description:
 					"1100-watt professional blender with Total Crushing Technology for ice and frozen fruits",
 				categoryId: kitchenCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 5490,
 				sellingPrice: 4790,
 				costPrice: 3200,
@@ -697,7 +697,7 @@ export async function seedEPP() {
 				description:
 					"Semi-automatic espresso machine with integrated grinder for fresh espresso",
 				categoryId: kitchenCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 34990,
 				sellingPrice: 31990,
 				costPrice: 25000,
@@ -735,7 +735,7 @@ export async function seedEPP() {
 				description:
 					"Artisan Series 5-Quart tilt-head stand mixer with 10 speeds and multiple attachments",
 				categoryId: kitchenCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 24990,
 				sellingPrice: 22490,
 				costPrice: 18000,
@@ -773,7 +773,7 @@ export async function seedEPP() {
 				description:
 					"Premium flagship with Leica optics, Snapdragon 8 Gen 3, and 90W HyperCharge",
 				categoryId: smartphonesCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 59990,
 				sellingPrice: 54990,
 				costPrice: 45000,
@@ -808,7 +808,7 @@ export async function seedEPP() {
 				description:
 					"Premium 2-in-1 convertible laptop with Intel Core Ultra 7 and 3K OLED touchscreen",
 				categoryId: laptopsCategory.id,
-				vendorId: vendor.id,
+				supplierId: supplier.id,
 				retailPrice: 94990,
 				sellingPrice: 89990,
 				costPrice: 75000,
@@ -856,7 +856,7 @@ export async function seedEPP() {
 		// SUMMARY
 		// ==========================================
 		console.log("\n📊 EPP Seeding Summary:");
-		console.log("   🏢 Vendors: 1");
+		console.log("   🏢 Suppliers: 1");
 		console.log("   📂 Categories: 7 (with hierarchy)");
 		console.log(`   📦 Items: ${items.length}`);
 		console.log("\n🎉 EPP seeding completed successfully!");

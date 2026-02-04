@@ -20,7 +20,7 @@ import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
 import { createTransactionForOrder } from "../../helper/transactionService";
-import { createApprovalChain } from "../../helper/approvalService";
+import { createApprovalChain, findMatchingWorkflow } from "../../helper/approvalService";
 import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { z } from "zod";
 
@@ -913,6 +913,21 @@ export const controller = (prisma: PrismaClient) => {
 					{ field: "total", message: "Order total must be greater than 0" },
 				]);
 				res.status(400).json(errorResponse);
+				return;
+			}
+
+			// Require a matching approval workflow before creating the order
+			const matchingWorkflow = await findMatchingWorkflow(prisma, total, paymentType);
+			if (!matchingWorkflow) {
+				cartItemLogger.warn(
+					`Checkout rejected: no approval workflow for total=${total}, paymentType=${paymentType}`,
+				);
+				res.status(400).json(
+					buildErrorResponse(
+						"No approval workflow is configured for this order amount and payment type. Please contact your administrator or choose different options.",
+						400,
+					),
+				);
 				return;
 			}
 

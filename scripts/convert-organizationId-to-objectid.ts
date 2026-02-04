@@ -39,7 +39,7 @@ async function convertOrganizationIdToObjectId() {
 		const models = [
 			{ name: "Item", collection: "items" },
 			{ name: "Category", collection: "categories" },
-			{ name: "Vendor", collection: "vendors" },
+			{ name: "Supplier", collection: "suppliers" },
 			{ name: "CartItem", collection: "cartItems" },
 			{ name: "WishlistItem", collection: "wishlistItems" },
 			{ name: "Order", collection: "orders" },

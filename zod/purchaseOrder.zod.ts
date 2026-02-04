@@ -23,7 +23,7 @@ export const PurchaseOrderSchema = z.object({
 	id: z.string().refine((val) => isValidObjectId(val), { message: "Invalid ObjectId" }),
 	poNumber: z.string(),
 	orderId: z.string().refine((val) => isValidObjectId(val), { message: "Invalid orderId" }),
-	vendorId: z.string().refine((val) => isValidObjectId(val), { message: "Invalid vendorId" }),
+	supplierId: z.string().refine((val) => isValidObjectId(val), { message: "Invalid supplierId" }),
 	status: PurchaseOrderStatusEnum,
 	items: z.array(PurchaseOrderItemSchema).optional().nullable(),
 	approvedBy: z
@@ -32,7 +32,7 @@ export const PurchaseOrderSchema = z.object({
 		.optional()
 		.nullable(),
 	approvedAt: z.coerce.date().optional().nullable(),
-	sentToVendorAt: z.coerce.date().optional().nullable(),
+	sentToSupplierAt: z.coerce.date().optional().nullable(),
 	notes: z.string().optional().nullable(),
 	organizationId: z
 		.string()
@@ -64,7 +64,7 @@ export const UpdatePurchaseOrderSchema = PurchaseOrderSchema.omit({
 	id: true,
 	poNumber: true,
 	orderId: true,
-	vendorId: true,
+	supplierId: true,
 	createdAt: true,
 	updatedAt: true,
 }).partial();

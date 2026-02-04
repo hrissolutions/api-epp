@@ -691,7 +691,7 @@ export const controller = (prisma: PrismaClient) => {
 						// Create "order approved" notification for the employee
 						await createOrderApprovedNotificationIfNeeded(prisma, order.id);
 
-						// Step 3: Create PurchaseOrder(s) to Vendor for this order
+						// Step 3: Create PurchaseOrder(s) to Supplier for this order
 						try {
 							const pos = await createPurchaseOrdersForApprovedOrder(
 								prisma,

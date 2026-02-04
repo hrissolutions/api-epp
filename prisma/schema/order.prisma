@@ -58,7 +58,7 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // When approved: Admin orders/requests items from Vendor (one PO per order, no bulk)
+  // When approved: Admin orders/requests items from Supplier (one PO per order, no bulk)
   purchaseOrders    PurchaseOrder[]
   // Delivery docs: Admin DO (fulfilling this order) and Client DR (completing delivery)
   deliveryDocuments DeliveryDocument[]

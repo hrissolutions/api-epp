@@ -8,7 +8,7 @@ async function main() {
 	// Seed template data
 	// await seedTemplates();
 
-	// Seed EPP data (vendor, categories, products)
+	// Seed EPP data (supplier, categories, products)
 	await seedEPP();
 
 	console.log("Seeding completed successfully!");

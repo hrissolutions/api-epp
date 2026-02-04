@@ -14,6 +14,13 @@ This document provides complete sample JSON examples for all approval-related en
 
 ## ApprovalLevel
 
+**ApprovalLevel** = **role + rules** only. It does **not** have a sequence number (Level 1, 2, 3) and does **not** store the approver or approver details.
+
+- **ApprovalLevel** (role + rules): `role` (e.g. MANAGER, HR, FINANCE), `description`, `isRequired`, `autoApproveUnder`, `timeoutDays`. Defines _what kind_ of approval step (the rules).
+- **WorkflowApprovalLevel** = **level + approver and approver details**: `level` (1, 2, 3...), `approverId`, `approverName`, `approverEmail`. Defines _where_ in the workflow and _who_ approves at that step.
+
+The order of steps (Level 1, 2, 3) and the specific approver (and their details) are always in **WorkflowApprovalLevel**, not in ApprovalLevel.
+
 Base approval level definitions that define roles and their settings.
 
 ### Create ApprovalLevel
@@ -24,11 +31,11 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "role": "MANAGER",
-  "description": "Direct manager approval required for employee orders",
-  "isRequired": true,
-  "autoApproveUnder": 1000,
-  "timeoutDays": 3
+	"role": "MANAGER",
+	"description": "Direct manager approval required for employee orders",
+	"isRequired": true,
+	"autoApproveUnder": 1000,
+	"timeoutDays": 3
 }
 ```
 
@@ -36,11 +43,11 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "role": "HR",
-  "description": "HR department verification for employee benefits eligibility",
-  "isRequired": true,
-  "autoApproveUnder": null,
-  "timeoutDays": 5
+	"role": "HR",
+	"description": "HR department verification for employee benefits eligibility",
+	"isRequired": true,
+	"autoApproveUnder": null,
+	"timeoutDays": 5
 }
 ```
 
@@ -48,11 +55,11 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "role": "FINANCE",
-  "description": "Finance department approval for budget and payment processing",
-  "isRequired": true,
-  "autoApproveUnder": null,
-  "timeoutDays": 7
+	"role": "FINANCE",
+	"description": "Finance department approval for budget and payment processing",
+	"isRequired": true,
+	"autoApproveUnder": null,
+	"timeoutDays": 7
 }
 ```
 
@@ -60,11 +67,11 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "role": "DEPARTMENT_HEAD",
-  "description": "Department head approval for high-value orders",
-  "isRequired": true,
-  "autoApproveUnder": 5000,
-  "timeoutDays": 5
+	"role": "DEPARTMENT_HEAD",
+	"description": "Department head approval for high-value orders",
+	"isRequired": true,
+	"autoApproveUnder": 5000,
+	"timeoutDays": 5
 }
 ```
 
@@ -72,11 +79,11 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "role": "ADMIN",
-  "description": "System administrator approval for special cases",
-  "isRequired": false,
-  "autoApproveUnder": null,
-  "timeoutDays": 10
+	"role": "ADMIN",
+	"description": "System administrator approval for special cases",
+	"isRequired": false,
+	"autoApproveUnder": null,
+	"timeoutDays": 10
 }
 ```
 
@@ -84,20 +91,20 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "success": true,
-  "message": "Approval level created successfully",
-  "data": {
-    "approvalLevel": {
-      "id": "67890abcdef1234567890123",
-      "role": "MANAGER",
-      "description": "Direct manager approval required for employee orders",
-      "isRequired": true,
-      "autoApproveUnder": 1000,
-      "timeoutDays": 3,
-      "createdAt": "2026-01-26T10:00:00.000Z",
-      "updatedAt": "2026-01-26T10:00:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Approval level created successfully",
+	"data": {
+		"approvalLevel": {
+			"id": "67890abcdef1234567890123",
+			"role": "MANAGER",
+			"description": "Direct manager approval required for employee orders",
+			"isRequired": true,
+			"autoApproveUnder": 1000,
+			"timeoutDays": 3,
+			"createdAt": "2026-01-26T10:00:00.000Z",
+			"updatedAt": "2026-01-26T10:00:00.000Z"
+		}
+	}
 }
 ```
 
@@ -109,37 +116,37 @@ Base approval level definitions that define roles and their settings.
 
 ```json
 {
-  "success": true,
-  "data": {
-    "approvalLevels": [
-      {
-        "id": "67890abcdef1234567890123",
-        "role": "MANAGER",
-        "description": "Direct manager approval required",
-        "isRequired": true,
-        "autoApproveUnder": 1000,
-        "timeoutDays": 3,
-        "createdAt": "2026-01-26T10:00:00.000Z",
-        "updatedAt": "2026-01-26T10:00:00.000Z"
-      },
-      {
-        "id": "67890abcdef1234567890124",
-        "role": "HR",
-        "description": "HR department verification",
-        "isRequired": true,
-        "autoApproveUnder": null,
-        "timeoutDays": 5,
-        "createdAt": "2026-01-26T10:05:00.000Z",
-        "updatedAt": "2026-01-26T10:05:00.000Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 2,
-      "totalPages": 1
-    }
-  }
+	"success": true,
+	"data": {
+		"approvalLevels": [
+			{
+				"id": "67890abcdef1234567890123",
+				"role": "MANAGER",
+				"description": "Direct manager approval required",
+				"isRequired": true,
+				"autoApproveUnder": 1000,
+				"timeoutDays": 3,
+				"createdAt": "2026-01-26T10:00:00.000Z",
+				"updatedAt": "2026-01-26T10:00:00.000Z"
+			},
+			{
+				"id": "67890abcdef1234567890124",
+				"role": "HR",
+				"description": "HR department verification",
+				"isRequired": true,
+				"autoApproveUnder": null,
+				"timeoutDays": 5,
+				"createdAt": "2026-01-26T10:05:00.000Z",
+				"updatedAt": "2026-01-26T10:05:00.000Z"
+			}
+		],
+		"pagination": {
+			"page": 1,
+			"limit": 10,
+			"total": 2,
+			"totalPages": 1
+		}
+	}
 }
 ```
 
@@ -157,12 +164,12 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "name": "Standard Order Approval",
-  "description": "For orders under $5,000",
-  "isActive": true,
-  "minOrderAmount": 0,
-  "maxOrderAmount": 5000,
-  "requiresInstallment": false
+	"name": "Standard Order Approval",
+	"description": "For orders under $5,000",
+	"isActive": true,
+	"minOrderAmount": 0,
+	"maxOrderAmount": 5000,
+	"requiresInstallment": false
 }
 ```
 
@@ -170,12 +177,12 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "name": "High-Value Order Approval",
-  "description": "For orders between $5,000 and $20,000",
-  "isActive": true,
-  "minOrderAmount": 5000,
-  "maxOrderAmount": 20000,
-  "requiresInstallment": false
+	"name": "High-Value Order Approval",
+	"description": "For orders between $5,000 and $20,000",
+	"isActive": true,
+	"minOrderAmount": 5000,
+	"maxOrderAmount": 20000,
+	"requiresInstallment": false
 }
 ```
 
@@ -183,12 +190,12 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "name": "Installment Order Approval",
-  "description": "For all orders with installment payments",
-  "isActive": true,
-  "minOrderAmount": 0,
-  "maxOrderAmount": null,
-  "requiresInstallment": true
+	"name": "Installment Order Approval",
+	"description": "For all orders with installment payments",
+	"isActive": true,
+	"minOrderAmount": 0,
+	"maxOrderAmount": null,
+	"requiresInstallment": true
 }
 ```
 
@@ -196,12 +203,12 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "name": "Premium Order Approval",
-  "description": "For orders over $20,000",
-  "isActive": true,
-  "minOrderAmount": 20000,
-  "maxOrderAmount": null,
-  "requiresInstallment": false
+	"name": "Premium Order Approval",
+	"description": "For orders over $20,000",
+	"isActive": true,
+	"minOrderAmount": 20000,
+	"maxOrderAmount": null,
+	"requiresInstallment": false
 }
 ```
 
@@ -209,21 +216,21 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "success": true,
-  "message": "Approval workflow created successfully",
-  "data": {
-    "approvalWorkflow": {
-      "id": "67890abcdef1234567890125",
-      "name": "Standard Order Approval",
-      "description": "For orders under $5,000",
-      "isActive": true,
-      "minOrderAmount": 0,
-      "maxOrderAmount": 5000,
-      "requiresInstallment": false,
-      "createdAt": "2026-01-26T10:10:00.000Z",
-      "updatedAt": "2026-01-26T10:10:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Approval workflow created successfully",
+	"data": {
+		"approvalWorkflow": {
+			"id": "67890abcdef1234567890125",
+			"name": "Standard Order Approval",
+			"description": "For orders under $5,000",
+			"isActive": true,
+			"minOrderAmount": 0,
+			"maxOrderAmount": 5000,
+			"requiresInstallment": false,
+			"createdAt": "2026-01-26T10:10:00.000Z",
+			"updatedAt": "2026-01-26T10:10:00.000Z"
+		}
+	}
 }
 ```
 
@@ -235,28 +242,28 @@ Workflow templates that define conditions and rules for order approval.
 
 ```json
 {
-  "success": true,
-  "data": {
-    "approvalWorkflows": [
-      {
-        "id": "67890abcdef1234567890125",
-        "name": "Standard Order Approval",
-        "description": "For orders under $5,000",
-        "isActive": true,
-        "minOrderAmount": 0,
-        "maxOrderAmount": 5000,
-        "requiresInstallment": false,
-        "createdAt": "2026-01-26T10:10:00.000Z",
-        "updatedAt": "2026-01-26T10:10:00.000Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 1,
-      "totalPages": 1
-    }
-  }
+	"success": true,
+	"data": {
+		"approvalWorkflows": [
+			{
+				"id": "67890abcdef1234567890125",
+				"name": "Standard Order Approval",
+				"description": "For orders under $5,000",
+				"isActive": true,
+				"minOrderAmount": 0,
+				"maxOrderAmount": 5000,
+				"requiresInstallment": false,
+				"createdAt": "2026-01-26T10:10:00.000Z",
+				"updatedAt": "2026-01-26T10:10:00.000Z"
+			}
+		],
+		"pagination": {
+			"page": 1,
+			"limit": 10,
+			"total": 1,
+			"totalPages": 1
+		}
+	}
 }
 ```
 
@@ -264,7 +271,12 @@ Workflow templates that define conditions and rules for order approval.
 
 ## WorkflowApprovalLevel
 
-Links workflows to approval levels, defining the sequence and assigning specific approvers.
+**WorkflowApprovalLevel** = **level + approver and approver details**. It links a workflow to an ApprovalLevel (role + rules) and adds:
+
+- **Level**: sequence in this workflow (`level`: 1, 2, 3...).
+- **Approver and approver details**: the person who approves at this step — `approverId`, `approverName`, `approverEmail` (used for notifications and display).
+
+ApprovalLevel has no approver fields; the approver and their details are only stored here, per workflow.
 
 ### Create WorkflowApprovalLevel
 
@@ -274,12 +286,12 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "workflowId": "67890abcdef1234567890125",
-  "approvalLevelId": "67890abcdef1234567890123",
-  "level": 1,
-  "approverId": "67890abcdef1234567890101",
-  "approverName": "John Doe",
-  "approverEmail": "john.doe@company.com"
+	"workflowId": "67890abcdef1234567890125",
+	"approvalLevelId": "67890abcdef1234567890123",
+	"level": 1,
+	"approverId": "67890abcdef1234567890101",
+	"approverName": "John Doe",
+	"approverEmail": "john.doe@company.com"
 }
 ```
 
@@ -287,12 +299,12 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "workflowId": "67890abcdef1234567890125",
-  "approvalLevelId": "67890abcdef1234567890124",
-  "level": 2,
-  "approverId": "67890abcdef1234567890102",
-  "approverName": "Jane Smith",
-  "approverEmail": "jane.smith@company.com"
+	"workflowId": "67890abcdef1234567890125",
+	"approvalLevelId": "67890abcdef1234567890124",
+	"level": 2,
+	"approverId": "67890abcdef1234567890102",
+	"approverName": "Jane Smith",
+	"approverEmail": "jane.smith@company.com"
 }
 ```
 
@@ -300,12 +312,12 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "workflowId": "67890abcdef1234567890125",
-  "approvalLevelId": "67890abcdef1234567890126",
-  "level": 3,
-  "approverId": "67890abcdef1234567890103",
-  "approverName": "Bob Johnson",
-  "approverEmail": "bob.johnson@company.com"
+	"workflowId": "67890abcdef1234567890125",
+	"approvalLevelId": "67890abcdef1234567890126",
+	"level": 3,
+	"approverId": "67890abcdef1234567890103",
+	"approverName": "Bob Johnson",
+	"approverEmail": "bob.johnson@company.com"
 }
 ```
 
@@ -313,12 +325,12 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "workflowId": "67890abcdef1234567890125",
-  "approvalLevelId": "67890abcdef1234567890123",
-  "level": 1,
-  "approverId": null,
-  "approverName": null,
-  "approverEmail": null
+	"workflowId": "67890abcdef1234567890125",
+	"approvalLevelId": "67890abcdef1234567890123",
+	"level": 1,
+	"approverId": null,
+	"approverName": null,
+	"approverEmail": null
 }
 ```
 
@@ -326,21 +338,21 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "success": true,
-  "message": "Workflow approval level created successfully",
-  "data": {
-    "workflowApprovalLevel": {
-      "id": "67890abcdef1234567890127",
-      "workflowId": "67890abcdef1234567890125",
-      "approvalLevelId": "67890abcdef1234567890123",
-      "level": 1,
-      "approverId": "67890abcdef1234567890101",
-      "approverName": "John Doe",
-      "approverEmail": "john.doe@company.com",
-      "createdAt": "2026-01-26T10:15:00.000Z",
-      "updatedAt": "2026-01-26T10:15:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Workflow approval level created successfully",
+	"data": {
+		"workflowApprovalLevel": {
+			"id": "67890abcdef1234567890127",
+			"workflowId": "67890abcdef1234567890125",
+			"approvalLevelId": "67890abcdef1234567890123",
+			"level": 1,
+			"approverId": "67890abcdef1234567890101",
+			"approverName": "John Doe",
+			"approverEmail": "john.doe@company.com",
+			"createdAt": "2026-01-26T10:15:00.000Z",
+			"updatedAt": "2026-01-26T10:15:00.000Z"
+		}
+	}
 }
 ```
 
@@ -352,36 +364,36 @@ Links workflows to approval levels, defining the sequence and assigning specific
 
 ```json
 {
-  "success": true,
-  "data": {
-    "workflowApprovalLevels": [
-      {
-        "id": "67890abcdef1234567890127",
-        "workflowId": "67890abcdef1234567890125",
-        "approvalLevelId": "67890abcdef1234567890123",
-        "level": 1,
-        "approverId": "67890abcdef1234567890101",
-        "approverName": "John Doe",
-        "approverEmail": "john.doe@company.com",
-        "workflow": {
-          "id": "67890abcdef1234567890125",
-          "name": "Standard Order Approval"
-        },
-        "approvalLevel": {
-          "id": "67890abcdef1234567890123",
-          "role": "MANAGER"
-        },
-        "createdAt": "2026-01-26T10:15:00.000Z",
-        "updatedAt": "2026-01-26T10:15:00.000Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 1,
-      "totalPages": 1
-    }
-  }
+	"success": true,
+	"data": {
+		"workflowApprovalLevels": [
+			{
+				"id": "67890abcdef1234567890127",
+				"workflowId": "67890abcdef1234567890125",
+				"approvalLevelId": "67890abcdef1234567890123",
+				"level": 1,
+				"approverId": "67890abcdef1234567890101",
+				"approverName": "John Doe",
+				"approverEmail": "john.doe@company.com",
+				"workflow": {
+					"id": "67890abcdef1234567890125",
+					"name": "Standard Order Approval"
+				},
+				"approvalLevel": {
+					"id": "67890abcdef1234567890123",
+					"role": "MANAGER"
+				},
+				"createdAt": "2026-01-26T10:15:00.000Z",
+				"updatedAt": "2026-01-26T10:15:00.000Z"
+			}
+		],
+		"pagination": {
+			"page": 1,
+			"limit": 10,
+			"total": 1,
+			"totalPages": 1
+		}
+	}
 }
 ```
 
@@ -403,45 +415,45 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "success": true,
-  "data": {
-    "orderApprovals": [
-      {
-        "id": "67890abcdef1234567890128",
-        "orderId": "67890abcdef1234567890200",
-        "approvalLevel": 1,
-        "approverRole": "MANAGER",
-        "approverId": "67890abcdef1234567890101",
-        "approverName": "John Doe",
-        "approverEmail": "john.doe@company.com",
-        "status": "PENDING",
-        "approvedAt": null,
-        "rejectedAt": null,
-        "comments": null,
-        "notifiedAt": "2026-01-26T10:20:00.000Z",
-        "reminderSentAt": null,
-        "createdAt": "2026-01-26T10:20:00.000Z",
-        "updatedAt": "2026-01-26T10:20:00.000Z"
-      },
-      {
-        "id": "67890abcdef1234567890129",
-        "orderId": "67890abcdef1234567890200",
-        "approvalLevel": 2,
-        "approverRole": "HR",
-        "approverId": "67890abcdef1234567890102",
-        "approverName": "Jane Smith",
-        "approverEmail": "jane.smith@company.com",
-        "status": "PENDING",
-        "approvedAt": null,
-        "rejectedAt": null,
-        "comments": null,
-        "notifiedAt": null,
-        "reminderSentAt": null,
-        "createdAt": "2026-01-26T10:20:00.000Z",
-        "updatedAt": "2026-01-26T10:20:00.000Z"
-      }
-    ]
-  }
+	"success": true,
+	"data": {
+		"orderApprovals": [
+			{
+				"id": "67890abcdef1234567890128",
+				"orderId": "67890abcdef1234567890200",
+				"approvalLevel": 1,
+				"approverRole": "MANAGER",
+				"approverId": "67890abcdef1234567890101",
+				"approverName": "John Doe",
+				"approverEmail": "john.doe@company.com",
+				"status": "PENDING",
+				"approvedAt": null,
+				"rejectedAt": null,
+				"comments": null,
+				"notifiedAt": "2026-01-26T10:20:00.000Z",
+				"reminderSentAt": null,
+				"createdAt": "2026-01-26T10:20:00.000Z",
+				"updatedAt": "2026-01-26T10:20:00.000Z"
+			},
+			{
+				"id": "67890abcdef1234567890129",
+				"orderId": "67890abcdef1234567890200",
+				"approvalLevel": 2,
+				"approverRole": "HR",
+				"approverId": "67890abcdef1234567890102",
+				"approverName": "Jane Smith",
+				"approverEmail": "jane.smith@company.com",
+				"status": "PENDING",
+				"approvedAt": null,
+				"rejectedAt": null,
+				"comments": null,
+				"notifiedAt": null,
+				"reminderSentAt": null,
+				"createdAt": "2026-01-26T10:20:00.000Z",
+				"updatedAt": "2026-01-26T10:20:00.000Z"
+			}
+		]
+	}
 }
 ```
 
@@ -453,7 +465,7 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "comments": "Order approved. Employee is eligible for this purchase."
+	"comments": "Order approved. Employee is eligible for this purchase."
 }
 ```
 
@@ -461,27 +473,27 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "success": true,
-  "message": "Order approval updated successfully",
-  "data": {
-    "orderApproval": {
-      "id": "67890abcdef1234567890128",
-      "orderId": "67890abcdef1234567890200",
-      "approvalLevel": 1,
-      "approverRole": "MANAGER",
-      "approverId": "67890abcdef1234567890101",
-      "approverName": "John Doe",
-      "approverEmail": "john.doe@company.com",
-      "status": "APPROVED",
-      "approvedAt": "2026-01-26T10:25:00.000Z",
-      "rejectedAt": null,
-      "comments": "Order approved. Employee is eligible for this purchase.",
-      "notifiedAt": "2026-01-26T10:20:00.000Z",
-      "reminderSentAt": null,
-      "createdAt": "2026-01-26T10:20:00.000Z",
-      "updatedAt": "2026-01-26T10:25:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Order approval updated successfully",
+	"data": {
+		"orderApproval": {
+			"id": "67890abcdef1234567890128",
+			"orderId": "67890abcdef1234567890200",
+			"approvalLevel": 1,
+			"approverRole": "MANAGER",
+			"approverId": "67890abcdef1234567890101",
+			"approverName": "John Doe",
+			"approverEmail": "john.doe@company.com",
+			"status": "APPROVED",
+			"approvedAt": "2026-01-26T10:25:00.000Z",
+			"rejectedAt": null,
+			"comments": "Order approved. Employee is eligible for this purchase.",
+			"notifiedAt": "2026-01-26T10:20:00.000Z",
+			"reminderSentAt": null,
+			"createdAt": "2026-01-26T10:20:00.000Z",
+			"updatedAt": "2026-01-26T10:25:00.000Z"
+		}
+	}
 }
 ```
 
@@ -493,7 +505,7 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "comments": "Order rejected. Order amount exceeds employee's credit limit."
+	"comments": "Order rejected. Order amount exceeds employee's credit limit."
 }
 ```
 
@@ -501,27 +513,27 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "success": true,
-  "message": "Order approval rejected",
-  "data": {
-    "orderApproval": {
-      "id": "67890abcdef1234567890128",
-      "orderId": "67890abcdef1234567890200",
-      "approvalLevel": 1,
-      "approverRole": "MANAGER",
-      "approverId": "67890abcdef1234567890101",
-      "approverName": "John Doe",
-      "approverEmail": "john.doe@company.com",
-      "status": "REJECTED",
-      "approvedAt": null,
-      "rejectedAt": "2026-01-26T10:25:00.000Z",
-      "comments": "Order rejected. Order amount exceeds employee's credit limit.",
-      "notifiedAt": "2026-01-26T10:20:00.000Z",
-      "reminderSentAt": null,
-      "createdAt": "2026-01-26T10:20:00.000Z",
-      "updatedAt": "2026-01-26T10:25:00.000Z"
-    }
-  }
+	"success": true,
+	"message": "Order approval rejected",
+	"data": {
+		"orderApproval": {
+			"id": "67890abcdef1234567890128",
+			"orderId": "67890abcdef1234567890200",
+			"approvalLevel": 1,
+			"approverRole": "MANAGER",
+			"approverId": "67890abcdef1234567890101",
+			"approverName": "John Doe",
+			"approverEmail": "john.doe@company.com",
+			"status": "REJECTED",
+			"approvedAt": null,
+			"rejectedAt": "2026-01-26T10:25:00.000Z",
+			"comments": "Order rejected. Order amount exceeds employee's credit limit.",
+			"notifiedAt": "2026-01-26T10:20:00.000Z",
+			"reminderSentAt": null,
+			"createdAt": "2026-01-26T10:20:00.000Z",
+			"updatedAt": "2026-01-26T10:25:00.000Z"
+		}
+	}
 }
 ```
 
@@ -533,34 +545,34 @@ OrderApprovals are automatically created when an order is created and a workflow
 
 ```json
 {
-  "success": true,
-  "data": {
-    "orderApprovals": [
-      {
-        "id": "67890abcdef1234567890128",
-        "orderId": "67890abcdef1234567890200",
-        "approvalLevel": 1,
-        "approverRole": "MANAGER",
-        "approverId": "67890abcdef1234567890101",
-        "approverName": "John Doe",
-        "approverEmail": "john.doe@company.com",
-        "status": "APPROVED",
-        "approvedAt": "2026-01-26T10:25:00.000Z",
-        "rejectedAt": null,
-        "comments": "Order approved",
-        "notifiedAt": "2026-01-26T10:20:00.000Z",
-        "reminderSentAt": null,
-        "createdAt": "2026-01-26T10:20:00.000Z",
-        "updatedAt": "2026-01-26T10:25:00.000Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 1,
-      "totalPages": 1
-    }
-  }
+	"success": true,
+	"data": {
+		"orderApprovals": [
+			{
+				"id": "67890abcdef1234567890128",
+				"orderId": "67890abcdef1234567890200",
+				"approvalLevel": 1,
+				"approverRole": "MANAGER",
+				"approverId": "67890abcdef1234567890101",
+				"approverName": "John Doe",
+				"approverEmail": "john.doe@company.com",
+				"status": "APPROVED",
+				"approvedAt": "2026-01-26T10:25:00.000Z",
+				"rejectedAt": null,
+				"comments": "Order approved",
+				"notifiedAt": "2026-01-26T10:20:00.000Z",
+				"reminderSentAt": null,
+				"createdAt": "2026-01-26T10:20:00.000Z",
+				"updatedAt": "2026-01-26T10:25:00.000Z"
+			}
+		],
+		"pagination": {
+			"page": 1,
+			"limit": 10,
+			"total": 1,
+			"totalPages": 1
+		}
+	}
 }
 ```
 
@@ -662,6 +674,7 @@ POST /api/workflowApprovalLevel
 ### Step 4: Order Creation (Auto-generates OrderApprovals)
 
 When an order is created with a total of $10,000, the system automatically:
+
 1. Matches the order to the "High-Value Order Approval" workflow
 2. Creates 3 OrderApproval records (one for each level)
 3. Sets all statuses to "PENDING"
@@ -728,9 +741,9 @@ PATCH /api/orderApproval/order_approval_003/approve
 
 ## API Endpoints Summary
 
-| Entity | Create | Get All | Get By ID | Update | Delete |
-|--------|--------|---------|-----------|--------|--------|
-| ApprovalLevel | POST `/api/approvalLevel` | GET `/api/approvalLevel` | GET `/api/approvalLevel/:id` | PATCH `/api/approvalLevel/:id` | DELETE `/api/approvalLevel/:id` |
-| ApprovalWorkflow | POST `/api/approvalWorkflow` | GET `/api/approvalWorkflow` | GET `/api/approvalWorkflow/:id` | PATCH `/api/approvalWorkflow/:id` | DELETE `/api/approvalWorkflow/:id` |
-| WorkflowApprovalLevel | POST `/api/workflowApprovalLevel` | GET `/api/workflowApprovalLevel` | GET `/api/workflowApprovalLevel/:id` | PATCH `/api/workflowApprovalLevel/:id` | DELETE `/api/workflowApprovalLevel/:id` |
-| OrderApproval | Auto-created | GET `/api/orderApproval` | GET `/api/orderApproval/:id` | PATCH `/api/orderApproval/:id/approve` or `/reject` | N/A |
+| Entity                | Create                            | Get All                          | Get By ID                            | Update                                              | Delete                                  |
+| --------------------- | --------------------------------- | -------------------------------- | ------------------------------------ | --------------------------------------------------- | --------------------------------------- |
+| ApprovalLevel         | POST `/api/approvalLevel`         | GET `/api/approvalLevel`         | GET `/api/approvalLevel/:id`         | PATCH `/api/approvalLevel/:id`                      | DELETE `/api/approvalLevel/:id`         |
+| ApprovalWorkflow      | POST `/api/approvalWorkflow`      | GET `/api/approvalWorkflow`      | GET `/api/approvalWorkflow/:id`      | PATCH `/api/approvalWorkflow/:id`                   | DELETE `/api/approvalWorkflow/:id`      |
+| WorkflowApprovalLevel | POST `/api/workflowApprovalLevel` | GET `/api/workflowApprovalLevel` | GET `/api/workflowApprovalLevel/:id` | PATCH `/api/workflowApprovalLevel/:id`              | DELETE `/api/workflowApprovalLevel/:id` |
+| OrderApproval         | Auto-created                      | GET `/api/orderApproval`         | GET `/api/orderApproval/:id`         | PATCH `/api/orderApproval/:id/approve` or `/reject` | N/A                                     |

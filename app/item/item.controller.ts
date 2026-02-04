@@ -311,7 +311,9 @@ export const controller = (prisma: PrismaClient) => {
 			// Debug logging
 			const orgId = (req as any).organizationId;
 			itemsLogger.info(`[DEBUG] OrganizationId from token: ${orgId}`);
-			itemsLogger.info(`[DEBUG] Where clause before filter: ${JSON.stringify(whereClause, null, 2)}`);
+			itemsLogger.info(
+				`[DEBUG] Where clause before filter: ${JSON.stringify(whereClause, null, 2)}`,
+			);
 
 			// Only show approved and available items by default
 			// Admin/internal endpoints can still override this via explicit filters if needed
@@ -333,7 +335,7 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Debug: Check total items and items with matching organizationId
 			const totalWithoutFilter = await prisma.item.count();
-			
+
 			// Test with raw MongoDB query to see actual data
 			let rawMongoCount = 0;
 			let rawMongoSample: any = null;
@@ -345,7 +347,7 @@ export const controller = (prisma: PrismaClient) => {
 					},
 				});
 				rawMongoCount = (rawCountResult as any).n || 0;
-				
+
 				// Get a sample document to see the actual type
 				const rawFindResult = await prisma.$runCommandRaw({
 					find: "items",
@@ -357,22 +359,28 @@ export const controller = (prisma: PrismaClient) => {
 				const docs = (rawFindResult as any).cursor?.firstBatch || [];
 				if (docs.length > 0) {
 					rawMongoSample = docs[0];
-					itemsLogger.info(`[DEBUG] Sample document organizationId type: ${typeof rawMongoSample.organizationId}, value: ${JSON.stringify(rawMongoSample.organizationId)}`);
+					itemsLogger.info(
+						`[DEBUG] Sample document organizationId type: ${typeof rawMongoSample.organizationId}, value: ${JSON.stringify(rawMongoSample.organizationId)}`,
+					);
 				}
 			} catch (error) {
 				itemsLogger.warn(`[DEBUG] Raw MongoDB query error: ${error}`);
 			}
-			
+
 			const totalWithOrgId = await prisma.item.count({
 				where: { organizationId: orgId || undefined },
 			});
 			const totalWithNullOrgId = await prisma.item.count({
 				where: { organizationId: null },
 			});
-			
+
 			itemsLogger.info(`[DEBUG] Total items in database (no filter): ${totalWithoutFilter}`);
-			itemsLogger.info(`[DEBUG] Raw MongoDB count with organizationId="${orgId}": ${rawMongoCount}`);
-			itemsLogger.info(`[DEBUG] Prisma count with organizationId="${orgId}": ${totalWithOrgId}`);
+			itemsLogger.info(
+				`[DEBUG] Raw MongoDB count with organizationId="${orgId}": ${rawMongoCount}`,
+			);
+			itemsLogger.info(
+				`[DEBUG] Prisma count with organizationId="${orgId}": ${totalWithOrgId}`,
+			);
 			itemsLogger.info(`[DEBUG] Items with organizationId=null: ${totalWithNullOrgId}`);
 			itemsLogger.info(`[DEBUG] Final where clause: ${JSON.stringify(whereClause, null, 2)}`);
 
@@ -834,36 +842,39 @@ export const controller = (prisma: PrismaClient) => {
 						continue;
 					}
 
-					// Look up vendor by code
-					let vendorId: string | null = null;
-					if (row.vendor && row.vendor.trim()) {
-						const vendor = await prisma.vendor.findFirst({
-							where: { code: row.vendor.trim() },
+					// Look up supplier by code (CSV column may still be named "vendor" for backward compatibility)
+					let supplierId: string | null = null;
+					const supplierCode = (row.supplier ?? row.vendor)?.trim();
+					if (supplierCode) {
+						const supplier = await prisma.supplier.findFirst({
+							where: { code: supplierCode },
 							select: { id: true },
 						});
 
-						if (!vendor) {
+						if (!supplier) {
 							errors.push({
 								row: i + 1,
 								sku: row.sku,
-								error: `Vendor not found with code: ${row.vendor}`,
+								error: `Supplier not found with code: ${supplierCode}`,
 							});
 							errorCount++;
 							itemsLogger.warn(
-								`Row ${i + 1} (SKU: ${row.sku}): Vendor not found with code: ${row.vendor}`,
+								`Row ${i + 1} (SKU: ${row.sku}): Supplier not found with code: ${supplierCode}`,
 							);
 							continue;
 						}
 
-						vendorId = vendor.id;
+						supplierId = supplier.id;
 					} else {
 						errors.push({
 							row: i + 1,
 							sku: row.sku,
-							error: "Vendor code is required",
+							error: "Supplier code is required",
 						});
 						errorCount++;
-						itemsLogger.warn(`Row ${i + 1} (SKU: ${row.sku}): Vendor code is missing`);
+						itemsLogger.warn(
+							`Row ${i + 1} (SKU: ${row.sku}): Supplier code is missing`,
+						);
 						continue;
 					}
 
@@ -983,7 +994,7 @@ export const controller = (prisma: PrismaClient) => {
 						description:
 							row.description && row.description.trim() ? row.description : null,
 						categoryId: categoryId,
-						vendorId: vendorId,
+						supplierId: supplierId,
 
 						// Item type
 						itemType: itemType,

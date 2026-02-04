@@ -773,7 +773,7 @@ export const processApproval = async (
 				// Create "order approved" notification for the employee
 				await createOrderApprovedNotificationIfNeeded(prisma, approval.orderId);
 
-				// Step 3: Create PurchaseOrder(s) to Vendor (one per vendor for this order's items)
+				// Step 3: Create PurchaseOrder(s) to Supplier (one per supplier for this order's items)
 				try {
 					const pos = await createPurchaseOrdersForApprovedOrder(
 						prisma,
