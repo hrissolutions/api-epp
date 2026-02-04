@@ -842,9 +842,9 @@ export const controller = (prisma: PrismaClient) => {
 						continue;
 					}
 
-					// Look up supplier by code (CSV column may still be named "vendor" for backward compatibility)
+					// Look up supplier by code (CSV column: supplier)
 					let supplierId: string | null = null;
-					const supplierCode = (row.supplier ?? row.vendor)?.trim();
+					const supplierCode = row.supplier?.trim();
 					if (supplierCode) {
 						const supplier = await prisma.supplier.findFirst({
 							where: { code: supplierCode },
