@@ -1,4 +1,4 @@
-model ApprovalLevel {
+model ApprovalType {
   id             String       @id @default(auto()) @map("_id") @db.ObjectId
   organizationId String?      @db.ObjectId
   role           ApproverRole
@@ -16,5 +16,5 @@ model ApprovalLevel {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
-  @@map("approvalLevels")
+  @@map("approvalTypes")
 }

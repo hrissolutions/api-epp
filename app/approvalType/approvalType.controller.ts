@@ -12,7 +12,7 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import { CreateVendorSchema, UpdateVendorSchema } from "../../zod/vendor.zod";
+import { CreateApprovalTypeSchema, UpdateApprovalTypeSchema } from "../../zod/approvalType.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
@@ -20,33 +20,32 @@ import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 
 const logger = getLogger();
-const vendorLogger = logger.child({ module: "vendor" });
+const approvalTypeLogger = logger.child({ module: "approvalType" });
 
-// Helper function to convert string booleans to actual booleans for form data
-const convertStringBooleans = (obj: any): any => {
+// Helper function to convert string numbers to actual numbers for form data
+const convertStringNumbers = (obj: any): any => {
 	if (obj === null || obj === undefined) {
 		return obj;
 	}
 
 	if (Array.isArray(obj)) {
-		return obj.map(convertStringBooleans);
+		return obj.map(convertStringNumbers);
 	}
 
 	if (typeof obj === "object" && obj.constructor === Object) {
 		const converted: any = {};
 		for (const [key, value] of Object.entries(obj)) {
-			converted[key] = convertStringBooleans(value);
+			converted[key] = convertStringNumbers(value);
 		}
 		return converted;
 	}
 
 	if (typeof obj === "string") {
-		// Convert string booleans to actual booleans
-		if (obj.toLowerCase() === "true") {
-			return true;
-		}
-		if (obj.toLowerCase() === "false") {
-			return false;
+		if (/^-?\d+\.?\d*$/.test(obj.trim()) && obj.trim() !== "") {
+			const num = parseFloat(obj);
+			if (!isNaN(num)) {
+				return num;
+			}
 		}
 		return obj;
 	}
@@ -63,79 +62,74 @@ export const controller = (prisma: PrismaClient) => {
 			contentType.includes("application/x-www-form-urlencoded") ||
 			contentType.includes("multipart/form-data")
 		) {
-			vendorLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
+			approvalTypeLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
 			requestData = transformFormDataToObject(req.body);
-			// Convert string booleans to actual booleans
-			requestData = convertStringBooleans(requestData);
-			vendorLogger.info(
+			requestData = convertStringNumbers(requestData);
+			approvalTypeLogger.info(
 				"Transformed form data to object structure:",
 				JSON.stringify(requestData, null, 2),
 			);
 		}
 
-		const validation = CreateVendorSchema.safeParse(requestData);
+		const validation = CreateApprovalTypeSchema.safeParse(requestData);
 		if (!validation.success) {
 			const formattedErrors = formatZodErrors(validation.error.format());
-			vendorLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+			approvalTypeLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 			const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 			res.status(400).json(errorResponse);
 			return;
 		}
 
 		try {
-			const vendor = await prisma.vendor.create({
+			const approvalType = await prisma.approvalType.create({
 				data: {
 					...validation.data,
 					organizationId: (req as any).organizationId || validation.data.organizationId,
 				} as any,
 			});
-			vendorLogger.info(`Vendor created successfully: ${vendor.id}`);
+			approvalTypeLogger.info(`ApprovalType created successfully: ${approvalType.id}`);
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
-				action: config.ACTIVITY_LOG.VENDOR.ACTIONS.CREATE_VENDOR,
-				description: `${config.ACTIVITY_LOG.VENDOR.DESCRIPTIONS.VENDOR_CREATED}: ${vendor.name || vendor.id}`,
+				action: "CREATE_APPROVAL_TYPE",
+				description: `Approval type created: ${approvalType.role}`,
 				page: {
 					url: req.originalUrl,
-					title: config.ACTIVITY_LOG.VENDOR.PAGES.VENDOR_CREATION,
+					title: "Approval Type Creation",
 				},
 			});
 
 			logAudit(req, {
 				userId: (req as any).user?.id || "unknown",
 				action: config.AUDIT_LOG.ACTIONS.CREATE,
-				resource: config.AUDIT_LOG.RESOURCES.VENDOR,
-				severity: config.AUDIT_LOG.SEVERITY.LOW,
-				entityType: config.AUDIT_LOG.ENTITY_TYPES.VENDOR,
-				entityId: vendor.id,
+				resource: "APPROVAL_TYPE",
+				severity: config.AUDIT_LOG.SEVERITY.MEDIUM,
+				entityType: "APPROVAL_TYPE",
+				entityId: approvalType.id,
 				changesBefore: null,
-				changesAfter: {
-					id: vendor.id,
-					name: vendor.name,
-					code: vendor.code,
-					email: vendor.email,
-					isActive: vendor.isActive,
-					createdAt: vendor.createdAt,
-					updatedAt: vendor.updatedAt,
-				},
-				description: `${config.AUDIT_LOG.VENDOR.DESCRIPTIONS.VENDOR_CREATED}: ${vendor.name || vendor.id}`,
+				changesAfter: approvalType,
+				description: `Approval type created: ${approvalType.id}`,
 			});
 
 			try {
-				await invalidateCache.byPattern("cache:vendor:list:*");
-				vendorLogger.info("Vendor list cache invalidated after creation");
+				await invalidateCache.byPattern("cache:approvalType:list:*");
+				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
+				approvalTypeLogger.info("ApprovalType cache invalidated after creation");
 			} catch (cacheError) {
-				vendorLogger.warn("Failed to invalidate cache after vendor creation:", cacheError);
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType creation:",
+					cacheError,
+				);
 			}
 
 			const successResponse = buildSuccessResponse(
-				config.SUCCESS.VENDOR.CREATED,
-				vendor,
+				"Approval type created successfully",
+				{ approvalType },
 				201,
 			);
 			res.status(201).json(successResponse);
 		} catch (error) {
-			vendorLogger.error(`${config.ERROR.VENDOR.CREATE_FAILED}: ${error}`);
+			approvalTypeLogger.error(`Failed to create approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -143,8 +137,9 @@ export const controller = (prisma: PrismaClient) => {
 			res.status(500).json(errorResponse);
 		}
 	};
+
 	const getAll = async (req: Request, res: Response, _next: NextFunction) => {
-		const validationResult = validateQueryParams(req, vendorLogger);
+		const validationResult = validateQueryParams(req, approvalTypeLogger);
 
 		if (!validationResult.isValid) {
 			res.status(400).json(validationResult.errorResponse);
@@ -166,25 +161,23 @@ export const controller = (prisma: PrismaClient) => {
 			groupBy,
 		} = validationResult.validatedParams!;
 
-		vendorLogger.info(
-			`Getting vendors, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
+		approvalTypeLogger.info(
+			`Getting approval types, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
 		);
 
 		try {
-			// Base where clause
-			const whereClause: Prisma.VendorWhereInput = {};
+			const whereClause: Prisma.ApprovalTypeWhereInput = {};
 
-			// search fields for vendors (name, code, description, contactName, email, phone)
-			const searchFields = ["name", "code", "description", "contactName", "email", "phone"];
+			const searchFields = ["role", "description"];
 			if (query) {
-				const searchConditions = buildSearchConditions("Vendor", query, searchFields);
+				const searchConditions = buildSearchConditions("ApprovalType", query, searchFields);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
 			}
 
 			if (filter) {
-				const filterConditions = buildFilterConditions("Vendor", filter);
+				const filterConditions = buildFilterConditions("ApprovalType", filter);
 				if (filterConditions.length > 0) {
 					whereClause.AND = filterConditions;
 				}
@@ -192,49 +185,53 @@ export const controller = (prisma: PrismaClient) => {
 
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
-			const [vendors, total] = await Promise.all([
-				document ? prisma.vendor.findMany(findManyQuery) : [],
-				count ? prisma.vendor.count({ where: whereClause }) : 0,
+			const [approvalTypes, total] = await Promise.all([
+				document ? prisma.approvalType.findMany(findManyQuery) : [],
+				count ? prisma.approvalType.count({ where: whereClause }) : 0,
 			]);
 
-			vendorLogger.info(`Retrieved ${vendors.length} vendors`);
+			approvalTypeLogger.info(`Retrieved ${approvalTypes.length} approval types`);
 			const processedData =
-				groupBy && document ? groupDataByField(vendors, groupBy as string) : vendors;
+				groupBy && document
+					? groupDataByField(approvalTypes, groupBy as string)
+					: approvalTypes;
 
 			const responseData: Record<string, any> = {
-				...(document && { vendors: processedData }),
+				...(document && { approvalTypes: processedData }),
 				...(count && { count: total }),
 				...(pagination && { pagination: buildPagination(total, page, limit) }),
 				...(groupBy && { groupedBy: groupBy }),
 			};
 
 			res.status(200).json(
-				buildSuccessResponse(config.SUCCESS.VENDOR.RETRIEVED_ALL, responseData, 200),
+				buildSuccessResponse("Approval types retrieved successfully", responseData, 200),
 			);
 		} catch (error) {
-			vendorLogger.error(`${config.ERROR.VENDOR.GET_ALL_FAILED}: ${error}`);
+			approvalTypeLogger.error(`Failed to get approval types: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
 		}
 	};
+
 	const getById = async (req: Request, res: Response, _next: NextFunction) => {
 		const { id: rawId } = req.params;
 		const { fields } = req.query;
 
 		try {
 			if (!rawId) {
-				vendorLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
-			// Ensure id is a string
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				vendorLogger.error(`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`);
+				approvalTypeLogger.error(
+					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
+				);
 				const errorResponse = buildErrorResponse(
 					config.ERROR.QUERY_PARAMS.POPULATE_MUST_BE_STRING,
 					400,
@@ -243,58 +240,61 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			vendorLogger.info(`${config.SUCCESS.VENDOR.GETTING_BY_ID}: ${id}`);
+			approvalTypeLogger.info(`Getting approval type by ID: ${id}`);
 
-			const cacheKey = `cache:vendor:byId:${id}:${fields || "full"}`;
-			let vendor = null;
+			const cacheKey = `cache:approvalType:byId:${id}:${fields || "full"}`;
+			let approvalType = null;
 
 			try {
 				if (redisClient.isClientConnected()) {
-					vendor = await redisClient.getJSON(cacheKey);
-					if (vendor) {
-						vendorLogger.info(`Vendor ${id} retrieved from direct Redis cache`);
+					approvalType = await redisClient.getJSON(cacheKey);
+					if (approvalType) {
+						approvalTypeLogger.info(`ApprovalType ${id} retrieved from cache`);
 					}
 				}
 			} catch (cacheError) {
-				vendorLogger.warn(`Redis cache retrieval failed for vendor ${id}:`, cacheError);
+				approvalTypeLogger.warn(
+					`Redis cache retrieval failed for approvalType ${id}:`,
+					cacheError,
+				);
 			}
 
-			if (!vendor) {
-				const query: Prisma.VendorFindFirstArgs = { where: { id } };
+			if (!approvalType) {
+				const query: Prisma.ApprovalTypeFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 
-				vendor = await prisma.vendor.findFirst(query);
+				approvalType = await prisma.approvalType.findFirst(query);
 
-				if (vendor && redisClient.isClientConnected()) {
+				if (approvalType && redisClient.isClientConnected()) {
 					try {
-						await redisClient.setJSON(cacheKey, vendor, 3600);
-						vendorLogger.info(`Vendor ${id} stored in direct Redis cache`);
+						await redisClient.setJSON(cacheKey, approvalType, 3600);
+						approvalTypeLogger.info(`ApprovalType ${id} stored in cache`);
 					} catch (cacheError) {
-						vendorLogger.warn(
-							`Failed to store vendor ${id} in Redis cache:`,
+						approvalTypeLogger.warn(
+							`Failed to store approvalType ${id} in cache:`,
 							cacheError,
 						);
 					}
 				}
 			}
 
-			if (!vendor) {
-				vendorLogger.error(`${config.ERROR.VENDOR.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.VENDOR.NOT_FOUND, 404);
+			if (!approvalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			vendorLogger.info(`${config.SUCCESS.VENDOR.RETRIEVED}: ${(vendor as any).id}`);
+			approvalTypeLogger.info(`Approval type retrieved: ${(approvalType as any).id}`);
 			const successResponse = buildSuccessResponse(
-				config.SUCCESS.VENDOR.RETRIEVED,
-				vendor,
+				"Approval type retrieved successfully",
+				approvalType,
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			vendorLogger.error(`${config.ERROR.VENDOR.ERROR_GETTING}: ${error}`);
+			approvalTypeLogger.error(`Error getting approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -308,40 +308,37 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			if (!rawId) {
-				vendorLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
-			// Ensure id is a string
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			let requestData = req.body;
 			const contentType = req.get("Content-Type") || "";
 
-			// Handle form data transformation for update as well
 			if (
 				contentType.includes("application/x-www-form-urlencoded") ||
 				contentType.includes("multipart/form-data")
 			) {
 				requestData = transformFormDataToObject(req.body);
-				// Convert string booleans to actual booleans
-				requestData = convertStringBooleans(requestData);
+				requestData = convertStringNumbers(requestData);
 			}
 
-			const validationResult = UpdateVendorSchema.safeParse(requestData);
+			const validationResult = UpdateApprovalTypeSchema.safeParse(requestData);
 
 			if (!validationResult.success) {
 				const formattedErrors = formatZodErrors(validationResult.error.format());
-				vendorLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+				approvalTypeLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 				const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
 			if (Object.keys(requestData).length === 0) {
-				vendorLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
+				approvalTypeLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
 				const errorResponse = buildErrorResponse(config.ERROR.COMMON.NO_UPDATE_FIELDS, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -349,43 +346,47 @@ export const controller = (prisma: PrismaClient) => {
 
 			const validatedData = validationResult.data;
 
-			vendorLogger.info(`Updating vendor: ${id}`);
+			approvalTypeLogger.info(`Updating approval type: ${id}`);
 
-			const existingVendor = await prisma.vendor.findFirst({
+			const existingApprovalType = await prisma.approvalType.findFirst({
 				where: { id },
 			});
 
-			if (!existingVendor) {
-				vendorLogger.error(`${config.ERROR.VENDOR.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.VENDOR.NOT_FOUND, 404);
+			if (!existingApprovalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
 			const prismaData = { ...validatedData };
 
-			const updatedVendor = await prisma.vendor.update({
+			const updatedApprovalType = await prisma.approvalType.update({
 				where: { id },
 				data: prismaData,
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:vendor:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:vendor:list:*");
-				vendorLogger.info(`Cache invalidated after vendor ${id} update`);
+				await invalidateCache.byPattern(`cache:approvalType:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:approvalType:list:*");
+				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
+				approvalTypeLogger.info(`Cache invalidated after approvalType ${id} update`);
 			} catch (cacheError) {
-				vendorLogger.warn("Failed to invalidate cache after vendor update:", cacheError);
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType update:",
+					cacheError,
+				);
 			}
 
-			vendorLogger.info(`${config.SUCCESS.VENDOR.UPDATED}: ${updatedVendor.id}`);
+			approvalTypeLogger.info(`Approval type updated: ${updatedApprovalType.id}`);
 			const successResponse = buildSuccessResponse(
-				config.SUCCESS.VENDOR.UPDATED,
-				{ vendor: updatedVendor },
+				"Approval type updated successfully",
+				{ approvalType: updatedApprovalType },
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			vendorLogger.error(`${config.ERROR.VENDOR.ERROR_UPDATING}: ${error}`);
+			approvalTypeLogger.error(`Error updating approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -399,45 +400,52 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			if (!rawId) {
-				vendorLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
-			// Ensure id is a string
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-			vendorLogger.info(`${config.SUCCESS.VENDOR.DELETED}: ${id}`);
+			approvalTypeLogger.info(`Deleting approval type: ${id}`);
 
-			const existingVendor = await prisma.vendor.findFirst({
+			const existingApprovalType = await prisma.approvalType.findFirst({
 				where: { id },
 			});
 
-			if (!existingVendor) {
-				vendorLogger.error(`${config.ERROR.VENDOR.NOT_FOUND}: ${id}`);
-				const errorResponse = buildErrorResponse(config.ERROR.VENDOR.NOT_FOUND, 404);
+			if (!existingApprovalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			await prisma.vendor.delete({
+			await prisma.approvalType.delete({
 				where: { id },
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:vendor:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:vendor:list:*");
-				vendorLogger.info(`Cache invalidated after vendor ${id} deletion`);
+				await invalidateCache.byPattern(`cache:approvalType:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:approvalType:list:*");
+				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
+				approvalTypeLogger.info(`Cache invalidated after approvalType ${id} deletion`);
 			} catch (cacheError) {
-				vendorLogger.warn("Failed to invalidate cache after vendor deletion:", cacheError);
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType deletion:",
+					cacheError,
+				);
 			}
 
-			vendorLogger.info(`${config.SUCCESS.VENDOR.DELETED}: ${id}`);
-			const successResponse = buildSuccessResponse(config.SUCCESS.VENDOR.DELETED, {}, 200);
+			approvalTypeLogger.info(`Approval type deleted: ${id}`);
+			const successResponse = buildSuccessResponse(
+				"Approval type deleted successfully",
+				{},
+				200,
+			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			vendorLogger.error(`${config.ERROR.VENDOR.DELETE_FAILED}: ${error}`);
+			approvalTypeLogger.error(`Failed to delete approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,

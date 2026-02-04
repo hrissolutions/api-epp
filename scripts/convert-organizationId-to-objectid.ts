@@ -39,7 +39,7 @@ async function convertOrganizationIdToObjectId() {
 		const models = [
 			{ name: "Item", collection: "items" },
 			{ name: "Category", collection: "categories" },
-			{ name: "Vendor", collection: "vendors" },
+			{ name: "Supplier", collection: "suppliers" },
 			{ name: "CartItem", collection: "cartItems" },
 			{ name: "WishlistItem", collection: "wishlistItems" },
 			{ name: "Order", collection: "orders" },
@@ -47,7 +47,7 @@ async function convertOrganizationIdToObjectId() {
 			{ name: "Transaction", collection: "transactions" },
 			{ name: "Installment", collection: "installments" },
 			{ name: "ApprovalWorkflow", collection: "approvalWorkflows" },
-			{ name: "ApprovalLevel", collection: "approvalLevels" },
+			{ name: "ApprovalType", collection: "approvalTypes" },
 			{ name: "WorkflowApprovalLevel", collection: "workflowApprovalLevels" },
 			{ name: "OrderApproval", collection: "orderApprovals" },
 			{ name: "Notification", collection: "notifications" },

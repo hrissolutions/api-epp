@@ -6,7 +6,7 @@ import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler"
 import { CreatePurchaseOrderSchema, UpdatePurchaseOrderSchema } from "../../zod/purchaseOrder.zod";
 import { config } from "../../config/constant";
 import { generatePONumber } from "../../helper/generate-PONumber.helper";
-import { createVendorDOForPO } from "../../helper/deliveryDocumentService";
+import { createSupplierDOForPO } from "../../helper/deliveryDocumentService";
 
 const logger = getLogger();
 const poLogger = logger.child({ module: "purchaseOrder" });
@@ -27,17 +27,17 @@ export const controller = (prisma: PrismaClient) => {
 					organizationId: (req as any).organizationId ?? data.organizationId,
 					poNumber,
 					orderId: data.orderId,
-					vendorId: data.vendorId,
+					supplierId: data.supplierId,
 					status: data.status ?? "PENDING",
 					items: data.items ?? undefined,
 					approvedBy: data.approvedBy ?? undefined,
 					approvedAt: data.approvedAt ?? undefined,
-					sentToVendorAt: data.sentToVendorAt ?? undefined,
+					sentToSupplierAt: data.sentToSupplierAt ?? undefined,
 					notes: data.notes ?? undefined,
 				},
 				include: {
 					order: { select: { orderNumber: true } },
-					vendor: { select: { name: true, code: true } },
+					supplier: { select: { name: true, code: true } },
 				},
 			});
 			poLogger.info(`PurchaseOrder created: ${po.poNumber}`);
@@ -71,7 +71,7 @@ export const controller = (prisma: PrismaClient) => {
 					orderBy: { createdAt: "desc" },
 					include: {
 						order: { select: { id: true, orderNumber: true } },
-						vendor: { select: { id: true, name: true, code: true } },
+						supplier: { select: { id: true, name: true, code: true } },
 					},
 				}),
 				prisma.purchaseOrder.count({ where }),
@@ -103,7 +103,7 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true, userId: true } },
-					vendor: { select: { id: true, name: true, code: true } },
+					supplier: { select: { id: true, name: true, code: true } },
 					deliveryDocuments: true,
 				},
 			});
@@ -145,23 +145,23 @@ export const controller = (prisma: PrismaClient) => {
 				data: validation.data,
 				include: {
 					order: { select: { orderNumber: true } },
-					vendor: { select: { name: true } },
+					supplier: { select: { name: true } },
 					deliveryDocuments: true,
 				},
 			});
-			// When status is CONFIRMED, ensure a Vendor DO exists (creates only if missing; no duplicate)
+			// When status is CONFIRMED, ensure a Supplier DO exists (creates only if missing; no duplicate)
 			let responsePo: typeof po = po;
 			if (validation.data.status === "CONFIRMED") {
-				const vendorDo = await createVendorDOForPO(prisma, id);
-				if (vendorDo) {
+				const supplierDo = await createSupplierDOForPO(prisma, id);
+				if (supplierDo) {
 					poLogger.info(
-						`PurchaseOrder ${po.poNumber} CONFIRMED; Vendor DO ${vendorDo.documentNumber} ensured`,
+						`PurchaseOrder ${po.poNumber} CONFIRMED; Supplier DO ${supplierDo.documentNumber} ensured`,
 					);
 					const refetched = await prisma.purchaseOrder.findFirst({
 						where: { id },
 						include: {
 							order: { select: { orderNumber: true } },
-							vendor: { select: { name: true } },
+							supplier: { select: { name: true } },
 							deliveryDocuments: true,
 						},
 					});
@@ -194,7 +194,7 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true, code: true } },
+					supplier: { select: { id: true, name: true, code: true } },
 					deliveryDocuments: true,
 				},
 			});
@@ -216,7 +216,7 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				data: {
 					status: "APPROVED",
-					sentToVendorAt: new Date(),
+					sentToSupplierAt: new Date(),
 				},
 			});
 
@@ -224,13 +224,13 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true, code: true } },
+					supplier: { select: { id: true, name: true, code: true } },
 					deliveryDocuments: true,
 				},
 			});
 
 			poLogger.info(
-				`PurchaseOrder ${po.poNumber} approved (Vendor DO is created when status becomes CONFIRMED)`,
+				`PurchaseOrder ${po.poNumber} approved (Supplier DO is created when status becomes CONFIRMED)`,
 			);
 
 			res.status(200).json(
@@ -257,7 +257,7 @@ export const controller = (prisma: PrismaClient) => {
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true, code: true } },
+					supplier: { select: { id: true, name: true, code: true } },
 					deliveryDocuments: true,
 				},
 			});
@@ -268,7 +268,7 @@ export const controller = (prisma: PrismaClient) => {
 			if (po.status !== "APPROVED") {
 				res.status(400).json(
 					buildErrorResponse(
-						`Purchase order cannot be confirmed: current status is ${po.status}. Only APPROVED can be confirmed (then Vendor DO is created).`,
+						`Purchase order cannot be confirmed: current status is ${po.status}. Only APPROVED can be confirmed (then Supplier DO is created).`,
 						400,
 					),
 				);
@@ -280,25 +280,25 @@ export const controller = (prisma: PrismaClient) => {
 				data: { status: "CONFIRMED" },
 			});
 
-			const vendorDo = await createVendorDOForPO(prisma, id);
+			const supplierDo = await createSupplierDOForPO(prisma, id);
 
 			const updated = await prisma.purchaseOrder.findFirst({
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
-					vendor: { select: { id: true, name: true, code: true } },
+					supplier: { select: { id: true, name: true, code: true } },
 					deliveryDocuments: true,
 				},
 			});
 
 			poLogger.info(
-				`PurchaseOrder ${po.poNumber} confirmed; Vendor DO ${vendorDo?.documentNumber ?? "none"} created`,
+				`PurchaseOrder ${po.poNumber} confirmed; Supplier DO ${supplierDo?.documentNumber ?? "none"} created`,
 			);
 
 			res.status(200).json(
-				buildSuccessResponse("Purchase order confirmed; Vendor DO created", {
+				buildSuccessResponse("Purchase order confirmed; Supplier DO created", {
 					purchaseOrder: updated,
-					deliveryOrder: vendorDo,
+					deliveryOrder: supplierDo,
 				}),
 			);
 		} catch (error) {

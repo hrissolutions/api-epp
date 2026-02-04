@@ -88,7 +88,7 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 		const models = [
 			{ name: "Item", prismaModel: prisma.item, collection: "items" },
 			{ name: "Category", prismaModel: prisma.category, collection: "categories" },
-			{ name: "Vendor", prismaModel: prisma.vendor, collection: "vendors" },
+			{ name: "Supplier", prismaModel: prisma.supplier, collection: "suppliers" },
 			{ name: "CartItem", prismaModel: prisma.cartItem, collection: "cartItems" },
 			{ name: "WishlistItem", prismaModel: prisma.wishlistItem, collection: "wishlistItems" },
 			{ name: "Order", prismaModel: prisma.order, collection: "orders" },
@@ -101,9 +101,9 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 				collection: "approvalWorkflows",
 			},
 			{
-				name: "ApprovalLevel",
-				prismaModel: prisma.approvalLevel,
-				collection: "approvalLevels",
+				name: "ApprovalType",
+				prismaModel: prisma.approvalType,
+				collection: "approvalTypes",
 			},
 			{
 				name: "WorkflowApprovalLevel",

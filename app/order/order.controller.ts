@@ -163,11 +163,27 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
+			// Calculate order totals from items (needed for workflow check and order data)
+			const totals = await calculateOrderTotals(prisma, validation.data.items);
+
+			// Require a matching approval workflow before creating the order
+			const paymentType = validation.data.paymentType ?? "INSTALLMENT";
+			const matchingWorkflow = await findMatchingWorkflow(prisma, totals.total, paymentType);
+			if (!matchingWorkflow) {
+				orderLogger.warn(
+					`Order creation rejected: no approval workflow for total=${totals.total}, paymentType=${paymentType}`,
+				);
+				res.status(400).json(
+					buildErrorResponse(
+						"No approval workflow is configured for this order amount and payment type. Please contact your administrator or choose different options.",
+						400,
+					),
+				);
+				return;
+			}
+
 			// Generate order number automatically
 			const orderNumber = await generateOrderNumber(prisma);
-
-			// Calculate order totals from items
-			const totals = await calculateOrderTotals(prisma, validation.data.items);
 
 			// Prepare order data with embedded items array and calculated totals
 			const { userId, ...restValidation } = validation.data;

@@ -112,12 +112,12 @@ export const router = (route: Router, controller: IController): Router => {
 	 *             type: object
 	 *             required:
 	 *               - workflowId
-	 *               - approvalLevelId
+	 *               - approvalTypeId
 	 *               - level
 	 *             properties:
 	 *               workflowId:
 	 *                 type: string
-	 *               approvalLevelId:
+	 *               approvalTypeId:
 	 *                 type: string
 	 *               level:
 	 *                 type: integer

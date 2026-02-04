@@ -1,4 +1,4 @@
-model Vendor {
+model Supplier {
   id                String             @id @default(auto()) @map("_id") @db.ObjectId
   organizationId    String?            @db.ObjectId
   name              String             @unique
@@ -10,12 +10,12 @@ model Vendor {
   website           String?
   isActive          Boolean            @default(true)
   items             Item[]
-  purchaseOrders    PurchaseOrder[] // Admin's POs to this vendor (when client orders are approved)
-  deliveryDocuments DeliveryDocument[] // Vendor DOs (one per PO)
+  purchaseOrders    PurchaseOrder[] // Admin's POs to this supplier (when client orders are approved)
+  deliveryDocuments DeliveryDocument[] // Supplier DOs (one per PO)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
-  @@map("vendors")
+  @@map("suppliers")
 }

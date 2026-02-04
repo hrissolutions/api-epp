@@ -15,7 +15,7 @@ const numberSchema = z
 export const WorkflowApprovalLevelSchema = z.object({
 	id: z.string(),
 	workflowId: z.string().min(1, "Workflow ID is required"),
-	approvalLevelId: z.string().min(1, "Approval Level ID is required"),
+	approvalTypeId: z.string().min(1, "Approval Type ID is required"),
 	level: z.number().int().positive("Level must be positive"),
 	approverId: z.string().optional().nullable(),
 	approverName: z.string().optional().nullable(),

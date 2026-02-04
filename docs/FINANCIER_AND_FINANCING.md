@@ -50,6 +50,6 @@ if (level?.financierId) {
 - **Financier → Admin:** full order amount (principal).
 - **Client → Financier:** installments (principal + interest).
 - **Financier income:** sum of `Installment.interestAmount` (and optional `installmentFee`).
-- **Admin → Vendor:** unchanged (PurchaseOrder / Delivery).
+- **Admin → Supplier:** unchanged (PurchaseOrder / Delivery).
 
 No changes to Delivery or PurchaseOrder models; financing is attached to **Order** and **Installments** only.

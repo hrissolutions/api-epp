@@ -6,8 +6,8 @@ model Item {
   description    String?
   category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   categoryId     String   @db.ObjectId
-  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  vendorId       String   @db.ObjectId
+  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  supplierId     String   @db.ObjectId
 
   // Item type
   itemType ItemType @default(PRODUCT)
@@ -42,7 +42,7 @@ model Item {
   updatedAt DateTime @updatedAt
 
   @@index([categoryId])
-  @@index([vendorId])
+  @@index([supplierId])
   @@index([itemType])
   @@index([organizationId])
   @@map("items")
@@ -54,7 +54,7 @@ enum ItemType {
 }
 
 enum ItemStatus {
-  PENDING // Created by vendor, awaiting approval
+  PENDING // Created by supplier, awaiting approval
   APPROVED // Approved and visible in item listings
   REJECTED // Rejected and not visible to normal users
 }

@@ -32,7 +32,7 @@ export const CreateDeliveryDocumentSchema = z.object({
 		.refine((val) => !val || isValidObjectId(val))
 		.optional()
 		.nullable(),
-	vendorId: z
+	supplierId: z
 		.string()
 		.refine((val) => !val || isValidObjectId(val))
 		.optional()

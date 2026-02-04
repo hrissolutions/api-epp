@@ -12,7 +12,7 @@
  *
  * Options:
  *   --dry-run              Preview changes without creating records
- *   --approval-level-id ID Use this ApprovalLevel id (default: 69800e5e16324ea0fcba22bc)
+ *   --approval-type-id ID  Use this ApprovalType id (default: 69800e5e16324ea0fcba22bc)
  *   --update-existing      Also update existing FINANCIER workflow levels with null approver fields
  *   --approver-id ID       Financier userId / approverId (default: 697845e3479eaa6d2f796b7d)
  *   --approver-email EMAIL Financier email (default: bryangabrielberja25@gmail.com)
@@ -25,7 +25,7 @@ import { connectAllDatabases, disconnectAllDatabases } from "../config/database"
 const logger = getLogger();
 const scriptLogger = logger.child({ module: "addFinancierWorkflowApprovalLevel" });
 
-const DEFAULT_FINANCIER_APPROVAL_LEVEL_ID = "69800e5e16324ea0fcba22bc";
+const DEFAULT_FINANCIER_APPROVAL_TYPE_ID = "69800e5e16324ea0fcba22bc";
 const DEFAULT_FINANCIER_APPROVER = {
 	approverId: "697845e3479eaa6d2f796b7d",
 	approverName: "Financier",
@@ -34,7 +34,7 @@ const DEFAULT_FINANCIER_APPROVER = {
 
 function parseArgs(): {
 	dryRun: boolean;
-	approvalLevelId: string;
+	approvalTypeId: string;
 	updateExisting: boolean;
 	approverId: string;
 	approverName: string;
@@ -42,7 +42,7 @@ function parseArgs(): {
 } {
 	const args = process.argv.slice(2);
 	let dryRun = false;
-	let approvalLevelId = DEFAULT_FINANCIER_APPROVAL_LEVEL_ID;
+	let approvalTypeId = DEFAULT_FINANCIER_APPROVAL_TYPE_ID;
 	let updateExisting = false;
 	let approverId = DEFAULT_FINANCIER_APPROVER.approverId;
 	let approverName = DEFAULT_FINANCIER_APPROVER.approverName;
@@ -51,8 +51,8 @@ function parseArgs(): {
 	for (let i = 0; i < args.length; i++) {
 		if (args[i] === "--dry-run") dryRun = true;
 		if (args[i] === "--update-existing") updateExisting = true;
-		if (args[i] === "--approval-level-id" && args[i + 1]) {
-			approvalLevelId = args[i + 1];
+		if (args[i] === "--approval-type-id" && args[i + 1]) {
+			approvalTypeId = args[i + 1];
 			i++;
 		}
 		if (args[i] === "--approver-id" && args[i + 1]) {
@@ -67,7 +67,7 @@ function parseArgs(): {
 
 	return {
 		dryRun,
-		approvalLevelId,
+		approvalTypeId,
 		updateExisting,
 		approverId,
 		approverName,
@@ -80,7 +80,7 @@ function isValidObjectId(id: string): boolean {
 }
 
 async function main() {
-	const { dryRun, approvalLevelId, updateExisting, approverId, approverName, approverEmail } =
+	const { dryRun, approvalTypeId, updateExisting, approverId, approverName, approverEmail } =
 		parseArgs();
 	const prisma = new PrismaClient();
 
@@ -90,36 +90,36 @@ async function main() {
 		scriptLogger.info("============================================================");
 		scriptLogger.info("Add FINANCIER to all approval workflows (WorkflowApprovalLevel)");
 		scriptLogger.info("============================================================");
-		scriptLogger.info(`Approval level ID (FINANCIER): ${approvalLevelId}`);
+		scriptLogger.info(`Approval type ID (FINANCIER): ${approvalTypeId}`);
 		scriptLogger.info(`Approver: ${approverName} <${approverEmail}> (id: ${approverId})`);
 		scriptLogger.info(`Update existing: ${updateExisting}`);
 		scriptLogger.info(`Mode: ${dryRun ? "DRY RUN (no changes)" : "LIVE"}`);
 		scriptLogger.info("");
 
-		if (!isValidObjectId(approvalLevelId)) {
+		if (!isValidObjectId(approvalTypeId)) {
 			scriptLogger.error(
-				`Invalid approval level id: ${approvalLevelId}. Must be 24 hex chars.`,
+				`Invalid approval type id: ${approvalTypeId}. Must be 24 hex chars.`,
 			);
 			process.exit(1);
 		}
 
-		// 1) Verify FINANCIER approval level exists
-		const financierApprovalLevel = await prisma.approvalLevel.findFirst({
-			where: { id: approvalLevelId },
+		// 1) Verify FINANCIER approval type exists
+		const financierApprovalType = await prisma.approvalType.findFirst({
+			where: { id: approvalTypeId },
 		});
-		if (!financierApprovalLevel) {
+		if (!financierApprovalType) {
 			scriptLogger.error(
-				`Approval level not found: ${approvalLevelId}. Create the FINANCIER approval level first (e.g. via POST /api/approvalLevel).`,
+				`Approval type not found: ${approvalTypeId}. Create the FINANCIER approval type first (e.g. via POST /api/approvalType).`,
 			);
 			process.exit(1);
 		}
-		if (financierApprovalLevel.role !== "FINANCIER") {
+		if (financierApprovalType.role !== "FINANCIER") {
 			scriptLogger.warn(
-				`Approval level ${approvalLevelId} has role "${financierApprovalLevel.role}", not FINANCIER. Continuing anyway.`,
+				`Approval type ${approvalTypeId} has role "${financierApprovalType.role}", not FINANCIER. Continuing anyway.`,
 			);
 		}
 		scriptLogger.info(
-			`Found approval level: ${financierApprovalLevel.role} - ${financierApprovalLevel.description ?? "(no description)"}`,
+			`Found approval type: ${financierApprovalType.role} - ${financierApprovalType.description ?? "(no description)"}`,
 		);
 
 		// 2) ADD: Add FINANCIER to all active approval workflows that don't already have it
@@ -139,7 +139,7 @@ async function main() {
 
 		for (const workflow of workflows) {
 			const alreadyHasFinancier = workflow.workflowLevels.some(
-				(wl) => wl.approvalLevelId === approvalLevelId,
+				(wl) => wl.approvalTypeId === approvalTypeId,
 			);
 			if (alreadyHasFinancier) {
 				scriptLogger.info(
@@ -162,7 +162,7 @@ async function main() {
 				await prisma.workflowApprovalLevel.create({
 					data: {
 						workflowId: workflow.id,
-						approvalLevelId,
+						approvalTypeId,
 						level: nextLevel,
 						organizationId: workflow.organizationId ?? null,
 						approverId,
@@ -185,7 +185,7 @@ async function main() {
 			);
 			const existingLevels = await prisma.workflowApprovalLevel.findMany({
 				where: {
-					approvalLevelId,
+					approvalTypeId,
 					OR: [{ approverName: null }, { approverEmail: null }, { approverId: null }],
 				},
 				include: { workflow: { select: { name: true } } },

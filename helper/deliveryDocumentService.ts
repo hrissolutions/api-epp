@@ -1,22 +1,22 @@
 import { PrismaClient } from "../generated/prisma";
 import { getLogger } from "./logger";
-import { generateVendorDONumber } from "./generate-DeliveryDocumentNumber.helper";
+import { generateSupplierDONumber } from "./generate-DeliveryDocumentNumber.helper";
 
 const logger = getLogger();
 const docServiceLogger = logger.child({ module: "deliveryDocumentService" });
 
 /**
- * Create a Vendor Delivery Order (DO) for an approved Purchase Order.
- * Called when PO status is set to APPROVED.
+ * Create a Supplier Delivery Order (DO) for an approved Purchase Order.
+ * Called when PO status is set to CONFIRMED.
  */
-export const createVendorDOForPO = async (
+export const createSupplierDOForPO = async (
 	prisma: PrismaClient,
 	purchaseOrderId: string,
 ): Promise<{ id: string; documentNumber: string } | null> => {
 	const po = await prisma.purchaseOrder.findUnique({
 		where: { id: purchaseOrderId },
 		include: {
-			vendor: { select: { id: true, name: true } },
+			supplier: { select: { id: true, name: true } },
 			order: { select: { id: true } },
 		},
 	});
@@ -26,7 +26,6 @@ export const createVendorDOForPO = async (
 		return null;
 	}
 
-	// Avoid duplicate Vendor DO for this PO
 	const existing = await prisma.deliveryDocument.findFirst({
 		where: {
 			purchaseOrderId,
@@ -37,7 +36,7 @@ export const createVendorDOForPO = async (
 	});
 	if (existing) {
 		docServiceLogger.info(
-			`Vendor DO already exists for PO ${po.poNumber}: ${existing.documentNumber}`,
+			`Supplier DO already exists for PO ${po.poNumber}: ${existing.documentNumber}`,
 		);
 		return { id: existing.id, documentNumber: existing.documentNumber };
 	}
@@ -51,11 +50,11 @@ export const createVendorDOForPO = async (
 	}));
 
 	if (doItems.length === 0) {
-		docServiceLogger.warn(`PO ${po.poNumber} has no items, skipping Vendor DO creation`);
+		docServiceLogger.warn(`PO ${po.poNumber} has no items, skipping Supplier DO creation`);
 		return null;
 	}
 
-	const documentNumber = await generateVendorDONumber(prisma);
+	const documentNumber = await generateSupplierDONumber(prisma);
 	const documentDate = new Date();
 
 	const doc = await prisma.deliveryDocument.create({
@@ -66,12 +65,12 @@ export const createVendorDOForPO = async (
 			documentNumber,
 			documentDate,
 			purchaseOrderId: po.id,
-			vendorId: po.vendorId,
+			supplierId: po.supplierId,
 			toName: "Admin",
 			items: doItems,
 		},
 	});
 
-	docServiceLogger.info(`Created Vendor DO ${doc.documentNumber} for PO ${po.poNumber}`);
+	docServiceLogger.info(`Created Supplier DO ${doc.documentNumber} for PO ${po.poNumber}`);
 	return { id: doc.id, documentNumber: doc.documentNumber };
 };
