@@ -46,7 +46,6 @@ const ORDER_DETAIL_INCLUDE = {
  * installments, installmentSummary, approvalWorkflow.
  */
 function buildOrderDetailResponse(order: any): Record<string, unknown> {
-	const items = order.items ?? [];
 	const orderItems = order.orderItems ?? [];
 	const transaction = order.transaction;
 	const installments = order.installments ?? [];
@@ -56,7 +55,6 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	const response: Record<string, unknown> = {
 		order: {
 			...order,
-			items,
 			orderItems: undefined,
 			transaction: undefined,
 			installments: undefined,
@@ -186,13 +184,12 @@ export const controller = (prisma: PrismaClient) => {
 			// Generate order number automatically
 			const orderNumber = await generateOrderNumber(prisma);
 
-			// Prepare order data with embedded items array and calculated totals
-			const { userId, ...restValidation } = validation.data;
+			// Prepare order data (order items are stored in OrderItem collection)
+			const { userId, items: _items, ...restValidation } = validation.data;
 			const orderData = {
 				...restValidation,
 				userId,
 				orderNumber,
-				items: totals.items, // Use calculated items with discount and subtotal
 				subtotal: totals.subtotal,
 				discount: totals.discount,
 				tax: totals.tax,
@@ -571,7 +568,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Same shape as create/getById: order, orderItems, transaction, installments, installmentSummary, approvalWorkflow
 			const normalizedOrders = useDetailInclude
 				? (orders as any[]).map((o) => buildOrderDetailResponse(o))
-				: (orders as any[]).map((o) => ({ ...o, items: o.items ?? [] }));
+				: (orders as any[]);
 
 			orderLogger.info(`Retrieved ${orders.length} orders`);
 			const processedData =
@@ -666,9 +663,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			// Return same shape as create: order, orderItems, transaction, installments, installmentSummary, approvalWorkflow
-			const responseData = fields
-				? { ...order, items: order.items ?? [] }
-				: buildOrderDetailResponse(order);
+			const responseData = fields ? { ...order } : buildOrderDetailResponse(order);
 
 			orderLogger.info(`${config.SUCCESS.ORDER.RETRIEVED}: ${order.id}`);
 			const successResponse = buildSuccessResponse(

@@ -16,7 +16,7 @@ type OrderLine = {
 /**
  * Create PurchaseOrder(s) for an approved order. One PO per supplier (order items grouped by item.supplierId).
  * Called when the last approver (e.g. FINANCIER) approves a client order (Step 3).
- * Supports orders created from cart checkout (embedded items only) and orders with OrderItem relations.
+ * Uses `orderItems` (OrderItem relation) as the source of truth.
  */
 export const createPurchaseOrdersForApprovedOrder = async (
 	prisma: PrismaClient,
@@ -49,59 +49,23 @@ export const createPurchaseOrdersForApprovedOrder = async (
 		}
 	>();
 
-	if (order.orderItems.length > 0) {
-		// Use OrderItem relation (orders created via order API with orderItems)
-		for (const oi of order.orderItems) {
-			const sid = oi.item.supplierId;
-			if (!bySupplier.has(sid)) {
-				bySupplier.set(sid, { supplierId: sid, items: [] });
-			}
-			bySupplier.get(sid)!.items.push({
-				itemId: oi.item.id,
-				sku: oi.item.sku,
-				description: oi.item.name,
-				quantity: oi.quantity,
-				unitPrice: oi.unitPrice,
-			});
+	if (order.orderItems.length === 0) {
+		poServiceLogger.warn(`Order ${orderId} has no order items, skipping PO creation`);
+		return [];
+	}
+
+	for (const oi of order.orderItems) {
+		const sid = oi.item.supplierId;
+		if (!bySupplier.has(sid)) {
+			bySupplier.set(sid, { supplierId: sid, items: [] });
 		}
-	} else {
-		// Cart checkout orders only have embedded items – build lines from order.items and Item lookup
-		const embeddedItems = (order.items as OrderLine[] | null) ?? [];
-		if (!Array.isArray(embeddedItems) || embeddedItems.length === 0) {
-			poServiceLogger.warn(
-				`Order ${orderId} has no order items (embedded or relation), skipping PO creation`,
-			);
-			return [];
-		}
-		for (const row of embeddedItems) {
-			const itemId = (row as any).itemId;
-			if (!itemId) continue;
-			const item = await prisma.item.findUnique({
-				where: { id: itemId },
-				select: { id: true, supplierId: true, sku: true, name: true },
-			});
-			if (!item) {
-				poServiceLogger.warn(`Item ${itemId} not found for order ${orderId}, skipping`);
-				continue;
-			}
-			const sid = item.supplierId;
-			if (!bySupplier.has(sid)) {
-				bySupplier.set(sid, { supplierId: sid, items: [] });
-			}
-			bySupplier.get(sid)!.items.push({
-				itemId: item.id,
-				sku: item.sku,
-				description: item.name,
-				quantity: (row as any).quantity ?? 0,
-				unitPrice: (row as any).unitPrice ?? 0,
-			});
-		}
-		if (bySupplier.size === 0) {
-			poServiceLogger.warn(
-				`Order ${orderId}: no valid items with supplier, skipping PO creation`,
-			);
-			return [];
-		}
+		bySupplier.get(sid)!.items.push({
+			itemId: oi.item.id,
+			sku: oi.item.sku,
+			description: oi.item.name,
+			quantity: oi.quantity,
+			unitPrice: oi.unitPrice,
+		});
 	}
 
 	const created: { id: string; poNumber: string; supplierId: string }[] = [];

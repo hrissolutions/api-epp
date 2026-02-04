@@ -11,42 +11,42 @@ export const deductStockForOrder = async (prisma: PrismaClient, orderId: string)
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
+			include: { orderItems: true },
 		});
 
 		if (!order) {
 			throw new Error(`Order ${orderId} not found`);
 		}
 
-		// Items are now embedded in the order (handle null for backward compatibility)
-		const items = (order.items as any) || [];
-		if (!Array.isArray(items) || items.length === 0) {
-			stockLogger.warn(`Order ${orderId} has no items`);
+		const orderItems = order.orderItems ?? [];
+		if (!Array.isArray(orderItems) || orderItems.length === 0) {
+			stockLogger.warn(`Order ${orderId} has no orderItems`);
 			return;
 		}
 
-		for (const item of items) {
+		for (const oi of orderItems) {
 			const dbItem = await prisma.item.findFirst({
-				where: { id: item.itemId },
+				where: { id: oi.itemId },
 			});
 
 			if (!dbItem) {
-				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
+				stockLogger.warn(`Item ${oi.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
 			const currentStock = dbItem.stockQuantity;
-			const quantityOrdered = item.quantity;
+			const quantityOrdered = oi.quantity;
 			const newStock = Math.max(0, currentStock - quantityOrdered);
 
 			await prisma.item.update({
-				where: { id: item.itemId },
+				where: { id: oi.itemId },
 				data: {
 					stockQuantity: newStock,
 				},
 			});
 
 			stockLogger.info(
-				`Stock deducted for item ${item.itemId} (${dbItem.name}): ` +
+				`Stock deducted for item ${oi.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (ordered: ${quantityOrdered})`,
 			);
 		}
@@ -77,15 +77,15 @@ export const validateStockForOrder = async (
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
+			include: { orderItems: true },
 		});
 
 		if (!order) {
 			throw new Error(`Order ${orderId} not found`);
 		}
 
-		// Items are now embedded in the order
-		const items = (order.items as any) || [];
-		if (!Array.isArray(items) || items.length === 0) {
+		const orderItems = order.orderItems ?? [];
+		if (!Array.isArray(orderItems) || orderItems.length === 0) {
 			return [];
 		}
 
@@ -97,22 +97,22 @@ export const validateStockForOrder = async (
 			shortage: number;
 		}> = [];
 
-		for (const item of items) {
+		for (const oi of orderItems) {
 			const dbItem = await prisma.item.findFirst({
-				where: { id: item.itemId },
+				where: { id: oi.itemId },
 			});
 
 			if (!dbItem) {
-				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
+				stockLogger.warn(`Item ${oi.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
 			const availableStock = dbItem.stockQuantity;
-			const requestedQuantity = item.quantity;
+			const requestedQuantity = oi.quantity;
 
 			if (availableStock < requestedQuantity) {
 				insufficientStock.push({
-					itemId: item.itemId,
+					itemId: oi.itemId,
 					itemName: dbItem.name || "Unknown Item",
 					requestedQuantity: requestedQuantity,
 					availableStock: availableStock,
@@ -120,7 +120,7 @@ export const validateStockForOrder = async (
 				});
 
 				stockLogger.warn(
-					`Insufficient stock for item ${item.itemId} (${dbItem.name}): ` +
+					`Insufficient stock for item ${oi.itemId} (${dbItem.name}): ` +
 						`Available: ${availableStock}, Requested: ${requestedQuantity}, Shortage: ${requestedQuantity - availableStock}`,
 				);
 			}
@@ -149,42 +149,42 @@ export const restoreStockForOrder = async (
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
+			include: { orderItems: true },
 		});
 
 		if (!order) {
 			throw new Error(`Order ${orderId} not found`);
 		}
 
-		// Items are now embedded in the order (handle null for backward compatibility)
-		const items = (order.items as any) || [];
-		if (!Array.isArray(items) || items.length === 0) {
-			stockLogger.warn(`Order ${orderId} has no items`);
+		const orderItems = order.orderItems ?? [];
+		if (!Array.isArray(orderItems) || orderItems.length === 0) {
+			stockLogger.warn(`Order ${orderId} has no orderItems`);
 			return;
 		}
 
-		for (const item of items) {
+		for (const oi of orderItems) {
 			const dbItem = await prisma.item.findFirst({
-				where: { id: item.itemId },
+				where: { id: oi.itemId },
 			});
 
 			if (!dbItem) {
-				stockLogger.warn(`Item ${item.itemId} not found for order ${orderId}`);
+				stockLogger.warn(`Item ${oi.itemId} not found for order ${orderId}`);
 				continue;
 			}
 
 			const currentStock = dbItem.stockQuantity;
-			const quantityToRestore = item.quantity;
+			const quantityToRestore = oi.quantity;
 			const newStock = currentStock + quantityToRestore;
 
 			await prisma.item.update({
-				where: { id: item.itemId },
+				where: { id: oi.itemId },
 				data: {
 					stockQuantity: newStock,
 				},
 			});
 
 			stockLogger.info(
-				`Stock restored for item ${item.itemId} (${dbItem.name}): ` +
+				`Stock restored for item ${oi.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (restored: ${quantityToRestore})`,
 			);
 		}

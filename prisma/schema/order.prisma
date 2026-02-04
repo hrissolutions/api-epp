@@ -8,7 +8,6 @@ model Order {
 
   // Order details
   status     OrderStatus @default(PENDING_APPROVAL)
-  items      Json? // Embedded array of order items (nullable for backward compatibility)
   orderItems OrderItem[]
 
   // Pricing
