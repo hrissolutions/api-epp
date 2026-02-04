@@ -14,6 +14,14 @@ import {
 	getUsedCreditForFinancierConfig,
 	getRateForInstallmentCount,
 } from "./financierHelper";
+import {
+	notifyApprovalChainCreated,
+	notifyApprovalDecision,
+	notifyNextApproverTurn,
+	notifyOrderFullyApproved,
+	notifyOrderRejected,
+} from "./socketOrderApproval";
+import type { Server } from "socket.io";
 
 const logger = getLogger();
 const approvalLogger = logger.child({ module: "approvalService" });
@@ -242,6 +250,7 @@ export const createApprovalChain = async (
 		scheduledDate: Date;
 		cutOffDate: Date;
 	}>,
+	io?: Server,
 ) => {
 	try {
 		// Find matching workflow
@@ -382,6 +391,18 @@ export const createApprovalChain = async (
 			);
 			const finalized = await tryFinalizeOrderWhenAllApproved(prisma, orderId);
 			if (finalized) {
+				const order = await prisma.order.findUnique({
+					where: { id: orderId },
+					select: { total: true },
+				});
+				const orderTotal = order?.total ?? 0;
+				notifyOrderFullyApproved(
+					io,
+					orderId,
+					orderNumber,
+					orderTotal,
+					approvals.map((a) => a.approverId),
+				);
 				approvalLogger.info(
 					`Order ${orderNumber} finalized (all approvals were auto-approved).`,
 				);
@@ -410,6 +431,9 @@ export const createApprovalChain = async (
 				);
 			}
 		}
+
+		// Socket.IO: notify all approvers (recipients) that they are in the approval chain
+		notifyApprovalChainCreated(io, orderId, orderNumber, orderTotal, approvals);
 
 		return {
 			workflow,
@@ -637,6 +661,7 @@ export const processApproval = async (
 	approvalId: string,
 	status: "APPROVED" | "REJECTED",
 	comments?: string,
+	io?: Server,
 ) => {
 	try {
 		// Get the approval record
@@ -714,8 +739,41 @@ export const processApproval = async (
 				rejectionReason: comments || "Order rejected",
 			});
 
+			// Socket.IO: notify approver who rejected and all recipients that order was rejected
+			notifyApprovalDecision(
+				io,
+				approval,
+				approval.order.orderNumber,
+				approval.order.total,
+				"REJECTED",
+				comments,
+			);
+			const allApprovalsForOrder = await prisma.orderApproval.findMany({
+				where: { orderId: approval.orderId },
+				select: { approverId: true },
+			});
+			const approverIds = [...new Set(allApprovalsForOrder.map((a) => a.approverId))];
+			notifyOrderRejected(
+				io,
+				approval.orderId,
+				approval.order.orderNumber,
+				approval.order.total,
+				approverIds,
+				approval.approverName,
+				comments,
+			);
+
 			approvalLogger.info(`Order ${approval.order.orderNumber} rejected`);
 		} else {
+			// Socket.IO: notify approver who approved
+			notifyApprovalDecision(
+				io,
+				updatedApproval,
+				approval.order.orderNumber,
+				approval.order.total,
+				"APPROVED",
+				comments,
+			);
 			// Approval was approved - check if all approvals are complete
 			const allApprovalsComplete = await checkAllApprovalsComplete(prisma, approval.orderId);
 
@@ -829,6 +887,16 @@ export const processApproval = async (
 					approvedAt: new Date(),
 				});
 
+				// Socket.IO: notify all approvers (recipients) that order is fully approved
+				const approverIds = [...new Set(allApprovals.map((a) => a.approverId))];
+				notifyOrderFullyApproved(
+					io,
+					approval.orderId,
+					approval.order.orderNumber,
+					approval.order.total,
+					approverIds,
+				);
+
 				approvalLogger.info(
 					`Order ${approval.order.orderNumber} fully approved by all ${allApprovals.length} required approvers`,
 				);
@@ -861,6 +929,15 @@ export const processApproval = async (
 						approvalLevel: nextLevelApproval.approvalLevel,
 						approverRole: nextLevelApproval.approverRole,
 					});
+
+					// Socket.IO: notify next approver it's their turn
+					notifyNextApproverTurn(
+						io,
+						nextLevelApproval,
+						approval.order.orderNumber,
+						approval.order.total,
+						approval.approverName,
+					);
 
 					approvalLogger.info(
 						`Sent next level approval notification for order ${approval.order.orderNumber}`,

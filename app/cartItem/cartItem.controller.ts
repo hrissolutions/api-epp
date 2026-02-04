@@ -88,8 +88,7 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const { employeeId, itemId, quantity = 1 } = validation.data;
-			const userId = employeeId; // API uses employeeId; Prisma model uses userId
+			const { userId, itemId, quantity = 1 } = validation.data;
 
 			// Ensure quantity is at least 1
 			const quantityToAdd = quantity || 1;
@@ -206,7 +205,7 @@ export const controller = (prisma: PrismaClient) => {
 			if (error.code === "P2002" && error.meta?.target?.includes("userId_itemId")) {
 				// This shouldn't happen now, but handle it gracefully
 				cartItemLogger.warn(
-					`Duplicate cart item detected for employee ${validation.data.employeeId} and item ${validation.data.itemId}, attempting update`,
+					`Duplicate cart item detected for user ${validation.data.userId} and item ${validation.data.itemId}, attempting update`,
 				);
 				const errorResponse = buildErrorResponse(
 					"This item is already in your cart. Quantity will be updated.",
@@ -565,7 +564,7 @@ export const controller = (prisma: PrismaClient) => {
 		});
 
 		const CheckoutSchema = z.object({
-			employeeId: z.string().min(1, "Employee ID is required"),
+			userId: z.string().min(1, "User ID is required"),
 			paymentType: z.enum(["CASH", "INSTALLMENT", "POINTS", "MIXED"]).default("INSTALLMENT"),
 			installmentMonths: z.number().int().min(1).optional().nullable(),
 			paymentMethod: z
@@ -595,7 +594,7 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		const {
-			employeeId,
+			userId,
 			paymentType,
 			installmentMonths,
 			paymentMethod,
@@ -625,7 +624,7 @@ export const controller = (prisma: PrismaClient) => {
 			let allCartItems: any[] = [];
 			try {
 				allCartItems = await prisma.cartItem.findMany({
-					where: { userId: employeeId },
+					where: { userId },
 				});
 				// Filter out any items with null itemId (safety check)
 				allCartItems = allCartItems.filter((item) => item.itemId != null);
@@ -659,7 +658,7 @@ export const controller = (prisma: PrismaClient) => {
 			}
 
 			if (allCartItems.length === 0) {
-				cartItemLogger.error(`No cart items found for employee ${employeeId}`);
+				cartItemLogger.error(`No cart items found for user ${userId}`);
 				const errorResponse = buildErrorResponse("Cart is empty", 400, [
 					{ field: "cart", message: "Cannot checkout with an empty cart" },
 				]);
@@ -689,7 +688,7 @@ export const controller = (prisma: PrismaClient) => {
 
 				if (cartItemsToProcess.length === 0) {
 					cartItemLogger.error(
-						`None of the requested items found in cart for employee ${employeeId}`,
+						`None of the requested items found in cart for user ${userId}`,
 					);
 					const errorResponse = buildErrorResponse(
 						"None of the requested items found in cart",
@@ -778,7 +777,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Remove invalid cart items from database
 			if (invalidCartItemIds.length > 0) {
 				cartItemLogger.warn(
-					`Found ${invalidCartItemIds.length} cart items with missing items for employee ${employeeId}`,
+					`Found ${invalidCartItemIds.length} cart items with missing items for user ${userId}`,
 				);
 				try {
 					await prisma.cartItem.deleteMany({
@@ -797,7 +796,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Check if there are any valid cart items after filtering
 			if (validCartItems.length === 0) {
 				cartItemLogger.error(
-					`No valid cart items found for employee ${employeeId} (all items are missing)`,
+					`No valid cart items found for user ${userId} (all items are missing)`,
 				);
 				const errorResponse = buildErrorResponse(
 					"Cart contains invalid items. Please remove items with unavailable products and try again.",
@@ -875,9 +874,7 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Check if we have any valid order items after filtering
 			if (orderItemsData.length === 0) {
-				cartItemLogger.error(
-					`No valid order items after filtering for employee ${employeeId}`,
-				);
+				cartItemLogger.error(`No valid order items after filtering for user ${userId}`);
 				const errorMessages: Array<{ field: string; message: string }> = [
 					{
 						field: "cart",
@@ -938,7 +935,7 @@ export const controller = (prisma: PrismaClient) => {
 			const order = await prisma.order.create({
 				data: {
 					orderNumber,
-					userId: employeeId,
+					userId,
 					subtotal,
 					discount,
 					tax,
@@ -1032,6 +1029,7 @@ export const controller = (prisma: PrismaClient) => {
 					order.orderDate || new Date(),
 					order.notes || undefined,
 					generatedInstallments || undefined,
+					(req as any).io,
 				);
 
 				if (approvalChain) {
@@ -1107,7 +1105,7 @@ export const controller = (prisma: PrismaClient) => {
 						},
 					});
 					cartItemLogger.info(
-						`Cleared ${cartItemIdsToDelete.length} cart items for employee ${employeeId}`,
+						`Cleared ${cartItemIdsToDelete.length} cart items for user ${userId}`,
 					);
 				}
 
@@ -1118,7 +1116,7 @@ export const controller = (prisma: PrismaClient) => {
 				}
 			} catch (clearCartError) {
 				cartItemLogger.error(
-					`Failed to clear cart items for employee ${employeeId}:`,
+					`Failed to clear cart items for user ${userId}:`,
 					clearCartError,
 				);
 				// Don't fail the checkout if cart clearing fails
@@ -1135,7 +1133,7 @@ export const controller = (prisma: PrismaClient) => {
 
 			// Log activity and audit
 			logActivity(req, {
-				userId: (req as any).user?.id || employeeId,
+				userId: (req as any).user?.id || userId,
 				action: config.ACTIVITY_LOG.ORDER.ACTIONS.CREATE_ORDER,
 				description: `Order created from cart: ${order.orderNumber || order.id}`,
 				page: {
@@ -1145,7 +1143,7 @@ export const controller = (prisma: PrismaClient) => {
 			});
 
 			logAudit(req, {
-				userId: (req as any).user?.id || employeeId,
+				userId: (req as any).user?.id || userId,
 				action: config.AUDIT_LOG.ACTIONS.CREATE,
 				resource: config.AUDIT_LOG.RESOURCES.ORDER,
 				severity: config.AUDIT_LOG.SEVERITY.LOW,

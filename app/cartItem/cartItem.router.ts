@@ -408,7 +408,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 * /api/cartItem/checkout:
 	 *   post:
 	 *     summary: Checkout cart items to create an order
-	 *     description: Convert cart items for an employee into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears only the checked-out items from the cart.
+	 *     description: Convert cart items for a user into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears only the checked-out items from the cart.
 	 *     tags: [CartItem]
 	 *     requestBody:
 	 *       required: true
@@ -417,11 +417,11 @@ export const router = (route: Router, controller: IController): Router => {
 	 *           schema:
 	 *             type: object
 	 *             required:
-	 *               - employeeId
+	 *               - userId
 	 *             properties:
-	 *               employeeId:
+	 *               userId:
 	 *                 type: string
-	 *                 description: Employee ID who owns the cart
+	 *                 description: User ID who owns the cart
 	 *                 example: "507f1f77bcf86cd799439011"
 	 *               items:
 	 *                 type: array

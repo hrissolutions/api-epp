@@ -27,6 +27,7 @@ import {
 } from "../../helper/financierHelper";
 import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { calculateOrderTotals } from "../../helper/calculateOrderTotals.helper";
+import { createPurchaseOrdersForApprovedOrder } from "../../helper/purchaseOrderService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -374,6 +375,7 @@ export const controller = (prisma: PrismaClient) => {
 					order.orderDate || new Date(),
 					order.notes || undefined,
 					installmentsForApproval,
+					(req as any).io,
 				);
 
 				if (approvalChain) {
@@ -846,5 +848,72 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove };
+	/**
+	 * Create purchase order(s) for an already-approved order (e.g. orders created from cart
+	 * that only had embedded items and did not get POs at approval time).
+	 */
+	const createPurchaseOrders = async (req: Request, res: Response, _next: NextFunction) => {
+		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+		if (!id) {
+			res.status(400).json(buildErrorResponse("Order ID is required", 400));
+			return;
+		}
+		try {
+			const order = await prisma.order.findUnique({
+				where: { id },
+				select: {
+					id: true,
+					orderNumber: true,
+					status: true,
+					purchaseOrders: { select: { id: true } },
+				},
+			});
+			if (!order) {
+				res.status(404).json(buildErrorResponse(config.ERROR.ORDER.NOT_FOUND, 404));
+				return;
+			}
+			if (order.status !== "APPROVED") {
+				res.status(400).json(
+					buildErrorResponse(
+						"Only approved orders can have purchase orders created. Current status: " +
+							order.status,
+						400,
+					),
+				);
+				return;
+			}
+			if (order.purchaseOrders.length > 0) {
+				res.status(400).json(
+					buildErrorResponse(
+						"Order already has purchase order(s). No duplicate POs created.",
+						400,
+					),
+				);
+				return;
+			}
+			const approvedBy = (req as any).user?.id;
+			const pos = await createPurchaseOrdersForApprovedOrder(prisma, id, approvedBy);
+			try {
+				await invalidateCache.byPattern(`cache:order:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:order:list:*");
+				await invalidateCache.byPattern("cache:purchaseOrder:list:*");
+			} catch (e) {
+				orderLogger.warn("Cache invalidation failed after creating POs:", e);
+			}
+			res.status(201).json(
+				buildSuccessResponse(
+					`Created ${pos.length} purchase order(s) for order ${order.orderNumber}`,
+					{ purchaseOrders: pos, count: pos.length },
+					201,
+				),
+			);
+		} catch (error: any) {
+			orderLogger.error(`Create purchase orders for order failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	return { create, getAll, getById, update, remove, createPurchaseOrders };
 };
