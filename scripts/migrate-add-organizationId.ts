@@ -101,9 +101,9 @@ async function migrateOrganizationId(options: MigrationOptions = {}) {
 				collection: "approvalWorkflows",
 			},
 			{
-				name: "ApprovalLevel",
-				prismaModel: prisma.approvalLevel,
-				collection: "approvalLevels",
+				name: "ApprovalType",
+				prismaModel: prisma.approvalType,
+				collection: "approvalTypes",
 			},
 			{
 				name: "WorkflowApprovalLevel",

@@ -97,7 +97,7 @@ export const findMatchingWorkflow = async (
 			where: { isActive: true },
 			include: {
 				workflowLevels: {
-					include: { approvalLevel: true },
+					include: { approvalType: true },
 					orderBy: { level: "asc" },
 				},
 			},
@@ -280,8 +280,8 @@ export const createApprovalChain = async (
 				// This email comes from the workflowApprovalLevel record you created
 				approverId =
 					workflowLevel.approverId ||
-					`approver_${workflowLevel.approvalLevel.role.toLowerCase()}`;
-				approverName = workflowLevel.approverName || workflowLevel.approvalLevel.role;
+					`approver_${workflowLevel.approvalType.role.toLowerCase()}`;
+				approverName = workflowLevel.approverName || workflowLevel.approvalType.role;
 				approverEmail = workflowLevel.approverEmail; // ← This is the email from workflowApprovalLevel
 				approverSource = "workflowApprovalLevel";
 
@@ -294,7 +294,7 @@ export const createApprovalChain = async (
 				// Only used if workflowApprovalLevel doesn't have an email
 				const approver = await getApproverForRole(
 					prisma,
-					workflowLevel.approvalLevel.role,
+					workflowLevel.approvalType.role,
 					employeeId,
 				);
 				approverId = approver.id;
@@ -348,7 +348,7 @@ export const createApprovalChain = async (
 				data: {
 					orderId: orderId,
 					approvalLevel: workflowLevel.level,
-					approverRole: workflowLevel.approvalLevel.role,
+					approverRole: workflowLevel.approvalType.role,
 					approverId: approverId,
 					approverName: approverName,
 					approverEmail: approverEmail, // Save the email from workflowApprovalLevel
@@ -359,7 +359,7 @@ export const createApprovalChain = async (
 
 			approvals.push(approval);
 			approvalLogger.info(
-				`Created approval level ${workflowLevel.level} (${workflowLevel.approvalLevel.role}) for order ${orderNumber} - ` +
+				`Created approval level ${workflowLevel.level} (${workflowLevel.approvalType.role}) for order ${orderNumber} - ` +
 					`Approver: ${approverName} (${approverEmail}) - Status: ${approvalStatus} - Source: ${approverSource}`,
 			);
 		}

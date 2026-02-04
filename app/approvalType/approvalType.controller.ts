@@ -12,7 +12,7 @@ import {
 import { buildSuccessResponse, buildPagination } from "../../helper/success-handler";
 import { groupDataByField } from "../../helper/dataGrouping";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
-import { CreateApprovalLevelSchema, UpdateApprovalLevelSchema } from "../../zod/approvalLevel.zod";
+import { CreateApprovalTypeSchema, UpdateApprovalTypeSchema } from "../../zod/approvalType.zod";
 import { logActivity } from "../../utils/activityLogger";
 import { logAudit } from "../../utils/auditLogger";
 import { config } from "../../config/constant";
@@ -20,7 +20,7 @@ import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 
 const logger = getLogger();
-const approvalLevelLogger = logger.child({ module: "approvalLevel" });
+const approvalTypeLogger = logger.child({ module: "approvalType" });
 
 // Helper function to convert string numbers to actual numbers for form data
 const convertStringNumbers = (obj: any): any => {
@@ -62,74 +62,74 @@ export const controller = (prisma: PrismaClient) => {
 			contentType.includes("application/x-www-form-urlencoded") ||
 			contentType.includes("multipart/form-data")
 		) {
-			approvalLevelLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
+			approvalTypeLogger.info("Original form data:", JSON.stringify(req.body, null, 2));
 			requestData = transformFormDataToObject(req.body);
 			requestData = convertStringNumbers(requestData);
-			approvalLevelLogger.info(
+			approvalTypeLogger.info(
 				"Transformed form data to object structure:",
 				JSON.stringify(requestData, null, 2),
 			);
 		}
 
-		const validation = CreateApprovalLevelSchema.safeParse(requestData);
+		const validation = CreateApprovalTypeSchema.safeParse(requestData);
 		if (!validation.success) {
 			const formattedErrors = formatZodErrors(validation.error.format());
-			approvalLevelLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+			approvalTypeLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 			const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 			res.status(400).json(errorResponse);
 			return;
 		}
 
 		try {
-			const approvalLevel = await prisma.approvalLevel.create({
+			const approvalType = await prisma.approvalType.create({
 				data: {
 					...validation.data,
 					organizationId: (req as any).organizationId || validation.data.organizationId,
 				} as any,
 			});
-			approvalLevelLogger.info(`ApprovalLevel created successfully: ${approvalLevel.id}`);
+			approvalTypeLogger.info(`ApprovalType created successfully: ${approvalType.id}`);
 
 			logActivity(req, {
 				userId: (req as any).user?.id || "unknown",
-				action: "CREATE_APPROVAL_LEVEL",
-				description: `Approval level created: ${approvalLevel.role}`,
+				action: "CREATE_APPROVAL_TYPE",
+				description: `Approval type created: ${approvalType.role}`,
 				page: {
 					url: req.originalUrl,
-					title: "Approval Level Creation",
+					title: "Approval Type Creation",
 				},
 			});
 
 			logAudit(req, {
 				userId: (req as any).user?.id || "unknown",
 				action: config.AUDIT_LOG.ACTIONS.CREATE,
-				resource: "APPROVAL_LEVEL",
+				resource: "APPROVAL_TYPE",
 				severity: config.AUDIT_LOG.SEVERITY.MEDIUM,
-				entityType: "APPROVAL_LEVEL",
-				entityId: approvalLevel.id,
+				entityType: "APPROVAL_TYPE",
+				entityId: approvalType.id,
 				changesBefore: null,
-				changesAfter: approvalLevel,
-				description: `Approval level created: ${approvalLevel.id}`,
+				changesAfter: approvalType,
+				description: `Approval type created: ${approvalType.id}`,
 			});
 
 			try {
-				await invalidateCache.byPattern("cache:approvalLevel:list:*");
+				await invalidateCache.byPattern("cache:approvalType:list:*");
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				approvalLevelLogger.info("ApprovalLevel cache invalidated after creation");
+				approvalTypeLogger.info("ApprovalType cache invalidated after creation");
 			} catch (cacheError) {
-				approvalLevelLogger.warn(
-					"Failed to invalidate cache after approvalLevel creation:",
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType creation:",
 					cacheError,
 				);
 			}
 
 			const successResponse = buildSuccessResponse(
-				"Approval level created successfully",
-				{ approvalLevel },
+				"Approval type created successfully",
+				{ approvalType },
 				201,
 			);
 			res.status(201).json(successResponse);
 		} catch (error) {
-			approvalLevelLogger.error(`Failed to create approval level: ${error}`);
+			approvalTypeLogger.error(`Failed to create approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -139,7 +139,7 @@ export const controller = (prisma: PrismaClient) => {
 	};
 
 	const getAll = async (req: Request, res: Response, _next: NextFunction) => {
-		const validationResult = validateQueryParams(req, approvalLevelLogger);
+		const validationResult = validateQueryParams(req, approvalTypeLogger);
 
 		if (!validationResult.isValid) {
 			res.status(400).json(validationResult.errorResponse);
@@ -161,27 +161,23 @@ export const controller = (prisma: PrismaClient) => {
 			groupBy,
 		} = validationResult.validatedParams!;
 
-		approvalLevelLogger.info(
-			`Getting approval levels, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
+		approvalTypeLogger.info(
+			`Getting approval types, page: ${page}, limit: ${limit}, query: ${query}, order: ${order}, groupBy: ${groupBy}`,
 		);
 
 		try {
-			const whereClause: Prisma.ApprovalLevelWhereInput = {};
+			const whereClause: Prisma.ApprovalTypeWhereInput = {};
 
 			const searchFields = ["role", "description"];
 			if (query) {
-				const searchConditions = buildSearchConditions(
-					"ApprovalLevel",
-					query,
-					searchFields,
-				);
+				const searchConditions = buildSearchConditions("ApprovalType", query, searchFields);
 				if (searchConditions.length > 0) {
 					whereClause.OR = searchConditions;
 				}
 			}
 
 			if (filter) {
-				const filterConditions = buildFilterConditions("ApprovalLevel", filter);
+				const filterConditions = buildFilterConditions("ApprovalType", filter);
 				if (filterConditions.length > 0) {
 					whereClause.AND = filterConditions;
 				}
@@ -189,29 +185,29 @@ export const controller = (prisma: PrismaClient) => {
 
 			const findManyQuery = buildFindManyQuery(whereClause, skip, limit, order, sort, fields);
 
-			const [approvalLevels, total] = await Promise.all([
-				document ? prisma.approvalLevel.findMany(findManyQuery) : [],
-				count ? prisma.approvalLevel.count({ where: whereClause }) : 0,
+			const [approvalTypes, total] = await Promise.all([
+				document ? prisma.approvalType.findMany(findManyQuery) : [],
+				count ? prisma.approvalType.count({ where: whereClause }) : 0,
 			]);
 
-			approvalLevelLogger.info(`Retrieved ${approvalLevels.length} approval levels`);
+			approvalTypeLogger.info(`Retrieved ${approvalTypes.length} approval types`);
 			const processedData =
 				groupBy && document
-					? groupDataByField(approvalLevels, groupBy as string)
-					: approvalLevels;
+					? groupDataByField(approvalTypes, groupBy as string)
+					: approvalTypes;
 
 			const responseData: Record<string, any> = {
-				...(document && { approvalLevels: processedData }),
+				...(document && { approvalTypes: processedData }),
 				...(count && { count: total }),
 				...(pagination && { pagination: buildPagination(total, page, limit) }),
 				...(groupBy && { groupedBy: groupBy }),
 			};
 
 			res.status(200).json(
-				buildSuccessResponse("Approval levels retrieved successfully", responseData, 200),
+				buildSuccessResponse("Approval types retrieved successfully", responseData, 200),
 			);
 		} catch (error) {
-			approvalLevelLogger.error(`Failed to get approval levels: ${error}`);
+			approvalTypeLogger.error(`Failed to get approval types: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
@@ -224,7 +220,7 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			if (!rawId) {
-				approvalLevelLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -233,7 +229,7 @@ export const controller = (prisma: PrismaClient) => {
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
 			if (fields && typeof fields !== "string") {
-				approvalLevelLogger.error(
+				approvalTypeLogger.error(
 					`${config.ERROR.QUERY_PARAMS.INVALID_POPULATE}: ${fields}`,
 				);
 				const errorResponse = buildErrorResponse(
@@ -244,61 +240,61 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			approvalLevelLogger.info(`Getting approval level by ID: ${id}`);
+			approvalTypeLogger.info(`Getting approval type by ID: ${id}`);
 
-			const cacheKey = `cache:approvalLevel:byId:${id}:${fields || "full"}`;
-			let approvalLevel = null;
+			const cacheKey = `cache:approvalType:byId:${id}:${fields || "full"}`;
+			let approvalType = null;
 
 			try {
 				if (redisClient.isClientConnected()) {
-					approvalLevel = await redisClient.getJSON(cacheKey);
-					if (approvalLevel) {
-						approvalLevelLogger.info(`ApprovalLevel ${id} retrieved from cache`);
+					approvalType = await redisClient.getJSON(cacheKey);
+					if (approvalType) {
+						approvalTypeLogger.info(`ApprovalType ${id} retrieved from cache`);
 					}
 				}
 			} catch (cacheError) {
-				approvalLevelLogger.warn(
-					`Redis cache retrieval failed for approvalLevel ${id}:`,
+				approvalTypeLogger.warn(
+					`Redis cache retrieval failed for approvalType ${id}:`,
 					cacheError,
 				);
 			}
 
-			if (!approvalLevel) {
-				const query: Prisma.ApprovalLevelFindFirstArgs = { where: { id } };
+			if (!approvalType) {
+				const query: Prisma.ApprovalTypeFindFirstArgs = { where: { id } };
 
 				query.select = getNestedFields(fields);
 
-				approvalLevel = await prisma.approvalLevel.findFirst(query);
+				approvalType = await prisma.approvalType.findFirst(query);
 
-				if (approvalLevel && redisClient.isClientConnected()) {
+				if (approvalType && redisClient.isClientConnected()) {
 					try {
-						await redisClient.setJSON(cacheKey, approvalLevel, 3600);
-						approvalLevelLogger.info(`ApprovalLevel ${id} stored in cache`);
+						await redisClient.setJSON(cacheKey, approvalType, 3600);
+						approvalTypeLogger.info(`ApprovalType ${id} stored in cache`);
 					} catch (cacheError) {
-						approvalLevelLogger.warn(
-							`Failed to store approvalLevel ${id} in cache:`,
+						approvalTypeLogger.warn(
+							`Failed to store approvalType ${id} in cache:`,
 							cacheError,
 						);
 					}
 				}
 			}
 
-			if (!approvalLevel) {
-				approvalLevelLogger.error(`Approval level not found: ${id}`);
-				const errorResponse = buildErrorResponse("Approval level not found", 404);
+			if (!approvalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			approvalLevelLogger.info(`Approval level retrieved: ${(approvalLevel as any).id}`);
+			approvalTypeLogger.info(`Approval type retrieved: ${(approvalType as any).id}`);
 			const successResponse = buildSuccessResponse(
-				"Approval level retrieved successfully",
-				approvalLevel,
+				"Approval type retrieved successfully",
+				approvalType,
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			approvalLevelLogger.error(`Error getting approval level: ${error}`);
+			approvalTypeLogger.error(`Error getting approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -312,7 +308,7 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			if (!rawId) {
-				approvalLevelLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -331,18 +327,18 @@ export const controller = (prisma: PrismaClient) => {
 				requestData = convertStringNumbers(requestData);
 			}
 
-			const validationResult = UpdateApprovalLevelSchema.safeParse(requestData);
+			const validationResult = UpdateApprovalTypeSchema.safeParse(requestData);
 
 			if (!validationResult.success) {
 				const formattedErrors = formatZodErrors(validationResult.error.format());
-				approvalLevelLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
+				approvalTypeLogger.error(`Validation failed: ${JSON.stringify(formattedErrors)}`);
 				const errorResponse = buildErrorResponse("Validation failed", 400, formattedErrors);
 				res.status(400).json(errorResponse);
 				return;
 			}
 
 			if (Object.keys(requestData).length === 0) {
-				approvalLevelLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
+				approvalTypeLogger.error(config.ERROR.COMMON.NO_UPDATE_FIELDS);
 				const errorResponse = buildErrorResponse(config.ERROR.COMMON.NO_UPDATE_FIELDS, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -350,47 +346,47 @@ export const controller = (prisma: PrismaClient) => {
 
 			const validatedData = validationResult.data;
 
-			approvalLevelLogger.info(`Updating approval level: ${id}`);
+			approvalTypeLogger.info(`Updating approval type: ${id}`);
 
-			const existingApprovalLevel = await prisma.approvalLevel.findFirst({
+			const existingApprovalType = await prisma.approvalType.findFirst({
 				where: { id },
 			});
 
-			if (!existingApprovalLevel) {
-				approvalLevelLogger.error(`Approval level not found: ${id}`);
-				const errorResponse = buildErrorResponse("Approval level not found", 404);
+			if (!existingApprovalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
 			const prismaData = { ...validatedData };
 
-			const updatedApprovalLevel = await prisma.approvalLevel.update({
+			const updatedApprovalType = await prisma.approvalType.update({
 				where: { id },
 				data: prismaData,
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:approvalLevel:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:approvalLevel:list:*");
+				await invalidateCache.byPattern(`cache:approvalType:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:approvalType:list:*");
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				approvalLevelLogger.info(`Cache invalidated after approvalLevel ${id} update`);
+				approvalTypeLogger.info(`Cache invalidated after approvalType ${id} update`);
 			} catch (cacheError) {
-				approvalLevelLogger.warn(
-					"Failed to invalidate cache after approvalLevel update:",
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType update:",
 					cacheError,
 				);
 			}
 
-			approvalLevelLogger.info(`Approval level updated: ${updatedApprovalLevel.id}`);
+			approvalTypeLogger.info(`Approval type updated: ${updatedApprovalType.id}`);
 			const successResponse = buildSuccessResponse(
-				"Approval level updated successfully",
-				{ approvalLevel: updatedApprovalLevel },
+				"Approval type updated successfully",
+				{ approvalType: updatedApprovalType },
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			approvalLevelLogger.error(`Error updating approval level: ${error}`);
+			approvalTypeLogger.error(`Error updating approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,
@@ -404,7 +400,7 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			if (!rawId) {
-				approvalLevelLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
+				approvalTypeLogger.error(config.ERROR.QUERY_PARAMS.MISSING_ID);
 				const errorResponse = buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400);
 				res.status(400).json(errorResponse);
 				return;
@@ -412,44 +408,44 @@ export const controller = (prisma: PrismaClient) => {
 
 			const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-			approvalLevelLogger.info(`Deleting approval level: ${id}`);
+			approvalTypeLogger.info(`Deleting approval type: ${id}`);
 
-			const existingApprovalLevel = await prisma.approvalLevel.findFirst({
+			const existingApprovalType = await prisma.approvalType.findFirst({
 				where: { id },
 			});
 
-			if (!existingApprovalLevel) {
-				approvalLevelLogger.error(`Approval level not found: ${id}`);
-				const errorResponse = buildErrorResponse("Approval level not found", 404);
+			if (!existingApprovalType) {
+				approvalTypeLogger.error(`Approval type not found: ${id}`);
+				const errorResponse = buildErrorResponse("Approval type not found", 404);
 				res.status(404).json(errorResponse);
 				return;
 			}
 
-			await prisma.approvalLevel.delete({
+			await prisma.approvalType.delete({
 				where: { id },
 			});
 
 			try {
-				await invalidateCache.byPattern(`cache:approvalLevel:byId:${id}:*`);
-				await invalidateCache.byPattern("cache:approvalLevel:list:*");
+				await invalidateCache.byPattern(`cache:approvalType:byId:${id}:*`);
+				await invalidateCache.byPattern("cache:approvalType:list:*");
 				await invalidateCache.byPattern("cache:workflowApprovalLevel:list:*");
-				approvalLevelLogger.info(`Cache invalidated after approvalLevel ${id} deletion`);
+				approvalTypeLogger.info(`Cache invalidated after approvalType ${id} deletion`);
 			} catch (cacheError) {
-				approvalLevelLogger.warn(
-					"Failed to invalidate cache after approvalLevel deletion:",
+				approvalTypeLogger.warn(
+					"Failed to invalidate cache after approvalType deletion:",
 					cacheError,
 				);
 			}
 
-			approvalLevelLogger.info(`Approval level deleted: ${id}`);
+			approvalTypeLogger.info(`Approval type deleted: ${id}`);
 			const successResponse = buildSuccessResponse(
-				"Approval level deleted successfully",
+				"Approval type deleted successfully",
 				{},
 				200,
 			);
 			res.status(200).json(successResponse);
 		} catch (error) {
-			approvalLevelLogger.error(`Failed to delete approval level: ${error}`);
+			approvalTypeLogger.error(`Failed to delete approval type: ${error}`);
 			const errorResponse = buildErrorResponse(
 				config.ERROR.COMMON.INTERNAL_SERVER_ERROR,
 				500,

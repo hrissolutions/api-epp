@@ -47,7 +47,7 @@ async function convertOrganizationIdToObjectId() {
 			{ name: "Transaction", collection: "transactions" },
 			{ name: "Installment", collection: "installments" },
 			{ name: "ApprovalWorkflow", collection: "approvalWorkflows" },
-			{ name: "ApprovalLevel", collection: "approvalLevels" },
+			{ name: "ApprovalType", collection: "approvalTypes" },
 			{ name: "WorkflowApprovalLevel", collection: "workflowApprovalLevels" },
 			{ name: "OrderApproval", collection: "orderApprovals" },
 			{ name: "Notification", collection: "notifications" },
