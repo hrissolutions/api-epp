@@ -1,7 +1,9 @@
 import { DMMF } from "@prisma/client/runtime/library";
 import { Prisma } from "../generated/prisma";
 
-const dmmf: DMMF.Document = Prisma.dmmf as unknown as DMMF.Document;
+const getDmmf = (): DMMF.Document => {
+	return Prisma.dmmf as unknown as DMMF.Document;
+};
 
 export const buildFindManyQuery = <T extends any | undefined>(
 	whereClause: T,
@@ -70,6 +72,12 @@ export const getNestedFields = (fields?: string) => {
  * Look up field metadata in Prisma DMMF for a single field
  */
 function getFieldMeta(modelName: string, field: string): DMMF.Field | undefined {
+	const dmmf = getDmmf();
+	if (!dmmf) {
+		console.warn("Prisma DMMF is not available");
+		return undefined;
+	}
+
 	const model = dmmf.datamodel.models.find((m) => m.name === modelName);
 	if (model) {
 		return model.fields.find((f) => f.name === field);
@@ -118,7 +126,12 @@ function buildCondition(modelName: string, path: string[], value: string): any {
 
 	// Get metadata for the current (first) field
 	const fieldMeta = getFieldMeta(modelName, path[0]);
-	if (!fieldMeta) return {};
+	if (!fieldMeta) {
+		console.warn(
+			`Field metadata not found for model ${modelName} field ${path[0]}. Check if model name in schema matches.`,
+		);
+		return {};
+	}
 
 	// Terminal field (scalar or enum)
 	if (path.length === 1) {
@@ -160,12 +173,25 @@ function buildCondition(modelName: string, path: string[], value: string): any {
 export function buildFilterConditions(modelName: string, filterParam?: string): any[] {
 	if (!filterParam) return [];
 
+	const dmmf = getDmmf();
+	if (!dmmf) {
+		throw new Error("Prisma DMMF is not available");
+	}
+
 	const items = filterParam.split(",");
 
 	const groups = new Map<string, string[]>();
 
 	for (const item of items) {
-		const [rawKey, rawValue] = item.split(":");
+		let rawKey, rawValue;
+		if (item.includes(":")) {
+			[rawKey, rawValue] = item.split(":");
+		} else if (item.includes("=")) {
+			[rawKey, rawValue] = item.split("=");
+		} else {
+			continue;
+		}
+
 		if (!groups.has(rawKey)) {
 			groups.set(rawKey, []);
 		}
@@ -204,6 +230,11 @@ export function buildSearchConditions(
 	searchFields?: string[],
 ): any[] {
 	if (!searchTerm || !searchFields || searchFields.length === 0) return [];
+
+	const dmmf = getDmmf();
+	if (!dmmf) {
+		throw new Error("Prisma DMMF is not available");
+	}
 
 	const model = dmmf.datamodel.models.find((m) => m.name === modelName);
 	if (!model) {
