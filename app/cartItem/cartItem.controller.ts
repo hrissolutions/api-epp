@@ -563,26 +563,41 @@ export const controller = (prisma: PrismaClient) => {
 			quantity: z.number().int().min(1, "Quantity must be at least 1"),
 		});
 
-		const CheckoutSchema = z.object({
-			userId: z.string().min(1, "User ID is required"),
-			paymentType: z.enum(["CASH", "INSTALLMENT", "POINTS", "MIXED"]).default("INSTALLMENT"),
-			installmentMonths: z.number().int().min(1).optional().nullable(),
-			paymentMethod: z
-				.enum([
-					"PAYROLL_DEDUCTION",
-					"CASH",
-					"CREDIT_CARD",
-					"DEBIT_CARD",
-					"BANK_TRANSFER",
-					"OTHER",
-				])
-				.default("PAYROLL_DEDUCTION"),
-			discount: z.number().min(0).default(0),
-			tax: z.number().min(0).default(0),
-			pointsUsed: z.number().min(0).optional().nullable(),
-			notes: z.string().optional().nullable(),
-			items: z.array(CheckoutItemSchema).optional(), // Optional: if provided, only checkout these items
-		});
+		const CheckoutSchema = z
+			.object({
+				userId: z.string().min(1, "User ID is required"),
+				paymentType: z
+					.enum(["CASH", "INSTALLMENT", "POINTS", "MIXED"])
+					.default("INSTALLMENT"),
+				installmentMonths: z.number().int().min(1).optional().nullable(),
+				paymentMethod: z
+					.enum([
+						"PAYROLL_DEDUCTION",
+						"CASH",
+						"CREDIT_CARD",
+						"DEBIT_CARD",
+						"BANK_TRANSFER",
+						"OTHER",
+					])
+					.default("PAYROLL_DEDUCTION"),
+				discount: z.number().min(0).default(0),
+				tax: z.number().min(0).default(0),
+				pointsUsed: z.number().min(0).optional().nullable(),
+				notes: z.string().optional().nullable(),
+				// Optional: if provided, only checkout these specific items
+				items: z.array(CheckoutItemSchema).optional(),
+				// Alias support: allow `orderItems` as an alternative key
+				orderItems: z.array(CheckoutItemSchema).optional(),
+			})
+			.superRefine((val, ctx) => {
+				if (val.items && val.orderItems) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["orderItems"],
+						message: "Provide either items or orderItems, not both",
+					});
+				}
+			});
 
 		const validation = CheckoutSchema.safeParse(requestData);
 		if (!validation.success) {
@@ -602,8 +617,10 @@ export const controller = (prisma: PrismaClient) => {
 			tax,
 			pointsUsed,
 			notes,
-			items: requestedItems,
+			items: itemsLegacy,
+			orderItems: orderItemsLegacy,
 		} = validation.data;
+		const requestedItems = itemsLegacy ?? orderItemsLegacy;
 
 		// Validate installment months if payment type is INSTALLMENT
 		if (paymentType === "INSTALLMENT" && !installmentMonths) {
@@ -931,7 +948,7 @@ export const controller = (prisma: PrismaClient) => {
 			// Generate order number using helper function
 			const orderNumber = await generateOrderNumber(prisma);
 
-			// Create order with embedded items array (no shipping for company internal delivery)
+			// Create order and persist line items in OrderItem collection
 			const order = await prisma.order.create({
 				data: {
 					orderNumber,
@@ -946,8 +963,17 @@ export const controller = (prisma: PrismaClient) => {
 					pointsUsed: pointsUsed || null,
 					notes: notes || null,
 					orderDate: new Date(),
-					items: orderItemsData, // Embedded items array
 					organizationId: (req as any).organizationId,
+					orderItems: {
+						create: orderItemsData.map((row) => ({
+							organizationId: (req as any).organizationId,
+							itemId: row.itemId,
+							quantity: row.quantity,
+							unitPrice: row.unitPrice,
+							discount: row.discount ?? 0,
+							subtotal: row.subtotal,
+						})),
+					},
 				} as any,
 			});
 
@@ -1164,30 +1190,29 @@ export const controller = (prisma: PrismaClient) => {
 				description: `Order created from cart: ${order.orderNumber || order.id}`,
 			});
 
-			// Fetch order (items are now embedded as JSON)
+			// Fetch order with orderItems + item details
 			const orderWithItems = await prisma.order.findUnique({
 				where: { id: order.id },
+				include: {
+					orderItems: {
+						include: {
+							item: {
+								select: { id: true, name: true, sku: true, imageUrl: true },
+							},
+						},
+					},
+				},
 			});
 
-			// Fetch item details for each item in the embedded items array
-			const orderItems = (orderWithItems?.items as any) || [];
-			const itemsWithDetails = await Promise.all(
-				orderItems.map(async (orderItem: any) => {
-					const item = await prisma.item.findUnique({
-						where: { id: orderItem.itemId },
-						select: {
-							id: true,
-							name: true,
-							sku: true,
-							imageUrl: true,
-						},
-					});
-					return {
-						...orderItem,
-						item,
-					};
-				}),
-			);
+			const itemsWithDetails =
+				orderWithItems?.orderItems?.map((oi: any) => ({
+					itemId: oi.itemId,
+					quantity: oi.quantity,
+					unitPrice: oi.unitPrice,
+					discount: oi.discount,
+					subtotal: oi.subtotal,
+					item: oi.item,
+				})) ?? [];
 
 			// Calculate total quantity of items
 			const totalQuantity = orderItemsData.reduce((sum, item) => sum + item.quantity, 0);
@@ -1212,9 +1237,10 @@ export const controller = (prisma: PrismaClient) => {
 					order: orderWithItems
 						? {
 								...orderWithItems,
-								items: itemsWithDetails,
+								orderItems: undefined,
 							}
 						: order,
+					orderItems: itemsWithDetails,
 					checkoutSummary: {
 						totalItems: totalItems,
 						totalQuantity: totalQuantity,
