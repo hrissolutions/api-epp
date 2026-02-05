@@ -8,7 +8,6 @@ import {
 } from "./email.helper";
 import { deductStockForOrder, restoreStockForOrder, validateStockForOrder } from "./stockService";
 import { invalidateCache } from "../middleware/cache";
-import { createPurchaseOrdersForApprovedOrder } from "./purchaseOrderService";
 import {
 	getFinancierConfigByUserId,
 	getUsedCreditForFinancierConfig,
@@ -629,14 +628,6 @@ export const tryFinalizeOrderWhenAllApproved = async (
 		}
 
 		try {
-			const pos = await createPurchaseOrdersForApprovedOrder(prisma, orderId);
-			approvalLogger.info(
-				`Created ${pos.length} purchase order(s) for order ${order.orderNumber}`,
-			);
-		} catch (poError) {
-			approvalLogger.error(`Failed to create POs for order ${order.orderNumber}:`, poError);
-		}
-		try {
 			await deductStockForOrder(prisma, orderId);
 			approvalLogger.info(`Stock deducted for order ${order.orderNumber}`);
 		} catch (stockError) {
@@ -830,24 +821,6 @@ export const processApproval = async (
 
 				// Create "order approved" notification for the employee
 				await createOrderApprovedNotificationIfNeeded(prisma, approval.orderId);
-
-				// Step 3: Create PurchaseOrder(s) to Supplier (one per supplier for this order's items)
-				try {
-					const pos = await createPurchaseOrdersForApprovedOrder(
-						prisma,
-						approval.orderId,
-						approval.approverId,
-					);
-					approvalLogger.info(
-						`Created ${pos.length} purchase order(s) for order ${approval.order.orderNumber}`,
-					);
-				} catch (poError) {
-					approvalLogger.error(
-						`Failed to create purchase orders for order ${approval.order.orderNumber}:`,
-						poError,
-					);
-					// Don't fail the approval; PO can be created manually later
-				}
 
 				// Deduct stock for all products in the order
 				try {

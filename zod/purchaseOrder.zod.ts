@@ -30,6 +30,12 @@ export const PurchaseOrderSchema = z.object({
 	availability: z.string().optional().nullable(),
 	delivery: z.coerce.date().optional().nullable(),
 	pdc: z.coerce.date().optional().nullable(),
+	contactName: z.string().optional().nullable(),
+	contactDesignation: z.string().optional().nullable(),
+	contactDepartment: z.string().optional().nullable(),
+	contactNumber: z.string().optional().nullable(),
+	contactMobile: z.string().optional().nullable(),
+	contactEmail: z.string().optional().nullable(),
 	approvedBy: z
 		.string()
 		.refine((val) => !val || isValidObjectId(val))

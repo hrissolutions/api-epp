@@ -21,6 +21,14 @@ model PurchaseOrder {
   delivery     DateTime? // expected delivery date/time
   pdc          DateTime? // Post-Dated Check date (if applicable)
 
+  // Contact details snapshot (optional)
+  contactName        String?
+  contactDesignation String?
+  contactDepartment  String?
+  contactNumber      String?
+  contactMobile      String?
+  contactEmail       String?
+
   approvedBy       String?   @db.ObjectId // Admin who approved the client order (or who created PO)
   approvedAt       DateTime? // When client order was approved
   sentToSupplierAt DateTime? // When PO was sent to supplier
