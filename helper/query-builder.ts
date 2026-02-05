@@ -183,7 +183,27 @@ export function buildFilterConditions(modelName: string, filterParam?: string): 
 	const groups = new Map<string, string[]>();
 
 	for (const item of items) {
-		const [rawKey, rawValue] = item.split(":");
+		// Support both ':' and '=' as key-value delimiters
+		// First try to find the delimiter position (prefer ':' if both exist, or use '=' as fallback)
+		let delimiterIndex = item.indexOf(":");
+		if (delimiterIndex === -1) {
+			delimiterIndex = item.indexOf("=");
+		}
+
+		if (delimiterIndex === -1) {
+			// No delimiter found, skip this item
+			console.warn(`Filter item "${item}" has no key-value delimiter (: or =), skipping`);
+			continue;
+		}
+
+		const rawKey = item.substring(0, delimiterIndex);
+		const rawValue = item.substring(delimiterIndex + 1);
+
+		if (!rawKey || rawValue === undefined || rawValue === "") {
+			console.warn(`Filter item "${item}" has empty key or value, skipping`);
+			continue;
+		}
+
 		if (!groups.has(rawKey)) {
 			groups.set(rawKey, []);
 		}
