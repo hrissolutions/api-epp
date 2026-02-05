@@ -26,6 +26,10 @@ export const PurchaseOrderSchema = z.object({
 	supplierId: z.string().refine((val) => isValidObjectId(val), { message: "Invalid supplierId" }),
 	status: PurchaseOrderStatusEnum,
 	items: z.array(PurchaseOrderItemSchema).optional().nullable(),
+	leadTime: z.number().int().min(0).optional().nullable(),
+	availability: z.string().optional().nullable(),
+	delivery: z.coerce.date().optional().nullable(),
+	pdc: z.coerce.date().optional().nullable(),
 	approvedBy: z
 		.string()
 		.refine((val) => !val || isValidObjectId(val))

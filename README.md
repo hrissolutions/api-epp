@@ -137,6 +137,60 @@ Perform a comprehensive build verification before production deployment:
 npm run build
 ```
 
+## 🌐 API Overview
+
+All APIs are exposed under the base path `/api/*`. Below is a high‑level summary of each module, its main endpoints, and what it’s used for.
+
+### Core catalog & cart
+
+| Module       | Base path           | Purpose                                                                | Key endpoints (most support standard CRUD)                                |
+| ------------ | ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Item**     | `/api/items`        | Product catalog: items available for purchase, pricing, stock, status. | `GET /` list, `GET /:id`, `POST /`, `PATCH /:id`, `DELETE /:id`           |
+| **Category** | `/api/category`     | Item categories for organizing the catalog.                            | CRUD on categories                                                        |
+| **Wishlist** | `/api/wishlistItem` | Employee wishlists (saved items, not yet in cart).                     | CRUD on wishlist items                                                    |
+| **CartItem** | `/api/cartItem`     | Shopping cart lines per user (SSO userId).                             | CRUD on cart items, **`POST /checkout`** creates an `Order` from the cart |
+
+### Ordering & financing
+
+| Module                 | Base path                 | Purpose                                                                       | Key endpoints                                                                                        |
+| ---------------------- | ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Order**              | `/api/order`              | Client orders: totals, payment type, status, workflow link.                   | CRUD on orders; responses include `order` + related data (orderItems, transaction, installments, …). |
+| **OrderItem**          | `/api/orderItem`          | Line items for orders (one record per product on an order).                   | CRUD on order items                                                                                  |
+| **Installment**        | `/api/installment`        | Installment schedule for installment orders.                                  | CRUD on installments                                                                                 |
+| **Transaction**        | `/api/transaction`        | Financial ledger for orders (total amount, paid amount, balance, status).     | CRUD on transactions                                                                                 |
+| **FinancierConfig**    | `/api/financierConfig`    | Financier credit limits and installment rate configuration.                   | CRUD and listing for financier configs                                                               |
+| **FinancingAgreement** | `/api/financingAgreement` | Agreement between financier and client for a specific order/installment plan. | CRUD on financing agreements                                                                         |
+
+### Approval workflow
+
+| Module                    | Base path                    | Purpose                                                                      | Key endpoints                                                                                      |
+| ------------------------- | ---------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **ApprovalWorkflow**      | `/api/approvalWorkflow`      | High‑level approval workflows (rules for which orders need which approvers). | CRUD on workflows                                                                                  |
+| **ApprovalType**          | `/api/approvalType`          | Types/roles of approvers (MANAGER, HR, FINANCE, FINANCIER, etc.).            | CRUD on approval types                                                                             |
+| **WorkflowApprovalLevel** | `/api/workflowApprovalLevel` | Per‑workflow approval levels (sequence, approver type, thresholds).          | CRUD on workflow levels                                                                            |
+| **OrderApproval**         | `/api/orderApproval`         | Concrete approvals for a specific order (one per level/approver).            | CRUD; custom: `PATCH /:id/approve`, `PATCH /:id/reject`, `GET /summary` for order approval summary |
+
+When an order is created (`POST /api/order` or `POST /api/cartItem/checkout`), an approval chain is generated based on the matching workflow. Approvers then use the **OrderApproval** endpoints to approve/reject, which drives stock, P.O., and notification flows.
+
+### Supplier & purchasing
+
+| Module               | Base path               | Purpose                                                                   | Key endpoints                                                                          |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Supplier**         | `/api/supplier`         | Supplier master data (who we buy from).                                   | CRUD on suppliers                                                                      |
+| **PurchaseOrder**    | `/api/purchaseOrder`    | Purchase orders issued to suppliers (grouped per supplier per order).     | CRUD; custom: `PATCH /:id/approve` (send PO), `PATCH /:id/confirm` (supplier confirms) |
+| **DeliveryDocument** | `/api/deliveryDocument` | Delivery orders/receipts for goods movement (Vendor→Admin, Admin→Client). | CRUD; used to track Supplier DO/DR and Admin DO/DR                                     |
+
+### Notifications, auditing, docs
+
+| Module           | Base path           | Purpose                                                                | Key endpoints                                                     |
+| ---------------- | ------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Notification** | `/api/notification` | In‑app notifications (order approved, approval requested, etc.).       | CRUD on notifications                                             |
+| **AuditLogging** | `/api/auditLogging` | Audit logs of important actions (create order, approve, reject, etc.). | Read/list audit logs                                              |
+| **Template**     | `/api/template`     | Example generic CRUD module (used as scaffolding reference).           | Standard CRUD                                                     |
+| **Docs**         | `/api/docs`         | Generated OpenAPI/Swagger and helper endpoints for documentation.      | Exposes OpenAPI JSON and helper routes used by the docs generator |
+
+All routers follow a consistent pattern: core CRUD on the base path and extra, domain‑specific actions on sub‑paths. For field‑level details and request/response schemas, use the generated **Swagger UI** (`/api/swagger` in non‑production) or the OpenAPI JSON served by the **Docs** module.
+
 ## 🎯 Enterprise Features & Capabilities
 
 ### 📦 **Production-Ready Utilities**

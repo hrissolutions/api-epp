@@ -15,6 +15,12 @@ model PurchaseOrder {
   // Items requested from supplier (from approved order's orderItems, or derived)
   items Json? // e.g. [{ itemId, sku, description, quantity, unitPrice }]
 
+  // Supplier fulfillment info (optional)
+  leadTime     Int?      // e.g. number of days
+  availability String?   // e.g. IN_STOCK, BACKORDER, PREORDER (free-form)
+  delivery     DateTime? // expected delivery date/time
+  pdc          DateTime? // Post-Dated Check date (if applicable)
+
   approvedBy       String?   @db.ObjectId // Admin who approved the client order (or who created PO)
   approvedAt       DateTime? // When client order was approved
   sentToSupplierAt DateTime? // When PO was sent to supplier
