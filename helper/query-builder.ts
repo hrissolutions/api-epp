@@ -183,15 +183,7 @@ export function buildFilterConditions(modelName: string, filterParam?: string): 
 	const groups = new Map<string, string[]>();
 
 	for (const item of items) {
-		let rawKey, rawValue;
-		if (item.includes(":")) {
-			[rawKey, rawValue] = item.split(":");
-		} else if (item.includes("=")) {
-			[rawKey, rawValue] = item.split("=");
-		} else {
-			continue;
-		}
-
+		const [rawKey, rawValue] = item.split(":");
 		if (!groups.has(rawKey)) {
 			groups.set(rawKey, []);
 		}
