@@ -30,11 +30,21 @@ export const controller = (prisma: PrismaClient) => {
 					supplierId: data.supplierId,
 					status: data.status ?? "PENDING",
 					items: data.items ?? undefined,
+					leadTime: data.leadTime ?? undefined,
+					availability: data.availability ?? undefined,
+					delivery: data.delivery ?? undefined,
+					pdc: data.pdc ?? undefined,
+					contactName: data.contactName ?? undefined,
+					contactDesignation: data.contactDesignation ?? undefined,
+					contactDepartment: data.contactDepartment ?? undefined,
+					contactNumber: data.contactNumber ?? undefined,
+					contactMobile: data.contactMobile ?? undefined,
+					contactEmail: data.contactEmail ?? undefined,
 					approvedBy: data.approvedBy ?? undefined,
 					approvedAt: data.approvedAt ?? undefined,
 					sentToSupplierAt: data.sentToSupplierAt ?? undefined,
 					notes: data.notes ?? undefined,
-				},
+				} as any,
 				include: {
 					order: { select: { orderNumber: true } },
 					supplier: { select: { name: true, code: true } },
@@ -142,7 +152,7 @@ export const controller = (prisma: PrismaClient) => {
 		try {
 			const po = await prisma.purchaseOrder.update({
 				where: { id },
-				data: validation.data,
+				data: validation.data as any,
 				include: {
 					order: { select: { orderNumber: true } },
 					supplier: { select: { name: true } },

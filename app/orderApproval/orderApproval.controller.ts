@@ -23,7 +23,6 @@ import {
 	createOrderApprovedNotificationIfNeeded,
 	tryFinalizeOrderWhenAllApproved,
 } from "../../helper/approvalService";
-import { createPurchaseOrdersForApprovedOrder } from "../../helper/purchaseOrderService";
 
 const logger = getLogger();
 const orderApprovalLogger = logger.child({ module: "orderApproval" });
@@ -702,22 +701,6 @@ export const controller = (prisma: PrismaClient) => {
 
 						// Create "order approved" notification for the employee
 						await createOrderApprovedNotificationIfNeeded(prisma, order.id);
-
-						// Step 3: Create PurchaseOrder(s) to Supplier for this order
-						try {
-							const pos = await createPurchaseOrdersForApprovedOrder(
-								prisma,
-								order.id,
-							);
-							orderApprovalLogger.info(
-								`Created ${pos.length} purchase order(s) for auto-approved order ${order.orderNumber}`,
-							);
-						} catch (poError) {
-							orderApprovalLogger.error(
-								`Failed to create purchase orders for auto-approved order ${order.orderNumber}:`,
-								poError,
-							);
-						}
 
 						// Deduct stock for all products in the order
 						try {

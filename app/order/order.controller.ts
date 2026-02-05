@@ -860,6 +860,7 @@ export const controller = (prisma: PrismaClient) => {
 					id: true,
 					orderNumber: true,
 					status: true,
+					isFullyApproved: true,
 					purchaseOrders: { select: { id: true } },
 				},
 			});
@@ -877,6 +878,15 @@ export const controller = (prisma: PrismaClient) => {
 				);
 				return;
 			}
+			if (!order.isFullyApproved) {
+				res.status(400).json(
+					buildErrorResponse(
+						"Order is not fully approved. Complete all required approvals before generating purchase orders.",
+						400,
+					),
+				);
+				return;
+			}
 			if (order.purchaseOrders.length > 0) {
 				res.status(400).json(
 					buildErrorResponse(
@@ -888,6 +898,17 @@ export const controller = (prisma: PrismaClient) => {
 			}
 			const approvedBy = (req as any).user?.id;
 			const pos = await createPurchaseOrdersForApprovedOrder(prisma, id, approvedBy);
+			// Re-fetch full PurchaseOrder objects with related order & supplier info
+			const fullPOs =
+				pos.length > 0
+					? await prisma.purchaseOrder.findMany({
+							where: { id: { in: pos.map((p) => p.id) } },
+							include: {
+								order: { select: { id: true, orderNumber: true } },
+								supplier: { select: { id: true, name: true, code: true } },
+							},
+						})
+					: [];
 			try {
 				await invalidateCache.byPattern(`cache:order:byId:${id}:*`);
 				await invalidateCache.byPattern("cache:order:list:*");
@@ -898,7 +919,7 @@ export const controller = (prisma: PrismaClient) => {
 			res.status(201).json(
 				buildSuccessResponse(
 					`Created ${pos.length} purchase order(s) for order ${order.orderNumber}`,
-					{ purchaseOrders: pos, count: pos.length },
+					{ purchaseOrders: fullPOs, count: pos.length },
 					201,
 				),
 			);
