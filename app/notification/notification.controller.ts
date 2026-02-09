@@ -51,13 +51,14 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const { source, category, title, description, metadata, isDeleted } =
+			const { source, category, title, description, recipients, metadata, isDeleted } =
 				validation.data as any;
 			const createData: Prisma.NotificationCreateInput = {
 				source,
 				category: category || "general",
 				title,
 				description,
+				...(recipients != null && { recipients }),
 				metadata,
 				isDeleted,
 			};
