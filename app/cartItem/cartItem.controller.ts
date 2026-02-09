@@ -93,6 +93,38 @@ export const controller = (prisma: PrismaClient) => {
 			// Ensure quantity is at least 1
 			const quantityToAdd = quantity || 1;
 
+			// Validate item exists and is purchasable (approved, available, in stock)
+			const item = await prisma.item.findUnique({
+				where: { id: itemId },
+				select: {
+					id: true,
+					name: true,
+					status: true,
+					isAvailable: true,
+					isActive: true,
+					stockQuantity: true,
+				},
+			});
+			if (!item) {
+				cartItemLogger.warn(`Add to cart failed: item not found ${itemId}`);
+				res.status(404).json(
+					buildErrorResponse("Item not found", 404, [
+						{ field: "itemId", message: "Item does not exist" },
+					]),
+				);
+				return;
+			}
+			const reasons: string[] = [];
+			if (item.status !== "APPROVED") {
+				reasons.push(`Item status is ${item.status} (must be APPROVED)`);
+			}
+			if (!item.isAvailable) {
+				reasons.push("Item is not available for purchase");
+			}
+			if (!item.isActive) {
+				reasons.push("Item is inactive");
+			}
+
 			// Check if cart item already exists for this user and item
 			const existingCartItem = await prisma.cartItem.findFirst({
 				where: {
@@ -100,6 +132,25 @@ export const controller = (prisma: PrismaClient) => {
 					itemId: itemId,
 				},
 			});
+
+			const totalQuantityAfterAdd = (existingCartItem?.quantity ?? 0) + quantityToAdd;
+			if (item.stockQuantity < totalQuantityAfterAdd) {
+				reasons.push(
+					`Insufficient stock: available ${item.stockQuantity}, requested ${totalQuantityAfterAdd}`,
+				);
+			}
+
+			if (reasons.length > 0) {
+				cartItemLogger.warn(
+					`Add to cart rejected for item ${itemId}: ${reasons.join("; ")}`,
+				);
+				res.status(400).json(
+					buildErrorResponse("Item cannot be added to cart", 400, [
+						{ field: "itemId", message: reasons.join(". ") },
+					]),
+				);
+				return;
+			}
 
 			let cartItem;
 			let isUpdate = false;
