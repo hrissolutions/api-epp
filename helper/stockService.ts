@@ -1,13 +1,20 @@
+import type { Server } from "socket.io";
 import { PrismaClient } from "../generated/prisma";
 import { getLogger } from "./logger";
+import { createLowStockNotificationIfNeeded } from "./lowStockNotificationService";
 
 const logger = getLogger();
 const stockLogger = logger.child({ module: "stockService" });
 
 /**
- * Deduct stock for items in an order
+ * Deduct stock for items in an order.
+ * Optionally creates low-stock notifications and emits to supplier socket room when io is provided.
  */
-export const deductStockForOrder = async (prisma: PrismaClient, orderId: string): Promise<void> => {
+export const deductStockForOrder = async (
+	prisma: PrismaClient,
+	orderId: string,
+	io?: Server,
+): Promise<void> => {
 	try {
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
@@ -49,6 +56,8 @@ export const deductStockForOrder = async (prisma: PrismaClient, orderId: string)
 				`Stock deducted for item ${oi.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (ordered: ${quantityOrdered})`,
 			);
+
+			await createLowStockNotificationIfNeeded(prisma, oi.itemId, io);
 		}
 
 		stockLogger.info(`Stock deducted for all items in order ${orderId}`);
@@ -140,11 +149,13 @@ export const validateStockForOrder = async (
 };
 
 /**
- * Restore stock for items in an order (when order is cancelled/rejected after approval)
+ * Restore stock for items in an order (when order is cancelled/rejected after approval).
+ * Optionally creates low-stock notifications and emits to supplier socket room when io is provided.
  */
 export const restoreStockForOrder = async (
 	prisma: PrismaClient,
 	orderId: string,
+	io?: Server,
 ): Promise<void> => {
 	try {
 		const order = await prisma.order.findFirst({
@@ -187,6 +198,8 @@ export const restoreStockForOrder = async (
 				`Stock restored for item ${oi.itemId} (${dbItem.name}): ` +
 					`${currentStock} → ${newStock} (restored: ${quantityToRestore})`,
 			);
+
+			await createLowStockNotificationIfNeeded(prisma, oi.itemId, io);
 		}
 
 		stockLogger.info(`Stock restored for all items in order ${orderId}`);

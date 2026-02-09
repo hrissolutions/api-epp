@@ -23,6 +23,8 @@ import {
 	createOrderApprovedNotificationIfNeeded,
 	tryFinalizeOrderWhenAllApproved,
 } from "../../helper/approvalService";
+import { createOrderApprovedSupplierNotifications } from "../../helper/orderApprovedSupplierNotification";
+import { notifyOrderOwnerApproved } from "../../helper/socketOrderApproval";
 
 const logger = getLogger();
 const orderApprovalLogger = logger.child({ module: "orderApproval" });
@@ -701,10 +703,25 @@ export const controller = (prisma: PrismaClient) => {
 
 						// Create "order approved" notification for the employee
 						await createOrderApprovedNotificationIfNeeded(prisma, order.id);
+						await createOrderApprovedSupplierNotifications(
+							prisma,
+							order.id,
+							(req as any).io,
+						);
+						const io = (req as any).io;
+						if (io && order.userId) {
+							notifyOrderOwnerApproved(
+								io,
+								order.id,
+								order.orderNumber,
+								order.total,
+								order.userId,
+							);
+						}
 
 						// Deduct stock for all products in the order
 						try {
-							await deductStockForOrder(prisma, order.id);
+							await deductStockForOrder(prisma, order.id, io);
 							orderApprovalLogger.info(
 								`Stock deducted for all products in auto-approved order ${order.orderNumber}`,
 							);

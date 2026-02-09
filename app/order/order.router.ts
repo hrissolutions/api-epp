@@ -393,6 +393,10 @@ export const router = (route: Router, controller: IController): Router => {
 	 *               contactNumber:      { type: string, nullable: true, description: Contact number }
 	 *               contactMobile:      { type: string, nullable: true, description: Contact mobile }
 	 *               contactEmail:       { type: string, nullable: true, description: Contact email }
+	 *               leadTime:           { type: integer, nullable: true, description: Lead time in days (e.g. number of days) }
+	 *               availability:       { type: string, nullable: true, description: e.g. IN_STOCK, ON_STOCK, BACKORDER, PREORDER }
+	 *               delivery:           { type: string, nullable: true, description: Delivery status/description (e.g. for delivery) }
+	 *               pdc:                { type: string, nullable: true, description: Payment terms (e.g. 90 days PDC) }
 	 *     responses:
 	 *       201:
 	 *         description: Purchase orders created successfully

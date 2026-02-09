@@ -167,3 +167,49 @@ export function notifyOrderRejected(
 		`Notified ${approverIds.length} approver(s) that order ${orderNumber} was rejected`,
 	);
 }
+
+/**
+ * Notify the order owner (employee who placed the order) that their order was approved.
+ */
+export function notifyOrderOwnerApproved(
+	io: Server | undefined,
+	orderId: string,
+	orderNumber: string,
+	orderTotal: number,
+	orderOwnerUserId: string,
+): void {
+	if (!io || !orderOwnerUserId) return;
+	emitToUser(io, orderOwnerUserId, "order:approved", {
+		orderId,
+		orderNumber,
+		orderTotal,
+		message: `Your order ${orderNumber} has been approved.`,
+		at: new Date().toISOString(),
+	});
+	socketLogger.info(`Notified order owner ${orderOwnerUserId} that order ${orderNumber} was approved`);
+}
+
+/**
+ * Notify the order owner (employee who placed the order) that their order was rejected.
+ */
+export function notifyOrderOwnerRejected(
+	io: Server | undefined,
+	orderId: string,
+	orderNumber: string,
+	orderTotal: number,
+	orderOwnerUserId: string,
+	rejectedBy: string,
+	rejectionReason?: string,
+): void {
+	if (!io || !orderOwnerUserId) return;
+	emitToUser(io, orderOwnerUserId, "order:rejected", {
+		orderId,
+		orderNumber,
+		orderTotal,
+		rejectedBy,
+		rejectionReason,
+		message: `Your order ${orderNumber} was rejected.`,
+		at: new Date().toISOString(),
+	});
+	socketLogger.info(`Notified order owner ${orderOwnerUserId} that order ${orderNumber} was rejected`);
+}
