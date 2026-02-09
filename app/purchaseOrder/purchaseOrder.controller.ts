@@ -34,6 +34,7 @@ export const controller = (prisma: PrismaClient) => {
 					availability: data.availability ?? undefined,
 					delivery: data.delivery ?? undefined,
 					pdc: data.pdc ?? undefined,
+					requisitioner: data.requisitioner ?? undefined,
 					contactName: data.contactName ?? undefined,
 					contactDesignation: data.contactDesignation ?? undefined,
 					contactDepartment: data.contactDepartment ?? undefined,

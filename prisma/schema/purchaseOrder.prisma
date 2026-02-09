@@ -21,6 +21,8 @@ model PurchaseOrder {
   delivery     DateTime? // expected delivery date/time
   pdc          DateTime? // Post-Dated Check date (if applicable)
 
+  requisitioner Requisitioner?
+
   // Contact details snapshot (optional)
   contactName        String?
   contactDesignation String?
@@ -57,4 +59,10 @@ enum PurchaseOrderStatus {
   SHIPPED // Supplier shipped
   RECEIVED // Admin received (Admin DR signed)
   CANCELLED
+}
+
+type Requisitioner {
+  name        String
+  designation String?
+  department  String?
 }
