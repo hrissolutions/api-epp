@@ -380,6 +380,19 @@ export const router = (route: Router, controller: IController): Router => {
 	 *           type: string
 	 *           pattern: '^[0-9a-fA-F]{24}$'
 	 *         description: Order ID (MongoDB ObjectId format)
+	 *     requestBody:
+	 *       required: false
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             properties:
+	 *               contactName:        { type: string, nullable: true, description: Contact name }
+	 *               contactDesignation: { type: string, nullable: true, description: Contact designation }
+	 *               contactDepartment:  { type: string, nullable: true, description: Contact department }
+	 *               contactNumber:      { type: string, nullable: true, description: Contact number }
+	 *               contactMobile:      { type: string, nullable: true, description: Contact mobile }
+	 *               contactEmail:       { type: string, nullable: true, description: Contact email }
 	 *     responses:
 	 *       201:
 	 *         description: Purchase orders created successfully

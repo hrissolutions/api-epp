@@ -13,6 +13,15 @@ type OrderLine = {
 	unitPrice: number;
 };
 
+export type PurchaseOrderContactPayload = {
+	contactName?: string | null;
+	contactDesignation?: string | null;
+	contactDepartment?: string | null;
+	contactNumber?: string | null;
+	contactMobile?: string | null;
+	contactEmail?: string | null;
+};
+
 /**
  * Create PurchaseOrder(s) for an approved order. One PO per supplier (order items grouped by item.supplierId).
  * Called when the last approver (e.g. FINANCIER) approves a client order (Step 3).
@@ -22,6 +31,7 @@ export const createPurchaseOrdersForApprovedOrder = async (
 	prisma: PrismaClient,
 	orderId: string,
 	approvedBy?: string,
+	contactPayload?: PurchaseOrderContactPayload,
 ): Promise<{ id: string; poNumber: string; supplierId: string }[]> => {
 	const order = await prisma.order.findUnique({
 		where: { id: orderId },
@@ -83,6 +93,14 @@ export const createPurchaseOrdersForApprovedOrder = async (
 				items: group.items as any,
 				approvedBy: approvedBy ?? undefined,
 				approvedAt,
+				...(contactPayload && {
+					contactName: contactPayload.contactName ?? undefined,
+					contactDesignation: contactPayload.contactDesignation ?? undefined,
+					contactDepartment: contactPayload.contactDepartment ?? undefined,
+					contactNumber: contactPayload.contactNumber ?? undefined,
+					contactMobile: contactPayload.contactMobile ?? undefined,
+					contactEmail: contactPayload.contactEmail ?? undefined,
+				}),
 			},
 		});
 		created.push({ id: po.id, poNumber: po.poNumber, supplierId: po.supplierId });
