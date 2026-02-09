@@ -13,6 +13,7 @@ export const SupplierSchema = z.object({
 	email: z.string().email("Invalid email format").optional().nullable(),
 	phone: z.string().optional().nullable(),
 	website: z.string().url("Invalid URL format").optional().nullable(),
+	address: z.string().optional().nullable(),
 	isActive: z.boolean().default(true),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
@@ -32,6 +33,7 @@ export const CreateSupplierSchema = SupplierSchema.omit({
 		email: true,
 		phone: true,
 		website: true,
+		address: true,
 		isActive: true,
 	})
 	.extend({

@@ -8,6 +8,7 @@ model Supplier {
   email             String?
   phone             String?
   website           String?
+  address           String?
   isActive          Boolean            @default(true)
   items             Item[]
   purchaseOrders    PurchaseOrder[] // Admin's POs to this supplier (when client orders are approved)

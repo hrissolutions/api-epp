@@ -86,6 +86,7 @@ export const controller = (prisma: PrismaClient) => {
 					name: supplier.name,
 					code: supplier.code,
 					email: supplier.email,
+					address: supplier.address,
 					isActive: supplier.isActive,
 					createdAt: supplier.createdAt,
 					updatedAt: supplier.updatedAt,
@@ -136,7 +137,15 @@ export const controller = (prisma: PrismaClient) => {
 		);
 		try {
 			const whereClause: Prisma.SupplierWhereInput = {};
-			const searchFields = ["name", "code", "description", "contactName", "email", "phone"];
+			const searchFields = [
+				"name",
+				"code",
+				"description",
+				"contactName",
+				"email",
+				"phone",
+				"address",
+			];
 			if (query) {
 				const searchConditions = buildSearchConditions("Supplier", query, searchFields);
 				if (searchConditions.length > 0) whereClause.OR = searchConditions;
