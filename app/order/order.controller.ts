@@ -897,7 +897,21 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 			const approvedBy = (req as any).user?.id;
-			const pos = await createPurchaseOrdersForApprovedOrder(prisma, id, approvedBy);
+			const body = req.body ?? {};
+			const contactPayload = {
+				contactName: body.contactName ?? null,
+				contactDesignation: body.contactDesignation ?? null,
+				contactDepartment: body.contactDepartment ?? null,
+				contactNumber: body.contactNumber ?? null,
+				contactMobile: body.contactMobile ?? null,
+				contactEmail: body.contactEmail ?? null,
+			};
+			const pos = await createPurchaseOrdersForApprovedOrder(
+				prisma,
+				id,
+				approvedBy,
+				contactPayload,
+			);
 			// Re-fetch full PurchaseOrder objects with related order & supplier info
 			const fullPOs =
 				pos.length > 0
