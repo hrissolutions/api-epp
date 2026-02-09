@@ -24,7 +24,7 @@ const io = new Server(server, {
 	},
 });
 
-// Socket.IO: allow clients to join user rooms so they receive order-approval notifications
+// Socket.IO: allow clients to join user rooms (order-approval) and supplier rooms (e.g. low-stock notifications)
 io.on("connection", (socket) => {
 	socket.on("subscribe:user", (userId: string) => {
 		if (userId && typeof userId === "string") {
@@ -34,8 +34,16 @@ io.on("connection", (socket) => {
 			console.log(`Socket ${socket.id} joined room ${room}`);
 		}
 	});
+	socket.on("subscribe:supplier", (supplierId: string) => {
+		if (supplierId && typeof supplierId === "string") {
+			const room = `supplier:${supplierId}`;
+			socket.join(room);
+			socket.data.supplierId = supplierId;
+			console.log(`Socket ${socket.id} joined room ${room}`);
+		}
+	});
 	socket.on("disconnect", () => {
-		// Optional: leave user room if you track it
+		// Optional: leave user/supplier room if you track it
 	});
 });
 

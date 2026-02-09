@@ -22,6 +22,14 @@ export type PurchaseOrderContactPayload = {
 	contactEmail?: string | null;
 };
 
+/** Fulfillment fields from PO model (leadTime, availability, delivery, pdc) */
+export type PurchaseOrderFulfillmentPayload = {
+	leadTime?: number | null; // e.g. number of days
+	availability?: string | null; // e.g. IN_STOCK, ON STOCK, BACKORDER, PREORDER
+	delivery?: string | null; // delivery status/description (e.g. "for delivery"), not a date
+	pdc?: string | null; // payment terms (e.g. "90 days PDC"), not a date
+};
+
 /**
  * Create PurchaseOrder(s) for an approved order. One PO per supplier (order items grouped by item.supplierId).
  * Called when the last approver (e.g. FINANCIER) approves a client order (Step 3).
@@ -32,6 +40,7 @@ export const createPurchaseOrdersForApprovedOrder = async (
 	orderId: string,
 	approvedBy?: string,
 	contactPayload?: PurchaseOrderContactPayload,
+	fulfillmentPayload?: PurchaseOrderFulfillmentPayload,
 ): Promise<{ id: string; poNumber: string; supplierId: string }[]> => {
 	const order = await prisma.order.findUnique({
 		where: { id: orderId },
@@ -100,6 +109,13 @@ export const createPurchaseOrdersForApprovedOrder = async (
 					contactNumber: contactPayload.contactNumber ?? undefined,
 					contactMobile: contactPayload.contactMobile ?? undefined,
 					contactEmail: contactPayload.contactEmail ?? undefined,
+				}),
+				...(fulfillmentPayload && {
+					leadTime:
+						fulfillmentPayload.leadTime != null ? fulfillmentPayload.leadTime : undefined,
+					availability: fulfillmentPayload.availability ?? undefined,
+					delivery: fulfillmentPayload.delivery ?? undefined,
+					pdc: fulfillmentPayload.pdc ?? undefined,
 				}),
 			},
 		});

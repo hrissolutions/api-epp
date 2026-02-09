@@ -23,6 +23,7 @@ import {
 	uploadMultipleToCloudinary,
 	deleteMultipleFromCloudinary,
 } from "../../helper/cloudinaryUpload";
+import { createLowStockNotificationIfNeeded } from "../../helper/lowStockNotificationService";
 import csvParser from "csv-parser";
 import { Readable } from "stream";
 import * as fs from "fs";
@@ -639,6 +640,17 @@ export const controller = (prisma: PrismaClient) => {
 				itemsLogger.info(`Cache invalidated after item ${id} update`);
 			} catch (cacheError) {
 				itemsLogger.warn("Failed to invalidate cache after item update:", cacheError);
+			}
+
+			try {
+				await createLowStockNotificationIfNeeded(
+					prisma,
+					id,
+					(req as any).io,
+					(req as any).organizationId,
+				);
+			} catch (lowStockErr) {
+				itemsLogger.warn("Low-stock notification check failed:", lowStockErr);
 			}
 
 			itemsLogger.info(`${config.SUCCESS.PRODUCTS.UPDATED}: ${updatedItem.id}`);

@@ -27,7 +27,10 @@ import {
 } from "../../helper/financierHelper";
 import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { calculateOrderTotals } from "../../helper/calculateOrderTotals.helper";
-import { createPurchaseOrdersForApprovedOrder } from "../../helper/purchaseOrderService";
+import {
+	createPurchaseOrdersForApprovedOrder,
+	type PurchaseOrderFulfillmentPayload,
+} from "../../helper/purchaseOrderService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -164,6 +167,67 @@ export const controller = (prisma: PrismaClient) => {
 		try {
 			// Calculate order totals from items (needed for workflow check and order data)
 			const totals = await calculateOrderTotals(prisma, validation.data.items);
+
+			// Validate item availability and stock (same rules as cart checkout)
+			const itemIds = [...new Set(totals.items.map((i) => i.itemId))];
+			const dbItems = await prisma.item.findMany({
+				where: { id: { in: itemIds } },
+				select: {
+					id: true,
+					name: true,
+					status: true,
+					isAvailable: true,
+					isActive: true,
+					stockQuantity: true,
+				},
+			});
+			const itemMap = new Map(dbItems.map((i) => [i.id, i]));
+			const unavailableItems: Array<{ itemId: string; itemName: string; reasons: string[] }> = [];
+			for (const row of totals.items) {
+				const item = itemMap.get(row.itemId);
+				if (!item) {
+					unavailableItems.push({
+						itemId: row.itemId,
+						itemName: "Unknown",
+						reasons: ["Item not found"],
+					});
+					continue;
+				}
+				const reasons: string[] = [];
+				if (item.status !== "APPROVED") {
+					reasons.push(`Status is ${item.status} (must be APPROVED)`);
+				}
+				if (!item.isAvailable) reasons.push("Item is not available");
+				if (!item.isActive) reasons.push("Item is inactive");
+				if (item.stockQuantity < row.quantity) {
+					reasons.push(
+						`Insufficient stock: available ${item.stockQuantity}, requested ${row.quantity}`,
+					);
+				}
+				if (reasons.length > 0) {
+					unavailableItems.push({
+						itemId: item.id,
+						itemName: item.name || "Unknown",
+						reasons,
+					});
+				}
+			}
+			if (unavailableItems.length > 0) {
+				orderLogger.warn(
+					`Order creation rejected: unavailable or out-of-stock items: ${JSON.stringify(unavailableItems)}`,
+				);
+				const errorMessages = unavailableItems.flatMap((u) =>
+					u.reasons.map((r) => ({ field: `item.${u.itemId}`, message: `${u.itemName}: ${r}` })),
+				);
+				res.status(400).json(
+					buildErrorResponse(
+						"One or more items are not available or out of stock. Please remove them and try again.",
+						400,
+						errorMessages,
+					),
+				);
+				return;
+			}
 
 			// Require a matching approval workflow before creating the order
 			const paymentType = validation.data.paymentType ?? "INSTALLMENT";
@@ -906,11 +970,19 @@ export const controller = (prisma: PrismaClient) => {
 				contactMobile: body.contactMobile ?? null,
 				contactEmail: body.contactEmail ?? null,
 			};
+			const rawLeadTime = body.leadTime != null ? Number(body.leadTime) : null;
+			const fulfillmentPayload: PurchaseOrderFulfillmentPayload = {
+				leadTime: rawLeadTime != null && !Number.isNaN(rawLeadTime) ? rawLeadTime : null,
+				availability: body.availability ?? null,
+				delivery: body.delivery ?? null,
+				pdc: body.pdc ?? null,
+			};
 			const pos = await createPurchaseOrdersForApprovedOrder(
 				prisma,
 				id,
 				approvedBy,
 				contactPayload,
+				fulfillmentPayload,
 			);
 			// Re-fetch full PurchaseOrder objects with related order & supplier info
 			const fullPOs =
