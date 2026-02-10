@@ -23,6 +23,7 @@ import {
 	notifyOrderOwnerRejected,
 } from "./socketOrderApproval";
 import { createOrderApprovedSupplierNotifications } from "./orderApprovedSupplierNotification";
+import { createFinancierDisbursementForAgreement } from "./financeSettlementService";
 import type { Server } from "socket.io";
 
 const logger = getLogger();
@@ -579,6 +580,10 @@ export const tryFinalizeOrderWhenAllApproved = async (
 					where: { orderId },
 					orderBy: { installmentNumber: "asc" },
 				});
+				// Financier -> EPP-admin lending should use base item value (no installment-rate uplift).
+				const principalAmount = parseFloat(
+					(Number(order.subtotal) - Number(order.discount)).toFixed(2),
+				);
 				const installmentCount = installments.length || 1;
 				const totalPayable =
 					installments.length > 0
@@ -601,7 +606,7 @@ export const tryFinalizeOrderWhenAllApproved = async (
 						orderId,
 						financierConfigId,
 						organizationId: order.organizationId ?? null,
-						principalAmount: order.total,
+						principalAmount,
 						totalPayable,
 						installmentCount,
 						installmentAmount,
@@ -611,14 +616,15 @@ export const tryFinalizeOrderWhenAllApproved = async (
 					},
 				});
 				approvalLogger.info(
-					`Created FinancingAgreement ${agreement.id} for order ${order.orderNumber} (principal ${order.total}, used credit updated)`,
+					`Created FinancingAgreement ${agreement.id} for order ${order.orderNumber} (principal ${principalAmount}, used credit updated)`,
 				);
+				await createFinancierDisbursementForAgreement(prisma, agreement.id);
 				// Update FinancierConfig: increment usedCredits, decrement availableCredits
 				await prisma.financierConfig.update({
 					where: { id: financierConfigId },
 					data: {
-						usedCredits: { increment: order.total },
-						availableCredits: { decrement: order.total },
+						usedCredits: { increment: principalAmount },
+						availableCredits: { decrement: principalAmount },
 					},
 				});
 				if (installments.length > 0) {

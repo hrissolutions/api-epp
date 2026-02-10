@@ -1,6 +1,7 @@
 import { PrismaClient } from "../generated/prisma";
 import { getLogger } from "./logger";
 import { generatePONumber } from "./generate-PONumber.helper";
+import { createSupplierSettlementForPO } from "./financeSettlementService";
 
 const logger = getLogger();
 const poServiceLogger = logger.child({ module: "purchaseOrderService" });
@@ -119,6 +120,7 @@ export const createPurchaseOrdersForApprovedOrder = async (
 				}),
 			},
 		});
+		await createSupplierSettlementForPO(prisma, po.id);
 		created.push({ id: po.id, poNumber: po.poNumber, supplierId: po.supplierId });
 		poServiceLogger.info(
 			`Created PO ${po.poNumber} for order ${order.orderNumber}, supplier ${group.supplierId}`,
