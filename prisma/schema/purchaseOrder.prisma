@@ -16,10 +16,10 @@ model PurchaseOrder {
   items Json? // e.g. [{ itemId, sku, description, quantity, unitPrice }]
 
   // Supplier fulfillment info (optional)
-  leadTime     Int?      // e.g. number of days
-  availability String?   // e.g. IN_STOCK, BACKORDER, PREORDER (free-form)
-  delivery     DateTime? // expected delivery date/time
-  pdc          DateTime? // Post-Dated Check date (if applicable)
+  leadTime     Int?    // e.g. number of days, or use availability for "ON-STOCK"
+  availability String? // e.g. IN_STOCK, ON STOCK, BACKORDER, PREORDER (free-form)
+  delivery     String? // delivery status/description (e.g. "for delivery"), not a date
+  pdc          String? // payment terms (e.g. "90 days PDC"), not a date
 
   requisitioner Requisitioner?
 

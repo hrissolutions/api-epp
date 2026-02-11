@@ -36,7 +36,6 @@ export const PurchaseOrderSchema = z.object({
 	availability: z.string().optional().nullable(),
 	delivery: z.coerce.date().optional().nullable(),
 	pdc: z.coerce.date().optional().nullable(),
-	requisitioner: RequisitionerSchema.optional().nullable(),
 	contactName: z.string().optional().nullable(),
 	contactDesignation: z.string().optional().nullable(),
 	contactDepartment: z.string().optional().nullable(),

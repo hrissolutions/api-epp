@@ -19,7 +19,10 @@ import {
 	notifyNextApproverTurn,
 	notifyOrderFullyApproved,
 	notifyOrderRejected,
+	notifyOrderOwnerApproved,
+	notifyOrderOwnerRejected,
 } from "./socketOrderApproval";
+import { createOrderApprovedSupplierNotifications } from "./orderApprovedSupplierNotification";
 import type { Server } from "socket.io";
 
 const logger = getLogger();
@@ -388,11 +391,11 @@ export const createApprovalChain = async (
 			approvalLogger.info(
 				`All ${approvals.length} approval level(s) already APPROVED for order ${orderNumber}; finalizing.`,
 			);
-			const finalized = await tryFinalizeOrderWhenAllApproved(prisma, orderId);
+			const finalized = await tryFinalizeOrderWhenAllApproved(prisma, orderId, io);
 			if (finalized) {
 				const order = await prisma.order.findUnique({
 					where: { id: orderId },
-					select: { total: true },
+					select: { total: true, userId: true },
 				});
 				const orderTotal = order?.total ?? 0;
 				notifyOrderFullyApproved(
@@ -402,6 +405,9 @@ export const createApprovalChain = async (
 					orderTotal,
 					approvals.map((a) => a.approverId),
 				);
+				if (order?.userId) {
+					notifyOrderOwnerApproved(io, orderId, orderNumber, orderTotal, order.userId);
+				}
 				approvalLogger.info(
 					`Order ${orderNumber} finalized (all approvals were auto-approved).`,
 				);
@@ -516,6 +522,7 @@ export const checkAllApprovalsComplete = async (
 export const tryFinalizeOrderWhenAllApproved = async (
 	prisma: PrismaClient,
 	orderId: string,
+	io?: Server,
 ): Promise<boolean> => {
 	try {
 		const order = await prisma.order.findUnique({
@@ -555,6 +562,7 @@ export const tryFinalizeOrderWhenAllApproved = async (
 			},
 		});
 		await createOrderApprovedNotificationIfNeeded(prisma, orderId);
+		await createOrderApprovedSupplierNotifications(prisma, orderId, io);
 
 		// Create FinancingAgreement when order had a financier in the approval chain (so used credit increases)
 		try {
@@ -628,7 +636,7 @@ export const tryFinalizeOrderWhenAllApproved = async (
 		}
 
 		try {
-			await deductStockForOrder(prisma, orderId);
+			await deductStockForOrder(prisma, orderId, io);
 			approvalLogger.info(`Stock deducted for order ${order.orderNumber}`);
 		} catch (stockError) {
 			approvalLogger.error(
@@ -705,7 +713,7 @@ export const processApproval = async (
 			// Restore stock if order was previously approved
 			if (wasApproved) {
 				try {
-					await restoreStockForOrder(prisma, approval.orderId);
+					await restoreStockForOrder(prisma, approval.orderId, undefined);
 					approvalLogger.info(
 						`Stock restored for order ${approval.order.orderNumber} after rejection`,
 					);
@@ -750,6 +758,15 @@ export const processApproval = async (
 				approval.order.orderNumber,
 				approval.order.total,
 				approverIds,
+				approval.approverName,
+				comments,
+			);
+			notifyOrderOwnerRejected(
+				io,
+				approval.orderId,
+				approval.order.orderNumber,
+				approval.order.total,
+				approval.order.userId,
 				approval.approverName,
 				comments,
 			);
@@ -821,10 +838,12 @@ export const processApproval = async (
 
 				// Create "order approved" notification for the employee
 				await createOrderApprovedNotificationIfNeeded(prisma, approval.orderId);
+				// Notify each supplier that has items in this order
+				await createOrderApprovedSupplierNotifications(prisma, approval.orderId, io);
 
 				// Deduct stock for all products in the order
 				try {
-					await deductStockForOrder(prisma, approval.orderId);
+					await deductStockForOrder(prisma, approval.orderId, io);
 					approvalLogger.info(
 						`Stock deducted for all products in order ${approval.order.orderNumber}`,
 					);
@@ -868,6 +887,13 @@ export const processApproval = async (
 					approval.order.orderNumber,
 					approval.order.total,
 					approverIds,
+				);
+				notifyOrderOwnerApproved(
+					io,
+					approval.orderId,
+					approval.order.orderNumber,
+					approval.order.total,
+					approval.order.userId,
 				);
 
 				approvalLogger.info(

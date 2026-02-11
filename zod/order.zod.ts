@@ -162,6 +162,20 @@ export const CreateOrderSchema = z
 				message: "Provide either items or orderItems, not both",
 			});
 		}
+		// Reject duplicate itemIds (same item should appear once with combined quantity)
+		const itemList = val.items ?? val.orderItems ?? [];
+		const itemIds = itemList.map((i: { itemId: string }) => i.itemId);
+		const duplicates = itemIds.filter(
+			(id, index) => itemIds.indexOf(id) !== index,
+		);
+		const uniqueDuplicates = [...new Set(duplicates)];
+		if (uniqueDuplicates.length > 0) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["items"],
+				message: `Duplicate item IDs not allowed: ${uniqueDuplicates.join(", ")}. Use a single line per item with the total quantity.`,
+			});
+		}
 	})
 	.transform((val) => ({
 		...val,
