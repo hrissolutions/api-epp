@@ -632,12 +632,16 @@ export const controller = (prisma: PrismaClient) => {
 	/**
 	 * Get client installment ledger (statement of account)
 	 * Preferred: GET /api/installment/ledger/:employeeId
+	 * Per-order: GET /api/installment/ledger/:employeeId/order/:orderId
 	 * Backward-compatible alias: GET /api/installment/soa/client/:employeeId
 	 */
 	const getClientSoa = async (req: Request, res: Response, _next: NextFunction) => {
 		const { employeeId: rawEmployeeId } = req.params;
-		const rawOrderId = req.query.orderId;
-		const orderIdFilter = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+		const rawOrderIdFromPath = req.params.orderId;
+		const rawOrderIdFromQuery = req.query.orderId;
+		const orderIdFilter = Array.isArray(rawOrderIdFromPath)
+			? rawOrderIdFromPath[0]
+			: rawOrderIdFromPath || (Array.isArray(rawOrderIdFromQuery) ? rawOrderIdFromQuery[0] : rawOrderIdFromQuery);
 
 		try {
 			if (!rawEmployeeId) {
@@ -749,6 +753,7 @@ export const controller = (prisma: PrismaClient) => {
 					"Client installment ledger retrieved",
 					{
 						employeeId,
+						...(orderIdFilter ? { orderId: orderIdFilter } : {}),
 						summary: {
 							totalOrders: orders.length,
 							totalEntries: entries.length,

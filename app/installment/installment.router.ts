@@ -541,6 +541,7 @@ export const router = (route: Router, controller: IController): Router => {
 	routes.get("/order/:orderId/summary", controller.getOrderSummary);
 
 	// Preferred endpoint name for client installment statement/ledger.
+	routes.get("/ledger/:employeeId/order/:orderId", controller.getClientSoa);
 	routes.get("/ledger/:employeeId", controller.getClientSoa);
 	// Backward-compatible alias; keep temporarily for existing clients.
 	routes.get("/soa/client/:employeeId", controller.getClientSoa);
