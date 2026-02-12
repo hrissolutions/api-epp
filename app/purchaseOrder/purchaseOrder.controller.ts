@@ -20,7 +20,7 @@ export const controller = (prisma: PrismaClient) => {
 			return;
 		}
 		try {
-			const data = validation.data;
+			const data: any = validation.data;
 			const poNumber = data.poNumber ?? (await generatePONumber(prisma));
 			const po = await prisma.purchaseOrder.create({
 				data: {

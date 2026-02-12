@@ -73,6 +73,19 @@ export const controller = (prisma: PrismaClient) => {
 					title: config.ACTIVITY_LOG.SUPPLIER.PAGES.SUPPLIER_CREATION,
 				},
 			});
+			const changesAfter = {
+				id: supplier.id,
+				name: supplier.name,
+				code: supplier.code,
+				email: supplier.email,
+				...(typeof (supplier as any).address !== "undefined"
+					? { address: (supplier as any).address }
+					: {}),
+				isActive: supplier.isActive,
+				createdAt: supplier.createdAt,
+				updatedAt: supplier.updatedAt,
+			};
+
 			logAudit(req, {
 				userId: (req as any).user?.id || "unknown",
 				action: config.AUDIT_LOG.ACTIONS.CREATE,
@@ -81,16 +94,7 @@ export const controller = (prisma: PrismaClient) => {
 				entityType: config.AUDIT_LOG.ENTITY_TYPES.SUPPLIER,
 				entityId: supplier.id,
 				changesBefore: null,
-				changesAfter: {
-					id: supplier.id,
-					name: supplier.name,
-					code: supplier.code,
-					email: supplier.email,
-					address: supplier.address,
-					isActive: supplier.isActive,
-					createdAt: supplier.createdAt,
-					updatedAt: supplier.updatedAt,
-				},
+				changesAfter,
 				description: `${config.AUDIT_LOG.SUPPLIER.DESCRIPTIONS.SUPPLIER_CREATED}: ${supplier.name || supplier.id}`,
 			});
 			try {
