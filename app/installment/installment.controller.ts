@@ -630,8 +630,9 @@ export const controller = (prisma: PrismaClient) => {
 	};
 
 	/**
-	 * Get client SOA for installment orders
-	 * GET /api/installment/soa/client/:employeeId
+	 * Get client installment ledger (statement of account)
+	 * Preferred: GET /api/installment/ledger/:employeeId
+	 * Backward-compatible alias: GET /api/installment/soa/client/:employeeId
 	 */
 	const getClientSoa = async (req: Request, res: Response, _next: NextFunction) => {
 		const { employeeId: rawEmployeeId } = req.params;
@@ -745,7 +746,7 @@ export const controller = (prisma: PrismaClient) => {
 
 			res.status(200).json(
 				buildSuccessResponse(
-					"Client installment SOA retrieved",
+					"Client installment ledger retrieved",
 					{
 						employeeId,
 						summary: {
@@ -761,7 +762,7 @@ export const controller = (prisma: PrismaClient) => {
 				),
 			);
 		} catch (error) {
-			installmentLogger.error(`Failed to get client installment SOA: ${error}`);
+			installmentLogger.error(`Failed to get client installment ledger: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
