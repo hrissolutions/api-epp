@@ -23,6 +23,7 @@ export async function seedEPP() {
 				email: "contact@uzarotech.com",
 				phone: "+63 912 345 6789",
 				website: "https://uzarotech.com",
+				address: "1234 Tech Avenue, Innovation City, Philippines",
 				isActive: true,
 			},
 		});
