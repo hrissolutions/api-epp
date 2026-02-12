@@ -29,11 +29,6 @@ interface OrderTotals {
 }
 
 /**
- * Default tax rate (10%). Can be made configurable later.
- */
-const DEFAULT_TAX_RATE = 0.1; // 10%
-
-/**
  * Calculates order totals from items
  * - Fetches item prices (sellingPrice) if unitPrice is not provided in items
  * - Fetches item details to get discount (if available from item)
@@ -42,13 +37,11 @@ const DEFAULT_TAX_RATE = 0.1; // 10%
  *
  * @param prisma - Prisma client instance
  * @param items - Array of order items (unitPrice is optional - will be fetched from item if not provided)
- * @param taxRate - Optional tax rate (defaults to 10%)
  * @returns Promise<OrderTotals> - Calculated order totals
  */
 export const calculateOrderTotals = async (
 	prisma: PrismaClient,
 	items: OrderItemInput[],
-	taxRate: number = DEFAULT_TAX_RATE,
 ): Promise<OrderTotals> => {
 	try {
 		const calculatedItems: CalculatedOrderItem[] = [];
@@ -115,11 +108,9 @@ export const calculateOrderTotals = async (
 			);
 		}
 
-		// Calculate tax on subtotal (after discounts)
-		const tax = orderSubtotal * taxRate;
-
-		// Calculate total: subtotal + tax
-		const total = orderSubtotal + tax;
+		// Tax is intentionally excluded from order computations.
+		const tax = 0;
+		const total = orderSubtotal;
 
 		const totals: OrderTotals = {
 			items: calculatedItems,

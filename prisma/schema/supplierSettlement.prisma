@@ -1,0 +1,48 @@
+model SupplierSettlement {
+  id                      String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId          String? @db.ObjectId
+  orderId                 String  @db.ObjectId
+  purchaseOrderId         String  @db.ObjectId
+  supplierId              String  @db.ObjectId
+  financierDisbursementId String? @db.ObjectId
+
+  referenceNo String?
+  amount      Float
+  currency    String   @default("PHP")
+  paidAt      DateTime?
+  dueAt       DateTime?
+
+  status               SettlementStatus    @default(PENDING)
+  reconciliationStatus ReconciliationStatus @default(PENDING)
+
+  reconciledAt DateTime?
+  reconciledBy String?  @db.ObjectId
+  notes        String?
+  metadata     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order                 Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  purchaseOrder         PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  financierDisbursement FinancierDisbursement? @relation(fields: [financierDisbursementId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([orderId])
+  @@index([purchaseOrderId])
+  @@index([supplierId])
+  @@index([financierDisbursementId])
+  @@index([status])
+  @@index([reconciliationStatus])
+  @@index([createdAt])
+  @@map("supplierSettlements")
+}
+
+enum SettlementStatus {
+  PENDING
+  PAID
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+

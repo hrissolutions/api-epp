@@ -19,8 +19,15 @@ import { config } from "../../config/constant";
 import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
-import { createTransactionForOrder } from "../../helper/transactionService";
+import {
+	createTransactionForOrder,
+	syncTransactionTotalFromInstallments,
+} from "../../helper/transactionService";
 import { createApprovalChain, findMatchingWorkflow } from "../../helper/approvalService";
+import {
+	getFinancierConfigForWorkflow,
+	getRateForInstallmentCount,
+} from "../../helper/financierHelper";
 import { generateOrderNumber } from "../../helper/generate-OrderNumber.helper";
 import { z } from "zod";
 
@@ -665,7 +672,6 @@ export const controller = (prisma: PrismaClient) => {
 			installmentMonths,
 			paymentMethod,
 			discount,
-			tax,
 			pointsUsed,
 			notes,
 			items: itemsLegacy,
@@ -969,8 +975,12 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
-			// No shipping cost for company internal delivery
-			const total = subtotal - discount + tax - (pointsUsed || 0);
+			// No shipping cost for company internal delivery.
+			// Compute principal first, then for INSTALLMENT apply financier rate
+			// before saving so `order.total` is already the payable total.
+			const principalTotal = subtotal - discount - (pointsUsed || 0);
+			let total = principalTotal;
+			let installmentRateFromFinancier: number | null = null;
 
 			if (total <= 0) {
 				cartItemLogger.error(`Invalid order total: ${total}`);
@@ -996,6 +1006,37 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 
+			// Apply financier installment rate before saving order
+			if (paymentType === "INSTALLMENT" && installmentMonths) {
+				const installmentCount = installmentMonths * 2;
+				let interestRatePercent = 0;
+				try {
+					if (matchingWorkflow) {
+						const financierConfig = await getFinancierConfigForWorkflow(
+							prisma,
+							matchingWorkflow,
+						);
+						if (financierConfig) {
+							interestRatePercent = getRateForInstallmentCount(
+								installmentCount,
+								financierConfig,
+							);
+						}
+					}
+				} catch (rateError) {
+					cartItemLogger.warn(
+						"Could not resolve financier rate for pre-save total (using 0%):",
+						rateError,
+					);
+				}
+				installmentRateFromFinancier = interestRatePercent > 0 ? interestRatePercent : null;
+				if (interestRatePercent > 0) {
+					total = Number(
+						(principalTotal + (principalTotal * interestRatePercent) / 100).toFixed(2),
+					);
+				}
+			}
+
 			// Generate order number using helper function
 			const orderNumber = await generateOrderNumber(prisma);
 
@@ -1006,7 +1047,7 @@ export const controller = (prisma: PrismaClient) => {
 					userId,
 					subtotal,
 					discount,
-					tax,
+					tax: 0,
 					total,
 					paymentType,
 					installmentMonths: paymentType === "INSTALLMENT" ? installmentMonths : null,
@@ -1053,8 +1094,13 @@ export const controller = (prisma: PrismaClient) => {
 			let generatedInstallments = null;
 			if (order.paymentType === "INSTALLMENT" && order.installmentMonths) {
 				try {
+					// Interest has already been applied to order.total before save.
+					// Generate installments from payable total with no extra interest pass.
+					const interestRatePercent = installmentRateFromFinancier ?? 0;
+
 					cartItemLogger.info(
-						`Generating installments for order ${order.id}: ${order.installmentMonths} months`,
+						`Generating installments for order ${order.id}: ${order.installmentMonths} months` +
+							(interestRatePercent > 0 ? `, rate ${interestRatePercent}%` : ""),
 					);
 
 					generatedInstallments = await generateInstallments(
@@ -1072,6 +1118,15 @@ export const controller = (prisma: PrismaClient) => {
 							installmentCount: generatedInstallments.length,
 							installmentAmount: generatedInstallments[0]?.amount || 0,
 						},
+					});
+					// Reflect financier rate (total payable) in transaction ledger
+					await syncTransactionTotalFromInstallments(prisma, order.id, {
+						rateFromFinancer: interestRatePercent,
+						price: order.subtotal,
+					});
+					// Re-fetch transaction so response reflects synced total and rate breakdown
+					transaction = await prisma.transaction.findFirst({
+						where: { orderId: order.id },
 					});
 
 					cartItemLogger.info(
@@ -1289,8 +1344,32 @@ export const controller = (prisma: PrismaClient) => {
 						? {
 								...orderWithItems,
 								orderItems: undefined,
+								totalPayable: undefined,
+								installmentRate: undefined,
+								installmentRateFromFinancier:
+									installmentRateFromFinancier ??
+									(transaction as any)?.metadata?.breakdown?.rateFromFinancer ??
+									null,
+								principalAmount: Number(
+									(
+										Number(order.subtotal ?? 0) - Number(order.discount ?? 0)
+									).toFixed(2),
+								),
 							}
-						: order,
+						: {
+								...order,
+								totalPayable: undefined,
+								installmentRate: undefined,
+								installmentRateFromFinancier:
+									installmentRateFromFinancier ??
+									(transaction as any)?.metadata?.breakdown?.rateFromFinancer ??
+									null,
+								principalAmount: Number(
+									(
+										Number(order.subtotal ?? 0) - Number(order.discount ?? 0)
+									).toFixed(2),
+								),
+							},
 					orderItems: itemsWithDetails,
 					checkoutSummary: {
 						totalItems: totalItems,
@@ -1306,6 +1385,33 @@ export const controller = (prisma: PrismaClient) => {
 								paidAmount: transaction.paidAmount,
 								balance: transaction.balance,
 								status: transaction.status,
+								rateFromFinancier:
+									(transaction as any)?.metadata?.breakdown?.rateFromFinancer ??
+									null,
+								breakdown: {
+									price:
+										(transaction as any)?.metadata?.breakdown?.price ??
+										order.subtotal ??
+										null,
+									principalAmount: Number(
+										(
+											Number(order.subtotal ?? 0) -
+											Number(order.discount ?? 0)
+										).toFixed(2),
+									),
+									interestAmount: Number(
+										(
+											Number(transaction.totalAmount) -
+											Number(
+												(
+													Number(order.subtotal ?? 0) -
+													Number(order.discount ?? 0) +
+													Number(order.pointsUsed ?? 0)
+												).toFixed(2),
+											)
+										).toFixed(2),
+									),
+								},
 							}
 						: null,
 					...(generatedInstallments && {

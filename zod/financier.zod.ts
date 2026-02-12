@@ -49,6 +49,11 @@ export const FinancierConfigSchema = z.object({
 	usedCredits: decimalSchema.optional().default(0), // Stored sum of principal from approved financing
 	availableCredits: decimalSchema.optional().default(0), // Stored remaining credit; decremented on financing
 	autoApproveLimit: decimalSchema,
+	adminRemittanceTermDays: z.coerce
+		.number()
+		.int("adminRemittanceTermDays must be an integer")
+		.nonnegative("adminRemittanceTermDays cannot be negative")
+		.default(30),
 	installmentRateConfig: InstallmentRateConfigSchema.optional().nullable(),
 	notes: z.string().optional().nullable(),
 	createdAt: z.coerce.date(),

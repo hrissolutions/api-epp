@@ -1,0 +1,54 @@
+model FinancierDisbursement {
+  id                   String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId       String? @db.ObjectId
+  orderId              String  @db.ObjectId
+  financingAgreementId String  @db.ObjectId
+  financierConfigId    String  @db.ObjectId
+
+  referenceNo String?
+  amount      Float
+  currency    String   @default("PHP")
+  disbursedAt DateTime?
+  expectedAt  DateTime?
+
+  status               DisbursementStatus  @default(PENDING)
+  reconciliationStatus ReconciliationStatus @default(PENDING)
+
+  reconciledAt DateTime?
+  reconciledBy String?  @db.ObjectId
+  notes        String?
+  metadata     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order              Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  financingAgreement FinancingAgreement @relation(fields: [financingAgreementId], references: [id], onDelete: Cascade)
+  settlements        SupplierSettlement[]
+  adminSettlements   AdminFinancierSettlement[]
+
+  @@index([organizationId])
+  @@index([orderId])
+  @@index([financingAgreementId])
+  @@index([financierConfigId])
+  @@index([status])
+  @@index([reconciliationStatus])
+  @@index([createdAt])
+  @@map("financierDisbursements")
+}
+
+enum DisbursementStatus {
+  PENDING
+  DISBURSED
+  FAILED
+  CANCELLED
+}
+
+enum ReconciliationStatus {
+  PENDING
+  MATCHED
+  PARTIAL
+  DISPUTED
+  SETTLED
+}
+

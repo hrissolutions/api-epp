@@ -1,0 +1,581 @@
+import { NextFunction, Request, Response } from "express";
+import { isValidObjectId } from "mongoose";
+import { PrismaClient } from "../../generated/prisma";
+import {
+	CreateAdminFinancierSettlementSchema,
+	CreateFinancierDisbursementSchema,
+	ReconcileFinancierDisbursementSchema,
+	UpdateFinancierDisbursementSchema,
+} from "../../zod/financierDisbursement.zod";
+import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
+import { buildSuccessResponse } from "../../helper/success-handler";
+
+export const controller = (prisma: PrismaClient) => {
+	type SoaView = "ADMIN_TO_FINANCIER" | "FINANCIER";
+	const DEFAULT_ADMIN_REMITTANCE_TERM_DAYS = 30;
+
+	const addDays = (base: Date, days: number): Date => {
+		const safeDays = Number.isFinite(days) ? Math.max(0, Math.floor(days)) : 0;
+		const next = new Date(base);
+		next.setDate(next.getDate() + safeDays);
+		return next;
+	};
+
+	const parseAmountFromMetadata = (metadata: unknown): number | null => {
+		if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+			return null;
+		}
+		const record = metadata as Record<string, unknown>;
+		const candidates = [record.paidAmount, record.paymentAmount, record.amountPaid];
+		for (const value of candidates) {
+			if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+				return value;
+			}
+			if (typeof value === "string") {
+				const parsed = Number(value);
+				if (Number.isFinite(parsed) && parsed > 0) {
+					return parsed;
+				}
+			}
+		}
+		return null;
+	};
+
+	const resolveCreditAmount = (row: {
+		amount: number;
+		reconciliationStatus: string;
+		metadata: unknown;
+	}): number => {
+		const metadataAmount = parseAmountFromMetadata(row.metadata);
+		if (row.reconciliationStatus === "PARTIAL" && metadataAmount !== null) {
+			return Math.min(metadataAmount, row.amount);
+		}
+		return row.amount;
+	};
+
+	const buildSoa = async (financierConfigId: string, view: SoaView) => {
+		const rows = await (prisma as any).financierDisbursement.findMany({
+			where: { financierConfigId },
+			orderBy: { createdAt: "asc" },
+			include: {
+				order: {
+					select: {
+						orderNumber: true,
+					},
+				},
+				adminSettlements: {
+					orderBy: { createdAt: "asc" },
+				},
+			},
+		});
+
+		type RawEntry = {
+			date: Date;
+			description: string;
+			debit: number;
+			credit: number;
+			eventType: "LOAN" | "PAYMENT";
+			disbursementId: string;
+			orderNumber: string | null;
+			status: string;
+			reconciliationStatus: string;
+			referenceNo: string | null;
+		};
+
+		const rawEntries: RawEntry[] = [];
+		for (const row of rows) {
+			const orderNumber = row.order?.orderNumber ?? null;
+			const loanDate = row.disbursedAt ?? row.createdAt;
+			rawEntries.push({
+				date: loanDate,
+				description:
+					view === "FINANCIER"
+						? `Loan to Admin${orderNumber ? ` (${orderNumber})` : ""}`
+						: `Loan from Financier${orderNumber ? ` (${orderNumber})` : ""}`,
+				debit: row.amount,
+				credit: 0,
+				eventType: "LOAN",
+				disbursementId: row.id,
+				orderNumber,
+				status: row.status,
+				reconciliationStatus: row.reconciliationStatus,
+				referenceNo: row.referenceNo ?? null,
+			});
+
+			const remittances = Array.isArray(row.adminSettlements) ? row.adminSettlements : [];
+			for (const remittance of remittances) {
+				rawEntries.push({
+					date: remittance.remittedAt ?? remittance.createdAt,
+					description:
+						view === "FINANCIER"
+							? `Payment Received from Admin${orderNumber ? ` (${orderNumber})` : ""}`
+							: `Payment to Financier${orderNumber ? ` (${orderNumber})` : ""}`,
+					debit: 0,
+					credit: remittance.amount,
+					eventType: "PAYMENT",
+					disbursementId: row.id,
+					orderNumber,
+					status: row.status,
+					reconciliationStatus: row.reconciliationStatus,
+					referenceNo: remittance.referenceNo ?? row.referenceNo ?? null,
+				});
+			}
+
+			// Backward compatibility for older reconciled records without immutable remittance rows.
+			const hasLegacyPaymentEvent =
+				remittances.length === 0 &&
+				(row.reconciliationStatus === "MATCHED" ||
+					row.reconciliationStatus === "PARTIAL" ||
+					row.reconciliationStatus === "SETTLED");
+			if (hasLegacyPaymentEvent) {
+				rawEntries.push({
+					date: row.reconciledAt ?? row.updatedAt,
+					description:
+						view === "FINANCIER"
+							? `Payment Received from Admin${orderNumber ? ` (${orderNumber})` : ""}`
+							: `Payment to Financier${orderNumber ? ` (${orderNumber})` : ""}`,
+					debit: 0,
+					credit: resolveCreditAmount({
+						amount: row.amount,
+						reconciliationStatus: row.reconciliationStatus,
+						metadata: row.metadata,
+					}),
+					eventType: "PAYMENT",
+					disbursementId: row.id,
+					orderNumber,
+					status: row.status,
+					reconciliationStatus: row.reconciliationStatus,
+					referenceNo: row.referenceNo ?? null,
+				});
+			}
+		}
+
+		rawEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
+		let runningBalance = 0;
+		const entries = rawEntries.map((entry) => {
+			runningBalance += entry.debit - entry.credit;
+			return {
+				date: entry.date,
+				description: entry.description,
+				debit: entry.debit,
+				credit: entry.credit,
+				balance: runningBalance,
+				eventType: entry.eventType,
+				disbursementId: entry.disbursementId,
+				orderNumber: entry.orderNumber,
+				status: entry.status,
+				reconciliationStatus: entry.reconciliationStatus,
+				referenceNo: entry.referenceNo,
+			};
+		});
+
+		const totalDebit = entries.reduce((sum, entry) => sum + entry.debit, 0);
+		const totalCredit = entries.reduce((sum, entry) => sum + entry.credit, 0);
+
+		return {
+			financierConfigId,
+			view,
+			summary: {
+				totalEntries: entries.length,
+				totalDebit,
+				totalCredit,
+				outstandingBalance: totalDebit - totalCredit,
+			},
+			entries,
+		};
+	};
+
+	const getAdminToFinancierSoa = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawFinancierConfigId = req.params.financierConfigId;
+		const financierConfigId = Array.isArray(rawFinancierConfigId)
+			? rawFinancierConfigId[0]
+			: rawFinancierConfigId;
+		const soa = await buildSoa(financierConfigId, "ADMIN_TO_FINANCIER");
+		res.status(200).json(buildSuccessResponse("Admin to Financier SOA retrieved", soa, 200));
+	};
+
+	const getFinancierSoa = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawFinancierConfigId = req.params.financierConfigId;
+		const financierConfigId = Array.isArray(rawFinancierConfigId)
+			? rawFinancierConfigId[0]
+			: rawFinancierConfigId;
+		const soa = await buildSoa(financierConfigId, "FINANCIER");
+		res.status(200).json(buildSuccessResponse("Financier SOA retrieved", soa, 200));
+	};
+
+	const getLedger = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawFinancierConfigId = req.params.financierConfigId;
+		const financierConfigId = Array.isArray(rawFinancierConfigId)
+			? rawFinancierConfigId[0]
+			: rawFinancierConfigId;
+
+		const rows = await prisma.financierDisbursement.findMany({
+			where: { financierConfigId },
+			orderBy: { createdAt: "asc" },
+			include: {
+				order: {
+					select: {
+						orderNumber: true,
+						subtotal: true,
+						discount: true,
+						pointsUsed: true,
+						total: true,
+					},
+				},
+				financingAgreement: {
+					select: {
+						principalAmount: true,
+						totalPayable: true,
+						interestRate: true,
+						installmentCount: true,
+						installmentAmount: true,
+					},
+				},
+			},
+		});
+
+		const entries = rows.map((row) => {
+			const principalAmount = row.financingAgreement?.principalAmount ?? row.amount;
+			const serviceFee = Math.max(row.amount - principalAmount, 0);
+			const pointsUsed = row.order?.pointsUsed ?? 0;
+			const totalPayable = row.financingAgreement?.totalPayable ?? row.amount;
+			const netPrincipalBase = principalAmount - pointsUsed;
+			const installmentIncome = Math.max(totalPayable - netPrincipalBase, 0);
+			const disbursedPrincipal = row.amount;
+
+			return {
+				...row,
+				breakdown: {
+					totalPrice: row.order?.subtotal ?? principalAmount,
+					totalAmount: row.amount,
+					principalAmount,
+					serviceFee,
+					disbursedPrincipal,
+					installmentIncome,
+					installmentCount: row.financingAgreement?.installmentCount ?? null,
+					installmentAmount: row.financingAgreement?.installmentAmount ?? null,
+				},
+			};
+		});
+
+		const totalAmount = entries.reduce((sum, row) => sum + row.amount, 0);
+		const totalDisbursed = entries
+			.filter((row) => row.status === "DISBURSED")
+			.reduce((sum, row) => sum + row.amount, 0);
+		const totalPending = entries
+			.filter((row) => row.status === "PENDING")
+			.reduce((sum, row) => sum + row.amount, 0);
+		const totalFailedOrCancelled = entries
+			.filter((row) => row.status === "FAILED" || row.status === "CANCELLED")
+			.reduce((sum, row) => sum + row.amount, 0);
+		const totalReconciled = entries
+			.filter(
+				(row) =>
+					row.reconciliationStatus === "MATCHED" ||
+					row.reconciliationStatus === "SETTLED",
+			)
+			.reduce((sum, row) => sum + row.amount, 0);
+		const totalDisbursedPrincipal = entries.reduce(
+			(sum, row) => sum + Number(row.breakdown?.disbursedPrincipal ?? 0),
+			0,
+		);
+		const totalInstallmentIncome = entries.reduce(
+			(sum, row) => sum + Number(row.breakdown?.installmentIncome ?? 0),
+			0,
+		);
+		res.status(200).json(
+			buildSuccessResponse(
+				"Financier ledger retrieved",
+				{
+					financierConfigId,
+					summary: {
+						totalEntries: entries.length,
+						totalAmount,
+						totalDisbursed,
+						totalPending,
+						totalFailedOrCancelled,
+						totalReconciled,
+						outstanding: totalAmount - totalDisbursed,
+						totalDisbursedPrincipal,
+						totalInstallmentIncome,
+					},
+					entries,
+				},
+				200,
+			),
+		);
+	};
+
+	const create = async (req: Request, res: Response, _next: NextFunction) => {
+		const parsed = CreateFinancierDisbursementSchema.safeParse(req.body);
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+		const record = await prisma.financierDisbursement.create({
+			data: {
+				...parsed.data,
+				organizationId: (req as any).organizationId ?? parsed.data.organizationId,
+			} as any,
+		});
+		res.status(201).json(buildSuccessResponse("Financier disbursement created", record, 201));
+	};
+
+	const createRemittance = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const disbursementId = Array.isArray(rawId) ? rawId[0] : rawId;
+		const parsed = CreateAdminFinancierSettlementSchema.safeParse(req.body);
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+
+		const existingDisbursement = await prisma.financierDisbursement.findFirst({
+			where: { id: disbursementId },
+		});
+		if (!existingDisbursement) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+
+		const financierConfig = await (prisma as any).financierConfig.findFirst({
+			where: { id: existingDisbursement.financierConfigId },
+			select: { adminRemittanceTermDays: true },
+		});
+		const remittanceTermDays =
+			Number(
+				financierConfig?.adminRemittanceTermDays ?? DEFAULT_ADMIN_REMITTANCE_TERM_DAYS,
+			) || DEFAULT_ADMIN_REMITTANCE_TERM_DAYS;
+		const defaultDueAt =
+			parsed.data.dueAt ??
+			existingDisbursement.expectedAt ??
+			addDays(
+				existingDisbursement.disbursedAt ?? existingDisbursement.createdAt,
+				remittanceTermDays,
+			);
+
+		const record = await (prisma as any).adminFinancierSettlement.create({
+			data: {
+				...parsed.data,
+				financierDisbursementId: disbursementId,
+				financierConfigId: existingDisbursement.financierConfigId,
+				dueAt: defaultDueAt,
+				organizationId:
+					(req as any).organizationId ??
+					parsed.data.organizationId ??
+					existingDisbursement.organizationId,
+			},
+		});
+
+		const aggregate = await (prisma as any).adminFinancierSettlement.aggregate({
+			where: { financierDisbursementId: disbursementId },
+			_sum: { amount: true },
+		});
+		const totalRemitted = Number(aggregate?._sum?.amount ?? 0);
+		const nextReconciliationStatus =
+			totalRemitted >= existingDisbursement.amount ? "SETTLED" : "PARTIAL";
+
+		const validReconciledBy = isValidObjectId(parsed.data.createdBy ?? "")
+			? parsed.data.createdBy
+			: isValidObjectId(existingDisbursement.reconciledBy ?? "")
+				? existingDisbursement.reconciledBy
+				: undefined;
+		const disbursementStatusUpdate =
+			existingDisbursement.status === "PENDING"
+				? {
+						status: "DISBURSED" as const,
+						disbursedAt:
+							existingDisbursement.disbursedAt ??
+							parsed.data.remittedAt ??
+							new Date(),
+					}
+				: {};
+
+		await prisma.financierDisbursement.update({
+			where: { id: disbursementId },
+			data: {
+				...disbursementStatusUpdate,
+				reconciliationStatus: nextReconciliationStatus as any,
+				reconciledAt: new Date(),
+				...(validReconciledBy ? { reconciledBy: validReconciledBy } : {}),
+			},
+		});
+
+		res.status(201).json(
+			buildSuccessResponse(
+				"Admin to financier remittance created",
+				{
+					remittance: record,
+					summary: {
+						disbursementId,
+						disbursementAmount: existingDisbursement.amount,
+						totalRemitted,
+						outstanding: Math.max(existingDisbursement.amount - totalRemitted, 0),
+						reconciliationStatus: nextReconciliationStatus,
+					},
+				},
+				201,
+			),
+		);
+	};
+
+	const getAll = async (_req: Request, res: Response, _next: NextFunction) => {
+		const rows = await prisma.financierDisbursement.findMany({
+			orderBy: { createdAt: "desc" },
+		});
+		res.status(200).json(buildSuccessResponse("Financier disbursements retrieved", rows, 200));
+	};
+
+	const getById = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const id = Array.isArray(rawId) ? rawId[0] : rawId;
+		const row = await prisma.financierDisbursement.findFirst({ where: { id } });
+		if (!row) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+		res.status(200).json(buildSuccessResponse("Financier disbursement retrieved", row, 200));
+	};
+
+	const getRemittances = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const disbursementId = Array.isArray(rawId) ? rawId[0] : rawId;
+
+		const existingDisbursement = await prisma.financierDisbursement.findFirst({
+			where: { id: disbursementId },
+			select: {
+				id: true,
+				orderId: true,
+				financierConfigId: true,
+				amount: true,
+			},
+		});
+		if (!existingDisbursement) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+
+		const remittances = await (prisma as any).adminFinancierSettlement.findMany({
+			where: { financierDisbursementId: disbursementId },
+			orderBy: { createdAt: "asc" },
+		});
+		const totalRemitted = remittances.reduce(
+			(sum: number, row: { amount: number }) => sum + Number(row.amount ?? 0),
+			0,
+		);
+
+		res.status(200).json(
+			buildSuccessResponse(
+				"Admin to financier remittances retrieved",
+				{
+					disbursement: existingDisbursement,
+					summary: {
+						remittanceCount: remittances.length,
+						totalRemitted,
+						outstanding: Math.max(existingDisbursement.amount - totalRemitted, 0),
+						isOverpaid: totalRemitted > existingDisbursement.amount,
+					},
+					remittances,
+				},
+				200,
+			),
+		);
+	};
+
+	const update = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const id = Array.isArray(rawId) ? rawId[0] : rawId;
+		const parsed = UpdateFinancierDisbursementSchema.safeParse(req.body);
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+		const existing = await prisma.financierDisbursement.findFirst({ where: { id } });
+		if (!existing) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+		const updated = await prisma.financierDisbursement.update({
+			where: { id },
+			data: parsed.data as any,
+		});
+		res.status(200).json(buildSuccessResponse("Financier disbursement updated", updated, 200));
+	};
+
+	const remove = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const id = Array.isArray(rawId) ? rawId[0] : rawId;
+		const existing = await prisma.financierDisbursement.findFirst({ where: { id } });
+		if (!existing) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+		await prisma.financierDisbursement.delete({ where: { id } });
+		res.status(200).json(buildSuccessResponse("Financier disbursement deleted", {}, 200));
+	};
+
+	const reconcile = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const id = Array.isArray(rawId) ? rawId[0] : rawId;
+		const parsed = ReconcileFinancierDisbursementSchema.safeParse(req.body);
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+		const existing = await prisma.financierDisbursement.findFirst({ where: { id } });
+		if (!existing) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+		const updated = await prisma.financierDisbursement.update({
+			where: { id },
+			data: {
+				reconciliationStatus: parsed.data.status,
+				reconciledAt: new Date(),
+				reconciledBy: parsed.data.reconciledBy,
+				notes: parsed.data.notes ?? existing.notes,
+			},
+		});
+		res.status(200).json(
+			buildSuccessResponse("Financier disbursement reconciled", updated, 200),
+		);
+	};
+
+	return {
+		getLedger,
+		getAdminToFinancierSoa,
+		getFinancierSoa,
+		create,
+		createRemittance,
+		getAll,
+		getById,
+		getRemittances,
+		update,
+		remove,
+		reconcile,
+	};
+};

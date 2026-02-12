@@ -19,7 +19,10 @@ import { config } from "../../config/constant";
 import { redisClient } from "../../config/redis";
 import { invalidateCache } from "../../middleware/cache";
 import { generateInstallments } from "../../helper/installmentService";
-import { createTransactionForOrder } from "../../helper/transactionService";
+import {
+	createTransactionForOrder,
+	syncTransactionTotalFromInstallments,
+} from "../../helper/transactionService";
 import { createApprovalChain, findMatchingWorkflow } from "../../helper/approvalService";
 import {
 	getFinancierConfigForWorkflow,
@@ -40,6 +43,7 @@ const ORDER_DETAIL_INCLUDE = {
 	orderItems: true,
 	transaction: true,
 	installments: { orderBy: { installmentNumber: "asc" as const } },
+	financingAgreement: { select: { interestRate: true } },
 	workflow: true,
 	approvals: { orderBy: { approvalLevel: "asc" as const } },
 } as const;
@@ -52,8 +56,14 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	const orderItems = order.orderItems ?? [];
 	const transaction = order.transaction;
 	const installments = order.installments ?? [];
+	const financingAgreement = order.financingAgreement;
+	const rateFromTransaction = transaction?.metadata?.breakdown?.rateFromFinancer ?? null;
 	const workflow = order.workflow;
 	const approvals = order.approvals ?? [];
+	const principalAmount = Number(
+		(Number(order?.subtotal ?? 0) - Number(order?.discount ?? 0)).toFixed(2),
+	);
+	const netPrincipalTotal = Number((principalAmount - Number(order?.pointsUsed ?? 0)).toFixed(2));
 
 	const response: Record<string, unknown> = {
 		order: {
@@ -61,6 +71,12 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 			orderItems: undefined,
 			transaction: undefined,
 			installments: undefined,
+			financingAgreement: undefined,
+			totalPayable: undefined,
+			installmentRate: undefined,
+			installmentRateFromFinancier:
+				financingAgreement?.interestRate ?? rateFromTransaction ?? null,
+			principalAmount,
 			workflow: undefined,
 			approvals: undefined,
 		},
@@ -72,6 +88,23 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 					paidAmount: transaction.paidAmount,
 					balance: transaction.balance,
 					status: transaction.status,
+					rateFromFinancier:
+						transaction?.metadata?.breakdown?.rateFromFinancer ??
+						financingAgreement?.interestRate ??
+						null,
+					breakdown: {
+						price: transaction?.metadata?.breakdown?.price ?? order?.subtotal ?? null,
+						principalAmount,
+						interestAmount:
+							transaction?.totalAmount != null
+								? Number(
+										(
+											Number(transaction.totalAmount) -
+											Number(netPrincipalTotal)
+										).toFixed(2),
+									)
+								: null,
+					},
 				}
 			: null,
 	};
@@ -182,7 +215,8 @@ export const controller = (prisma: PrismaClient) => {
 				},
 			});
 			const itemMap = new Map(dbItems.map((i) => [i.id, i]));
-			const unavailableItems: Array<{ itemId: string; itemName: string; reasons: string[] }> = [];
+			const unavailableItems: Array<{ itemId: string; itemName: string; reasons: string[] }> =
+				[];
 			for (const row of totals.items) {
 				const item = itemMap.get(row.itemId);
 				if (!item) {
@@ -217,7 +251,10 @@ export const controller = (prisma: PrismaClient) => {
 					`Order creation rejected: unavailable or out-of-stock items: ${JSON.stringify(unavailableItems)}`,
 				);
 				const errorMessages = unavailableItems.flatMap((u) =>
-					u.reasons.map((r) => ({ field: `item.${u.itemId}`, message: `${u.itemName}: ${r}` })),
+					u.reasons.map((r) => ({
+						field: `item.${u.itemId}`,
+						message: `${u.itemName}: ${r}`,
+					})),
 				);
 				res.status(400).json(
 					buildErrorResponse(
@@ -248,6 +285,44 @@ export const controller = (prisma: PrismaClient) => {
 			// Generate order number automatically
 			const orderNumber = await generateOrderNumber(prisma);
 
+			// Compute final order total before saving:
+			// - principalTotal comes from base pricing (subtotal/discount)
+			// - for INSTALLMENT, apply financier rate so persisted `total` is payable total
+			const principalTotal = totals.total;
+			let finalTotal = principalTotal;
+			let installmentRateFromFinancier: number | null = null;
+			if (paymentType === "INSTALLMENT") {
+				const requestedMonths = validation.data.installmentMonths || 6;
+				const installmentCount = requestedMonths * 2;
+				let interestRatePercent = 0;
+				try {
+					const financierConfig = await getFinancierConfigForWorkflow(
+						prisma,
+						matchingWorkflow,
+					);
+					if (financierConfig) {
+						interestRatePercent = getRateForInstallmentCount(
+							installmentCount,
+							financierConfig,
+						);
+						orderLogger.info(
+							`Using financier rate for order pre-save total: ${interestRatePercent}% for ${installmentCount} installments`,
+						);
+					}
+				} catch (rateError) {
+					orderLogger.warn(
+						`Could not resolve financier rate for pre-save total (using 0%):`,
+						rateError,
+					);
+				}
+				installmentRateFromFinancier = interestRatePercent > 0 ? interestRatePercent : null;
+				if (interestRatePercent > 0) {
+					finalTotal = Number(
+						(principalTotal + (principalTotal * interestRatePercent) / 100).toFixed(2),
+					);
+				}
+			}
+
 			// Prepare order data (order items are stored in OrderItem collection)
 			const { userId, items: _items, ...restValidation } = validation.data;
 			const orderData = {
@@ -256,8 +331,8 @@ export const controller = (prisma: PrismaClient) => {
 				orderNumber,
 				subtotal: totals.subtotal,
 				discount: totals.discount,
-				tax: totals.tax,
-				total: totals.total,
+				tax: 0,
+				total: finalTotal,
 			};
 
 			// Create the order first
@@ -333,36 +408,9 @@ export const controller = (prisma: PrismaClient) => {
 					);
 				}
 
-				// Resolve financier rate for interest: interest = principal × (rate/100), totalPayable = principal + interest, then split by installments
-				const installmentCount = installmentMonths * 2;
-				let interestRatePercent = 0;
-				try {
-					const workflow = await findMatchingWorkflow(
-						prisma,
-						order.total,
-						order.paymentType,
-					);
-					if (workflow) {
-						const financierConfig = await getFinancierConfigForWorkflow(
-							prisma,
-							workflow,
-						);
-						if (financierConfig) {
-							interestRatePercent = getRateForInstallmentCount(
-								installmentCount,
-								financierConfig,
-							);
-							orderLogger.info(
-								`Using financier rate for order ${order.id}: ${interestRatePercent}% for ${installmentCount} installments`,
-							);
-						}
-					}
-				} catch (rateError) {
-					orderLogger.warn(
-						`Could not resolve financier rate for installments (using 0%):`,
-						rateError,
-					);
-				}
+				// Interest has already been applied to order.total before save.
+				// Generate installments from payable total with no extra interest pass.
+				const interestRatePercent = installmentRateFromFinancier ?? 0;
 
 				try {
 					orderLogger.info(
@@ -376,7 +424,6 @@ export const controller = (prisma: PrismaClient) => {
 						installmentMonths,
 						order.total,
 						order.orderDate || new Date(),
-						interestRatePercent > 0 ? { interestRatePercent } : undefined,
 					);
 
 					// Update order with installment details
@@ -386,6 +433,15 @@ export const controller = (prisma: PrismaClient) => {
 							installmentCount: generatedInstallments.length,
 							installmentAmount: generatedInstallments[0]?.amount || 0,
 						},
+					});
+					// Reflect financier rate (total payable) in transaction ledger
+					await syncTransactionTotalFromInstallments(prisma, order.id, {
+						rateFromFinancer: interestRatePercent,
+						price: order.subtotal,
+					});
+					// Re-fetch transaction so response reflects synced total and rate breakdown
+					transaction = await prisma.transaction.findFirst({
+						where: { orderId: order.id },
 					});
 
 					orderLogger.info(
@@ -511,7 +567,18 @@ export const controller = (prisma: PrismaClient) => {
 			const successResponse = buildSuccessResponse(
 				config.SUCCESS.ORDER.CREATED,
 				{
-					order,
+					order: {
+						...order,
+						totalPayable: undefined,
+						installmentRate: undefined,
+						installmentRateFromFinancier:
+							installmentRateFromFinancier ??
+							(transaction as any)?.metadata?.breakdown?.rateFromFinancer ??
+							null,
+						principalAmount: Number(
+							(Number(order.subtotal ?? 0) - Number(order.discount ?? 0)).toFixed(2),
+						),
+					},
 					orderItems: createdOrderItems.length > 0 ? createdOrderItems : undefined,
 					transaction: transaction
 						? {
@@ -520,6 +587,33 @@ export const controller = (prisma: PrismaClient) => {
 								paidAmount: transaction.paidAmount,
 								balance: transaction.balance,
 								status: transaction.status,
+								rateFromFinancier:
+									(transaction as any)?.metadata?.breakdown?.rateFromFinancer ??
+									null,
+								breakdown: {
+									price:
+										(transaction as any)?.metadata?.breakdown?.price ??
+										order.subtotal ??
+										null,
+									principalAmount: Number(
+										(
+											Number(order.subtotal ?? 0) -
+											Number(order.discount ?? 0)
+										).toFixed(2),
+									),
+									interestAmount: Number(
+										(
+											Number(transaction.totalAmount) -
+											Number(
+												(
+													Number(order.subtotal ?? 0) -
+													Number(order.discount ?? 0) +
+													Number(order.pointsUsed ?? 0)
+												).toFixed(2),
+											)
+										).toFixed(2),
+									),
+								},
 							}
 						: null,
 					...(generatedInstallments && {

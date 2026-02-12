@@ -629,6 +629,145 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
+	/**
+	 * Get client SOA for installment orders
+	 * GET /api/installment/soa/client/:employeeId
+	 */
+	const getClientSoa = async (req: Request, res: Response, _next: NextFunction) => {
+		const { employeeId: rawEmployeeId } = req.params;
+		const rawOrderId = req.query.orderId;
+		const orderIdFilter = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+
+		try {
+			if (!rawEmployeeId) {
+				installmentLogger.error("Missing employeeId");
+				res.status(400).json(buildErrorResponse("Employee ID is required", 400));
+				return;
+			}
+
+			const employeeId = Array.isArray(rawEmployeeId) ? rawEmployeeId[0] : rawEmployeeId;
+			const orders = await prisma.order.findMany({
+				where: {
+					userId: employeeId,
+					paymentType: "INSTALLMENT",
+					...(orderIdFilter ? { id: orderIdFilter } : {}),
+				},
+				orderBy: { createdAt: "asc" },
+				include: {
+					installments: {
+						orderBy: { scheduledDate: "asc" },
+					},
+					transaction: {
+						select: {
+							totalAmount: true,
+							paidAmount: true,
+							balance: true,
+							status: true,
+						},
+					},
+					financingAgreement: {
+						select: {
+							totalPayable: true,
+						},
+					},
+				},
+			});
+
+			type SoaEntry = {
+				date: Date;
+				description: string;
+				debit: number;
+				credit: number;
+				balance: number;
+				eventType: "LOAN" | "PAYMENT";
+				orderId: string;
+				orderNumber: string;
+				installmentId: string | null;
+				installmentNumber: number | null;
+				installmentStatus: string | null;
+				referenceNo: string | null;
+			};
+
+			const rawEntries: Omit<SoaEntry, "balance">[] = [];
+			for (const order of orders) {
+				const principalRaw =
+					order.transaction?.totalAmount ??
+					order.financingAgreement?.totalPayable ??
+					order.total;
+				const principal = Number(principalRaw);
+				rawEntries.push({
+					date: order.approvedAt ?? order.createdAt,
+					description: `Loan to Client (${order.orderNumber})`,
+					debit: principal,
+					credit: 0,
+					eventType: "LOAN",
+					orderId: order.id,
+					orderNumber: order.orderNumber,
+					installmentId: null,
+					installmentNumber: null,
+					installmentStatus: null,
+					referenceNo: null,
+				});
+
+				for (const installment of order.installments) {
+					if (installment.status !== "DEDUCTED") continue;
+					rawEntries.push({
+						date:
+							installment.deductedDate ??
+							installment.updatedAt ??
+							installment.scheduledDate,
+						description: `Installment Payment #${installment.installmentNumber} (${order.orderNumber})`,
+						debit: 0,
+						credit: Number(installment.amount ?? 0),
+						eventType: "PAYMENT",
+						orderId: order.id,
+						orderNumber: order.orderNumber,
+						installmentId: installment.id,
+						installmentNumber: installment.installmentNumber,
+						installmentStatus: installment.status,
+						referenceNo: installment.deductionReference ?? null,
+					});
+				}
+			}
+
+			rawEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
+			let runningBalance = 0;
+			const entries: SoaEntry[] = rawEntries.map((entry) => {
+				runningBalance += entry.debit - entry.credit;
+				return {
+					...entry,
+					balance: runningBalance,
+				};
+			});
+
+			const totalDebit = entries.reduce((sum, entry) => sum + entry.debit, 0);
+			const totalCredit = entries.reduce((sum, entry) => sum + entry.credit, 0);
+
+			res.status(200).json(
+				buildSuccessResponse(
+					"Client installment SOA retrieved",
+					{
+						employeeId,
+						summary: {
+							totalOrders: orders.length,
+							totalEntries: entries.length,
+							totalDebit,
+							totalCredit,
+							outstandingBalance: totalDebit - totalCredit,
+						},
+						entries,
+					},
+					200,
+				),
+			);
+		} catch (error) {
+			installmentLogger.error(`Failed to get client installment SOA: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
 	return {
 		create,
 		getAll,
@@ -638,5 +777,6 @@ export const controller = (prisma: PrismaClient) => {
 		markAsDeducted,
 		getPendingForPayroll,
 		getOrderSummary,
+		getClientSoa,
 	};
 };

@@ -1,0 +1,30 @@
+// Immutable remittance entries from EPP-admin to financier.
+// Each payment/remittance should create one row for SOA traceability.
+model AdminFinancierSettlement {
+  id                      String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId          String? @db.ObjectId
+  financierDisbursementId String  @db.ObjectId
+  financierConfigId       String  @db.ObjectId
+
+  amount      Float
+  currency    String   @default("PHP")
+  remittedAt  DateTime?
+  dueAt       DateTime?
+  referenceNo String?
+
+  createdBy String?
+  notes     String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  financierDisbursement FinancierDisbursement @relation(fields: [financierDisbursementId], references: [id], onDelete: Cascade)
+  financierConfig       FinancierConfig       @relation(fields: [financierConfigId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([financierDisbursementId])
+  @@index([financierConfigId])
+  @@index([createdAt])
+  @@map("adminFinancierSettlements")
+}

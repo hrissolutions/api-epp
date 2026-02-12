@@ -19,12 +19,15 @@ model FinancierConfig {
 
   // Tiered rate by installment count: e.g. [{ installmentCount: 3, rate: 1.5 }, { installmentCount: 6, rate: 2 }, { installmentCount: 12, rate: 3 }]
   installmentRateConfig InstallmentRateTier[]
+  // Default repayment term (in days) for Admin remittance back to Financier.
+  adminRemittanceTermDays Int @default(30)
 
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   financingAgreements FinancingAgreement[]
+  adminSettlements    AdminFinancierSettlement[]
 
   @@unique([organizationId, code])
   @@index([organizationId])

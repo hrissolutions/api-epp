@@ -17,6 +17,10 @@ export async function createTransactionForOrder(
 ) {
 	try {
 		const transactionNumber = `TXN-${Date.now()}`;
+		const order = await prisma.order.findFirst({
+			where: { id: orderId },
+			select: { subtotal: true, total: true },
+		});
 
 		const transaction = await prisma.transaction.create({
 			data: {
@@ -30,6 +34,13 @@ export async function createTransactionForOrder(
 				balance: totalAmount,
 				paymentMethod: paymentMethod as any,
 				paymentHistory: [],
+				metadata: {
+					breakdown: {
+						price: order?.subtotal ?? null,
+						totalPrice: order?.total ?? totalAmount,
+						rateFromFinancer: null,
+					},
+				},
 			},
 		});
 
@@ -42,6 +53,61 @@ export async function createTransactionForOrder(
 		transactionLogger.error(`Failed to create transaction for order ${orderId}:`, error);
 		throw error;
 	}
+}
+
+/**
+ * Sync transaction total/balance with generated installments total payable.
+ * This ensures installment rate from financier config is reflected in ledger amounts.
+ */
+export async function syncTransactionTotalFromInstallments(
+	prisma: PrismaClient,
+	orderId: string,
+	options?: {
+		rateFromFinancer?: number;
+		price?: number;
+	},
+): Promise<void> {
+	const [transaction, installments] = await Promise.all([
+		prisma.transaction.findFirst({ where: { orderId } }),
+		prisma.installment.findMany({ where: { orderId } }),
+	]);
+
+	if (!transaction) {
+		return;
+	}
+	if (!installments.length) {
+		return;
+	}
+
+	const totalPayable = installments.reduce((sum, inst) => sum + inst.amount, 0);
+	const newBalance = Math.max(0, totalPayable - transaction.paidAmount);
+	const existingMetadata = ((transaction.metadata as any) ?? {}) as Record<string, any>;
+	const existingBreakdown = (existingMetadata.breakdown ?? {}) as Record<string, any>;
+	const mergedBreakdown = {
+		...existingBreakdown,
+		price: options?.price ?? existingBreakdown.price ?? null,
+		totalPrice: totalPayable,
+		rateFromFinancer: options?.rateFromFinancer ?? existingBreakdown.rateFromFinancer ?? null,
+	};
+
+	await prisma.transaction.update({
+		where: { id: transaction.id },
+		data: {
+			totalAmount: totalPayable,
+			balance: newBalance,
+			metadata: {
+				...existingMetadata,
+				breakdown: mergedBreakdown,
+			} as any,
+			notes:
+				transaction.notes ??
+				"Transaction total synced from installment total payable (includes financier rate).",
+		},
+	});
+
+	transactionLogger.info(
+		`Transaction ${transaction.transactionNumber} synced from installments for order ${orderId}: total=${totalPayable}, balance=${newBalance}`,
+	);
 }
 
 /**

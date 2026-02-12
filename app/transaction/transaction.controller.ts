@@ -48,6 +48,52 @@ const convertStringNumbers = (obj: any): any => {
 	return obj;
 };
 
+async function enrichTransactionsWithBreakdown(
+	prisma: PrismaClient,
+	transactions: any[],
+): Promise<any[]> {
+	if (!Array.isArray(transactions) || transactions.length === 0) {
+		return transactions;
+	}
+
+	const orderIds = [...new Set(transactions.map((t) => t.orderId).filter(Boolean))] as string[];
+	if (orderIds.length === 0) {
+		return transactions;
+	}
+
+	const orders = await prisma.order.findMany({
+		where: { id: { in: orderIds } },
+		select: {
+			id: true,
+			subtotal: true,
+			total: true,
+			financingAgreement: { select: { interestRate: true } },
+		},
+	});
+	const orderMap = new Map(orders.map((o) => [o.id, o]));
+
+	return transactions.map((t) => {
+		const order = orderMap.get(t.orderId);
+		const metadata = (t.metadata as any) ?? {};
+		const existingBreakdown = metadata.breakdown ?? {};
+		const { breakdown: _ignoredBreakdown, ...metadataWithoutBreakdown } = metadata;
+		return {
+			...t,
+			metadata: Object.keys(metadataWithoutBreakdown).length
+				? metadataWithoutBreakdown
+				: null,
+			breakdown: {
+				price: existingBreakdown.price ?? order?.subtotal ?? null,
+				totalPrice: existingBreakdown.totalPrice ?? order?.total ?? t.totalAmount ?? null,
+				rateFromFinancer:
+					existingBreakdown.rateFromFinancer ??
+					order?.financingAgreement?.interestRate ??
+					null,
+			},
+		};
+	});
+}
+
 export const controller = (prisma: PrismaClient) => {
 	const create = async (req: Request, res: Response, _next: NextFunction) => {
 		let requestData = req.body;
@@ -202,12 +248,15 @@ export const controller = (prisma: PrismaClient) => {
 				document ? prisma.transaction.findMany(findManyQuery) : [],
 				count ? prisma.transaction.count({ where: whereClause }) : 0,
 			]);
+			const enrichedTransactions = document
+				? await enrichTransactionsWithBreakdown(prisma, transactions as any[])
+				: transactions;
 
-			transactionLogger.info(`Retrieved ${transactions.length} transactions`);
+			transactionLogger.info(`Retrieved ${enrichedTransactions.length} transactions`);
 			const processedData =
 				groupBy && document
-					? groupDataByField(transactions, groupBy as string)
-					: transactions;
+					? groupDataByField(enrichedTransactions, groupBy as string)
+					: enrichedTransactions;
 
 			const responseData: Record<string, any> = {
 				...(document && { transactions: processedData }),
@@ -276,6 +325,10 @@ export const controller = (prisma: PrismaClient) => {
 				query.select = getNestedFields(fields);
 
 				transaction = await prisma.transaction.findFirst(query);
+				if (transaction) {
+					const enriched = await enrichTransactionsWithBreakdown(prisma, [transaction as any]);
+					transaction = enriched[0];
+				}
 
 				if (transaction && redisClient.isClientConnected()) {
 					try {
@@ -570,18 +623,19 @@ export const controller = (prisma: PrismaClient) => {
 				where: { orderId },
 				orderBy: { createdAt: "asc" },
 			});
+			const enrichedTransactions = await enrichTransactionsWithBreakdown(prisma, transactions);
 
 			const summary = {
 				orderId,
-				totalTransactions: transactions.length,
-				totalAmount: transactions.reduce((sum, t) => sum + Number(t.totalAmount), 0),
-				paidAmount: transactions.reduce((sum, t) => sum + Number(t.paidAmount), 0),
-				balance: transactions.reduce((sum, t) => sum + Number(t.balance), 0),
-				transactions,
+				totalTransactions: enrichedTransactions.length,
+				totalAmount: enrichedTransactions.reduce((sum, t) => sum + Number(t.totalAmount), 0),
+				paidAmount: enrichedTransactions.reduce((sum, t) => sum + Number(t.paidAmount), 0),
+				balance: enrichedTransactions.reduce((sum, t) => sum + Number(t.balance), 0),
+				transactions: enrichedTransactions,
 			};
 
 			transactionLogger.info(
-				`Retrieved ${transactions.length} transactions for order ${orderId}`,
+				`Retrieved ${enrichedTransactions.length} transactions for order ${orderId}`,
 			);
 
 			const successResponse = buildSuccessResponse(
