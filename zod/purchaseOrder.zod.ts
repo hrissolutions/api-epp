@@ -23,6 +23,7 @@ const RequisitionerSchema = z.object({
 	name: z.string(),
 	designation: z.string().optional().nullable(),
 	department: z.string().optional().nullable(),
+	address: z.string().optional().nullable(),
 });
 
 export const PurchaseOrderSchema = z.object({

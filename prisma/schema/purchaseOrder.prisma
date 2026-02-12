@@ -66,4 +66,5 @@ type Requisitioner {
   name        String
   designation String?
   department  String?
+  address     String?
 }
