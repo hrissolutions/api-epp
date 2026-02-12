@@ -25,6 +25,7 @@ model FinancierDisbursement {
   order              Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
   financingAgreement FinancingAgreement @relation(fields: [financingAgreementId], references: [id], onDelete: Cascade)
   settlements        SupplierSettlement[]
+  adminSettlements   AdminFinancierSettlement[]
 
   @@index([organizationId])
   @@index([orderId])

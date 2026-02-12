@@ -64,6 +64,8 @@ model Order {
 
   // Financier: pays Admin upfront; Client repays in installments (optional, for INSTALLMENT orders)
   financingAgreement FinancingAgreement?
+  disbursements      FinancierDisbursement[]
+  supplierSettlements SupplierSettlement[]
 
   @@index([userId])
   @@index([status])

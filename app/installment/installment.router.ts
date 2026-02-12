@@ -10,6 +10,7 @@ interface IController {
 	markAsDeducted(req: Request, res: Response, next: NextFunction): Promise<void>;
 	getPendingForPayroll(req: Request, res: Response, next: NextFunction): Promise<void>;
 	getOrderSummary(req: Request, res: Response, next: NextFunction): Promise<void>;
+	getClientSoa(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -538,6 +539,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.get("/order/:orderId/summary", controller.getOrderSummary);
+	routes.get("/soa/client/:employeeId", controller.getClientSoa);
 
 	route.use(path, routes);
 

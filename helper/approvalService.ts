@@ -27,7 +27,7 @@ import { createFinancierDisbursementForAgreement } from "./financeSettlementServ
 import type { Server } from "socket.io";
 
 const logger = getLogger();
-const approvalLogger = logger.child({ module: "approvalService" });
+const approvalLogger = logger.child({ module: "approvalService" }); 
 
 /**
  * Create an "order approved" notification for the employee (idempotent).

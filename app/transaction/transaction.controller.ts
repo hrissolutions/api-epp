@@ -66,7 +66,6 @@ async function enrichTransactionsWithBreakdown(
 		select: {
 			id: true,
 			subtotal: true,
-			tax: true,
 			total: true,
 			financingAgreement: { select: { interestRate: true } },
 		},
@@ -86,7 +85,6 @@ async function enrichTransactionsWithBreakdown(
 			breakdown: {
 				price: existingBreakdown.price ?? order?.subtotal ?? null,
 				totalPrice: existingBreakdown.totalPrice ?? order?.total ?? t.totalAmount ?? null,
-				tax: existingBreakdown.tax ?? order?.tax ?? null,
 				rateFromFinancer:
 					existingBreakdown.rateFromFinancer ??
 					order?.financingAgreement?.interestRate ??

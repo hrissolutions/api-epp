@@ -19,7 +19,7 @@ export async function createTransactionForOrder(
 		const transactionNumber = `TXN-${Date.now()}`;
 		const order = await prisma.order.findFirst({
 			where: { id: orderId },
-			select: { subtotal: true, tax: true, total: true },
+			select: { subtotal: true, total: true },
 		});
 
 		const transaction = await prisma.transaction.create({
@@ -38,7 +38,6 @@ export async function createTransactionForOrder(
 					breakdown: {
 						price: order?.subtotal ?? null,
 						totalPrice: order?.total ?? totalAmount,
-						tax: order?.tax ?? null,
 						rateFromFinancer: null,
 					},
 				},
@@ -66,7 +65,6 @@ export async function syncTransactionTotalFromInstallments(
 	options?: {
 		rateFromFinancer?: number;
 		price?: number;
-		tax?: number;
 	},
 ): Promise<void> {
 	const [transaction, installments] = await Promise.all([
@@ -89,7 +87,6 @@ export async function syncTransactionTotalFromInstallments(
 		...existingBreakdown,
 		price: options?.price ?? existingBreakdown.price ?? null,
 		totalPrice: totalPayable,
-		tax: options?.tax ?? existingBreakdown.tax ?? null,
 		rateFromFinancer: options?.rateFromFinancer ?? existingBreakdown.rateFromFinancer ?? null,
 	};
 

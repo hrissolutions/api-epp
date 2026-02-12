@@ -63,9 +63,7 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	const principalAmount = Number(
 		(Number(order?.subtotal ?? 0) - Number(order?.discount ?? 0)).toFixed(2),
 	);
-	const taxableTotal = Number(
-		(principalAmount + Number(order?.tax ?? 0) - Number(order?.pointsUsed ?? 0)).toFixed(2),
-	);
+	const netPrincipalTotal = Number((principalAmount - Number(order?.pointsUsed ?? 0)).toFixed(2));
 
 	const response: Record<string, unknown> = {
 		order: {
@@ -96,13 +94,13 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 						null,
 					breakdown: {
 						price: transaction?.metadata?.breakdown?.price ?? order?.subtotal ?? null,
-						tax: transaction?.metadata?.breakdown?.tax ?? order?.tax ?? null,
 						principalAmount,
 						interestAmount:
 							transaction?.totalAmount != null
 								? Number(
 										(
-											Number(transaction.totalAmount) - Number(taxableTotal)
+											Number(transaction.totalAmount) -
+											Number(netPrincipalTotal)
 										).toFixed(2),
 									)
 								: null,
@@ -288,7 +286,7 @@ export const controller = (prisma: PrismaClient) => {
 			const orderNumber = await generateOrderNumber(prisma);
 
 			// Compute final order total before saving:
-			// - principalTotal comes from base pricing (subtotal/discount/tax)
+			// - principalTotal comes from base pricing (subtotal/discount)
 			// - for INSTALLMENT, apply financier rate so persisted `total` is payable total
 			const principalTotal = totals.total;
 			let finalTotal = principalTotal;
@@ -333,7 +331,7 @@ export const controller = (prisma: PrismaClient) => {
 				orderNumber,
 				subtotal: totals.subtotal,
 				discount: totals.discount,
-				tax: totals.tax,
+				tax: 0,
 				total: finalTotal,
 			};
 
@@ -440,7 +438,6 @@ export const controller = (prisma: PrismaClient) => {
 					await syncTransactionTotalFromInstallments(prisma, order.id, {
 						rateFromFinancer: interestRatePercent,
 						price: order.subtotal,
-						tax: order.tax,
 					});
 					// Re-fetch transaction so response reflects synced total and rate breakdown
 					transaction = await prisma.transaction.findFirst({
@@ -598,10 +595,6 @@ export const controller = (prisma: PrismaClient) => {
 										(transaction as any)?.metadata?.breakdown?.price ??
 										order.subtotal ??
 										null,
-									tax:
-										(transaction as any)?.metadata?.breakdown?.tax ??
-										order.tax ??
-										null,
 									principalAmount: Number(
 										(
 											Number(order.subtotal ?? 0) -
@@ -615,7 +608,6 @@ export const controller = (prisma: PrismaClient) => {
 												(
 													Number(order.subtotal ?? 0) -
 													Number(order.discount ?? 0) +
-													Number(order.tax ?? 0) -
 													Number(order.pointsUsed ?? 0)
 												).toFixed(2),
 											)

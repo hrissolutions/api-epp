@@ -3,6 +3,14 @@ import { getLogger } from "./logger";
 
 const logger = getLogger();
 const financeSettlementLogger = logger.child({ module: "financeSettlementService" });
+const DEFAULT_ADMIN_REMITTANCE_TERM_DAYS = 30;
+
+function addDays(base: Date, days: number): Date {
+	const safeDays = Number.isFinite(days) ? Math.max(0, Math.floor(days)) : 0;
+	const next = new Date(base);
+	next.setDate(next.getDate() + safeDays);
+	return next;
+}
 
 function sumPOItems(items: unknown): number {
 	if (!Array.isArray(items)) return 0;
@@ -33,6 +41,16 @@ export const createFinancierDisbursementForAgreement = async (
 	});
 	if (existing) return;
 
+	const financierConfig = await (prisma as any).financierConfig.findFirst({
+		where: { id: agreement.financierConfigId },
+		select: { adminRemittanceTermDays: true },
+	});
+	const remittanceTermDays =
+		Number(financierConfig?.adminRemittanceTermDays ?? DEFAULT_ADMIN_REMITTANCE_TERM_DAYS) ||
+		DEFAULT_ADMIN_REMITTANCE_TERM_DAYS;
+	const approvedBaseDate = agreement.approvedAt ?? new Date();
+	const expectedAt = addDays(approvedBaseDate, remittanceTermDays);
+
 	await prisma.financierDisbursement.create({
 		data: {
 			organizationId: agreement.organizationId,
@@ -41,12 +59,13 @@ export const createFinancierDisbursementForAgreement = async (
 			financierConfigId: agreement.financierConfigId,
 			amount: agreement.principalAmount,
 			currency: "PHP",
-			expectedAt: agreement.approvedAt ?? new Date(),
+			expectedAt,
 			status: "PENDING",
 			reconciliationStatus: "PENDING",
 			metadata: {
 				orderNumber: agreement.order.orderNumber,
 				source: "auto-from-financing-agreement",
+				adminRemittanceTermDays: remittanceTermDays,
 			},
 		},
 	});

@@ -68,3 +68,36 @@ export const ReconcileFinancierDisbursementSchema = z.object({
 	status: ReconciliationStatusEnum.default("MATCHED"),
 });
 
+export const AdminFinancierSettlementSchema = z.object({
+	id: objectId("id"),
+	financierDisbursementId: objectId("financierDisbursementId"),
+	financierConfigId: objectId("financierConfigId"),
+	amount: z.number().positive(),
+	currency: z.string().default("PHP"),
+	remittedAt: z.coerce.date().optional().nullable(),
+	dueAt: z.coerce.date().optional().nullable(),
+	referenceNo: z.string().optional().nullable(),
+	createdBy: z.string().optional().nullable(),
+	notes: z.string().optional().nullable(),
+	metadata: z.record(z.any()).optional().nullable(),
+	organizationId: objectId("organizationId").optional().nullable(),
+	createdAt: z.coerce.date(),
+	updatedAt: z.coerce.date(),
+});
+
+export const CreateAdminFinancierSettlementSchema = AdminFinancierSettlementSchema.omit({
+	id: true,
+	financierDisbursementId: true,
+	financierConfigId: true,
+	createdAt: true,
+	updatedAt: true,
+}).partial({
+	currency: true,
+	remittedAt: true,
+	dueAt: true,
+	referenceNo: true,
+	createdBy: true,
+	notes: true,
+	metadata: true,
+	organizationId: true,
+});

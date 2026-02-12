@@ -672,7 +672,6 @@ export const controller = (prisma: PrismaClient) => {
 			installmentMonths,
 			paymentMethod,
 			discount,
-			tax,
 			pointsUsed,
 			notes,
 			items: itemsLegacy,
@@ -979,7 +978,7 @@ export const controller = (prisma: PrismaClient) => {
 			// No shipping cost for company internal delivery.
 			// Compute principal first, then for INSTALLMENT apply financier rate
 			// before saving so `order.total` is already the payable total.
-			const principalTotal = subtotal - discount + tax - (pointsUsed || 0);
+			const principalTotal = subtotal - discount - (pointsUsed || 0);
 			let total = principalTotal;
 			let installmentRateFromFinancier: number | null = null;
 
@@ -1048,7 +1047,7 @@ export const controller = (prisma: PrismaClient) => {
 					userId,
 					subtotal,
 					discount,
-					tax,
+					tax: 0,
 					total,
 					paymentType,
 					installmentMonths: paymentType === "INSTALLMENT" ? installmentMonths : null,
@@ -1124,7 +1123,6 @@ export const controller = (prisma: PrismaClient) => {
 					await syncTransactionTotalFromInstallments(prisma, order.id, {
 						rateFromFinancer: interestRatePercent,
 						price: order.subtotal,
-						tax: order.tax,
 					});
 					// Re-fetch transaction so response reflects synced total and rate breakdown
 					transaction = await prisma.transaction.findFirst({
@@ -1395,10 +1393,6 @@ export const controller = (prisma: PrismaClient) => {
 										(transaction as any)?.metadata?.breakdown?.price ??
 										order.subtotal ??
 										null,
-									tax:
-										(transaction as any)?.metadata?.breakdown?.tax ??
-										order.tax ??
-										null,
 									principalAmount: Number(
 										(
 											Number(order.subtotal ?? 0) -
@@ -1412,7 +1406,6 @@ export const controller = (prisma: PrismaClient) => {
 												(
 													Number(order.subtotal ?? 0) -
 													Number(order.discount ?? 0) +
-													Number(order.tax ?? 0) -
 													Number(order.pointsUsed ?? 0)
 												).toFixed(2),
 											)
