@@ -53,9 +53,20 @@ export const controller = (prisma: PrismaClient) => {
 		return row.amount;
 	};
 
-	const buildSoa = async (financierConfigId: string, view: SoaView) => {
+	const buildSoa = async (
+		view: SoaView,
+		filters?: { financierConfigId?: string; organizationId?: string },
+	) => {
+		const where: Record<string, unknown> = {};
+		if (filters?.financierConfigId) {
+			where.financierConfigId = filters.financierConfigId;
+		}
+		if (filters?.organizationId) {
+			where.organizationId = filters.organizationId;
+		}
+
 		const rows = await (prisma as any).financierDisbursement.findMany({
-			where: { financierConfigId },
+			where,
 			orderBy: { createdAt: "asc" },
 			include: {
 				order: {
@@ -173,7 +184,7 @@ export const controller = (prisma: PrismaClient) => {
 		const totalCredit = entries.reduce((sum, entry) => sum + entry.credit, 0);
 
 		return {
-			financierConfigId,
+			financierConfigId: filters?.financierConfigId ?? null,
 			view,
 			summary: {
 				totalEntries: entries.length,
@@ -190,8 +201,20 @@ export const controller = (prisma: PrismaClient) => {
 		const financierConfigId = Array.isArray(rawFinancierConfigId)
 			? rawFinancierConfigId[0]
 			: rawFinancierConfigId;
-		const soa = await buildSoa(financierConfigId, "ADMIN_TO_FINANCIER");
-		res.status(200).json(buildSuccessResponse("Admin to Financier SOA retrieved", soa, 200));
+		const organizationId = (req as any).organizationId as string | undefined;
+		const soa = await buildSoa("ADMIN_TO_FINANCIER", {
+			financierConfigId,
+			organizationId,
+		});
+		res.status(200).json(
+			buildSuccessResponse(
+				financierConfigId
+					? "Admin ledger for financier config retrieved"
+					: "Admin ledger across financier configs retrieved",
+				soa,
+				200,
+			),
+		);
 	};
 
 	const getFinancierSoa = async (req: Request, res: Response, _next: NextFunction) => {
@@ -199,8 +222,9 @@ export const controller = (prisma: PrismaClient) => {
 		const financierConfigId = Array.isArray(rawFinancierConfigId)
 			? rawFinancierConfigId[0]
 			: rawFinancierConfigId;
-		const soa = await buildSoa(financierConfigId, "FINANCIER");
-		res.status(200).json(buildSuccessResponse("Financier SOA retrieved", soa, 200));
+		const organizationId = (req as any).organizationId as string | undefined;
+		const soa = await buildSoa("FINANCIER", { financierConfigId, organizationId });
+		res.status(200).json(buildSuccessResponse("Financier ledger retrieved", soa, 200));
 	};
 
 	const getLedger = async (req: Request, res: Response, _next: NextFunction) => {
