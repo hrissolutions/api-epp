@@ -539,6 +539,10 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.get("/order/:orderId/summary", controller.getOrderSummary);
+
+	// Preferred endpoint name for client installment statement/ledger.
+	routes.get("/ledger/:employeeId", controller.getClientSoa);
+	// Backward-compatible alias; keep temporarily for existing clients.
 	routes.get("/soa/client/:employeeId", controller.getClientSoa);
 
 	route.use(path, routes);
