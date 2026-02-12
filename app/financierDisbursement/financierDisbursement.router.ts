@@ -19,7 +19,15 @@ export const router = (_route: Router, controller: IController): Router => {
 	const routes = Router();
 	const path = "/financier-disbursement";
 
+	routes.get("/ledger/admin", controller.getAdminToFinancierSoa);
 	routes.get("/ledger/:financierConfigId", controller.getLedger);
+	routes.get("/ledger/admin/:financierConfigId", controller.getAdminToFinancierSoa);
+	routes.get(
+		"/ledger/admin-to-financier/:financierConfigId",
+		controller.getAdminToFinancierSoa,
+	);
+	routes.get("/ledger/financier/:financierConfigId", controller.getFinancierSoa);
+	// Backward-compatible SOA aliases.
 	routes.get("/soa/admin-to-financier/:financierConfigId", controller.getAdminToFinancierSoa);
 	routes.get("/soa/financier/:financierConfigId", controller.getFinancierSoa);
 	routes.post("/", controller.create);
@@ -30,6 +38,12 @@ export const router = (_route: Router, controller: IController): Router => {
 	routes.patch("/:id", controller.update);
 	routes.delete("/:id", controller.remove);
 	routes.post("/:id/reconcile", controller.reconcile);
+
+	// Top-level ledger aliases without /financier-disbursement prefix.
+	route.get("/ledger/admin", controller.getAdminToFinancierSoa);
+	route.get("/ledger/:financierConfigId", controller.getLedger);
+	route.get("/ledger/admin/:financierConfigId", controller.getAdminToFinancierSoa);
+	route.get("/ledger/financier/:financierConfigId", controller.getFinancierSoa);
 
 	route.use(path, routes);
 	return route;
