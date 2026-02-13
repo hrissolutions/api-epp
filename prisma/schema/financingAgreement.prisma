@@ -16,6 +16,10 @@ model FinancingAgreement {
 
   interestRate Float // Snapshot at time of approval (e.g. 2.5 = 2.5%)
   status       FinancingStatus @default(PENDING)
+  // Snapshot of admin remittance term at agreement creation time.
+  adminRemittanceTermDays Int?
+  // Actual due date for admin remittance to financier.
+  adminRemittanceDueDate  DateTime?
 
   approvedAt DateTime?
   createdAt  DateTime  @default(now())

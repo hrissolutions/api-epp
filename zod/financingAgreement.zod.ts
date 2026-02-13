@@ -34,6 +34,8 @@ export const FinancingAgreementSchema = z.object({
 	installmentAmount: decimalSchema,
 	interestRate: decimalSchema,
 	status: FinancingStatusEnum.default("PENDING"),
+	adminRemittanceTermDays: z.number().int().nonnegative().optional().nullable(),
+	adminRemittanceDueDate: z.coerce.date().optional().nullable(),
 	approvedAt: z.coerce.date().optional().nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
@@ -43,6 +45,8 @@ export type FinancingAgreement = z.infer<typeof FinancingAgreementSchema>;
 
 export const CreateFinancingAgreementSchema = FinancingAgreementSchema.omit({
 	id: true,
+	adminRemittanceTermDays: true,
+	adminRemittanceDueDate: true,
 	createdAt: true,
 	updatedAt: true,
 }).extend({
@@ -55,6 +59,8 @@ export const UpdateFinancingAgreementSchema = FinancingAgreementSchema.omit({
 	id: true,
 	orderId: true,
 	financierConfigId: true,
+	adminRemittanceTermDays: true,
+	adminRemittanceDueDate: true,
 	createdAt: true,
 	updatedAt: true,
 }).partial();
