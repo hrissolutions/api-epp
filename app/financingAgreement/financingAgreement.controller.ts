@@ -45,6 +45,111 @@ const convertStringNumbers = (obj: any): any => {
 };
 
 export const controller = (prisma: PrismaClient) => {
+	const formatDateDayMonthYear = (date: Date): string =>
+		date.toLocaleDateString("en-GB", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		});
+
+	const getValidDate = (value: unknown): Date | null => {
+		if (!value) return null;
+		const parsed = value instanceof Date ? value : new Date(String(value));
+		return Number.isNaN(parsed.getTime()) ? null : parsed;
+	};
+
+	const addDays = (base: Date, days: number): Date => {
+		const result = new Date(base);
+		result.setDate(result.getDate() + days);
+		return result;
+	};
+
+	const resolveAdminRemittanceTermDays = async (
+		financierConfigId: string,
+		fallbackTermDays?: number | null,
+	): Promise<number | null> => {
+		if (typeof fallbackTermDays === "number" && Number.isFinite(fallbackTermDays)) {
+			return fallbackTermDays;
+		}
+		const financierConfig = await (prisma as any).financierConfig.findFirst({
+			where: { id: financierConfigId },
+			select: { adminRemittanceTermDays: true },
+		});
+		const termDays = financierConfig?.adminRemittanceTermDays;
+		return typeof termDays === "number" && Number.isFinite(termDays) ? termDays : null;
+	};
+
+	const enrichWithAdminRemittanceTermDays = async <T extends Record<string, any>>(
+		agreements: T[],
+	): Promise<
+		Array<
+			T & {
+				adminRemittanceTermDays: number | null;
+				adminRemittanceDueDate: string | null;
+				adminRemittanceDueDateDisplay: string | null;
+			}
+		>
+	> => {
+		if (!agreements.length) return [];
+
+		const financierConfigIds = Array.from(
+			new Set(
+				agreements
+					.map((agreement) => agreement.financierConfigId)
+					.filter((id): id is string => typeof id === "string" && id.length > 0),
+			),
+		);
+
+		if (!financierConfigIds.length) {
+			return agreements.map((agreement) => ({
+				...agreement,
+				adminRemittanceTermDays:
+					typeof agreement.adminRemittanceTermDays === "number"
+						? agreement.adminRemittanceTermDays
+						: null,
+				adminRemittanceDueDate: getValidDate(agreement.adminRemittanceDueDate)
+					? new Date(agreement.adminRemittanceDueDate).toISOString()
+					: null,
+				adminRemittanceDueDateDisplay: getValidDate(agreement.adminRemittanceDueDate)
+					? formatDateDayMonthYear(new Date(agreement.adminRemittanceDueDate))
+					: null,
+			}));
+		}
+
+		const financierConfigs = await (prisma as any).financierConfig.findMany({
+			where: { id: { in: financierConfigIds } },
+			select: { id: true, adminRemittanceTermDays: true },
+		});
+
+		const remittanceTermByConfigId = new Map<string, number | null>(
+			financierConfigs.map((cfg: any) => [cfg.id, cfg.adminRemittanceTermDays ?? null]),
+		);
+
+		return agreements.map((agreement) => {
+			const adminRemittanceTermDays =
+				typeof agreement.adminRemittanceTermDays === "number"
+					? agreement.adminRemittanceTermDays
+					: typeof agreement.financierConfigId === "string"
+						? (remittanceTermByConfigId.get(agreement.financierConfigId) ?? null)
+						: null;
+			const storedDueDate = getValidDate(agreement.adminRemittanceDueDate);
+			const startDate =
+				getValidDate(agreement.approvedAt) ?? getValidDate(agreement.createdAt);
+			const dueDate =
+				storedDueDate ??
+				(startDate && adminRemittanceTermDays !== null
+					? addDays(startDate, adminRemittanceTermDays)
+					: null);
+
+			return {
+				...agreement,
+				adminRemittanceTermDays,
+				adminRemittanceDueDate: dueDate ? dueDate.toISOString() : null,
+				adminRemittanceDueDateDisplay: dueDate ? formatDateDayMonthYear(dueDate) : null,
+			};
+		});
+	};
+
 	const create = async (req: Request, res: Response, _next: NextFunction) => {
 		let requestData = req.body;
 		const contentType = req.get("Content-Type") || "";
@@ -67,10 +172,22 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
+			const organizationId = (req as any).organizationId || validation.data.organizationId;
+			const baseDate = getValidDate(validation.data.approvedAt) ?? new Date();
+			const adminRemittanceTermDays = await resolveAdminRemittanceTermDays(
+				validation.data.financierConfigId,
+			);
+			const adminRemittanceDueDate =
+				adminRemittanceTermDays !== null
+					? addDays(baseDate, adminRemittanceTermDays)
+					: null;
+
 			const financingAgreement = await prisma.financingAgreement.create({
 				data: {
 					...validation.data,
-					organizationId: (req as any).organizationId || validation.data.organizationId,
+					organizationId,
+					adminRemittanceTermDays,
+					adminRemittanceDueDate,
 				} as any,
 			});
 			financingAgreementLogger.info(
@@ -105,11 +222,15 @@ export const controller = (prisma: PrismaClient) => {
 				);
 			}
 
+			const [financingAgreementWithDates] = await enrichWithAdminRemittanceTermDays([
+				financingAgreement as any,
+			]);
+
 			res.status(201).json(
 				buildSuccessResponse(
 					"Financing agreement created successfully",
 					{
-						financingAgreement,
+						financingAgreement: financingAgreementWithDates,
 					},
 					201,
 				),
@@ -170,14 +291,17 @@ export const controller = (prisma: PrismaClient) => {
 				document ? prisma.financingAgreement.findMany(findManyQuery) : [],
 				count ? prisma.financingAgreement.count({ where: whereClause }) : 0,
 			]);
+			const financingAgreementsWithTerm = document
+				? await enrichWithAdminRemittanceTermDays(financingAgreements as any[])
+				: financingAgreements;
 
 			financingAgreementLogger.info(
-				`Retrieved ${financingAgreements.length} financing agreements`,
+				`Retrieved ${financingAgreementsWithTerm.length} financing agreements`,
 			);
 			const processedData =
 				groupBy && document
-					? groupDataByField(financingAgreements, groupBy as string)
-					: financingAgreements;
+					? groupDataByField(financingAgreementsWithTerm, groupBy as string)
+					: financingAgreementsWithTerm;
 
 			const responseData: Record<string, any> = {
 				...(document && { financingAgreements: processedData }),
@@ -255,6 +379,12 @@ export const controller = (prisma: PrismaClient) => {
 					}
 				}
 			}
+			if (agreement) {
+				const [agreementWithTerm] = await enrichWithAdminRemittanceTermDays([
+					agreement as any,
+				]);
+				agreement = agreementWithTerm;
+			}
 
 			if (!agreement) {
 				financingAgreementLogger.error(`Financing agreement not found: ${id}`);
@@ -309,10 +439,28 @@ export const controller = (prisma: PrismaClient) => {
 				res.status(404).json(buildErrorResponse("Financing agreement not found", 404));
 				return;
 			}
+			const existingAgreement = existing as any;
+			const baseDate =
+				getValidDate((validationResult.data as any).approvedAt) ??
+				getValidDate(existingAgreement.approvedAt) ??
+				getValidDate(existingAgreement.createdAt) ??
+				new Date();
+			const adminRemittanceTermDays = await resolveAdminRemittanceTermDays(
+				existingAgreement.financierConfigId,
+				existingAgreement.adminRemittanceTermDays,
+			);
+			const adminRemittanceDueDate =
+				adminRemittanceTermDays !== null
+					? addDays(baseDate, adminRemittanceTermDays)
+					: null;
 
 			const updated = await prisma.financingAgreement.update({
 				where: { id },
-				data: validationResult.data as any,
+				data: {
+					...validationResult.data,
+					adminRemittanceTermDays,
+					adminRemittanceDueDate,
+				} as any,
 			});
 
 			try {
@@ -325,11 +473,13 @@ export const controller = (prisma: PrismaClient) => {
 				);
 			}
 
+			const [updatedWithDates] = await enrichWithAdminRemittanceTermDays([updated as any]);
+
 			res.status(200).json(
 				buildSuccessResponse(
 					"Financing agreement updated successfully",
 					{
-						financingAgreement: updated,
+						financingAgreement: updatedWithDates,
 					},
 					200,
 				),
