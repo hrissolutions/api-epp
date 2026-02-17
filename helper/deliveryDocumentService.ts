@@ -1,6 +1,9 @@
 import { PrismaClient } from "../generated/prisma";
 import { getLogger } from "./logger";
-import { generateSupplierDONumber } from "./generate-DeliveryDocumentNumber.helper";
+import {
+	generateSupplierDONumber,
+	generateAdminDRNumber,
+} from "./generate-DeliveryDocumentNumber.helper";
 
 const logger = getLogger();
 const docServiceLogger = logger.child({ module: "deliveryDocumentService" });
@@ -73,4 +76,107 @@ export const createSupplierDOForPO = async (
 
 	docServiceLogger.info(`Created Supplier DO ${doc.documentNumber} for PO ${po.poNumber}`);
 	return { id: doc.id, documentNumber: doc.documentNumber };
+};
+
+export type AdminDROptions = {
+	receiverName?: string | null;
+	receiverSignature?: string | null;
+	conditionOfGoods?: string | null;
+};
+
+/**
+ * Create an Admin Delivery Receipt (DR) when Admin receives goods (VENDOR_TO_ADMIN).
+ * Called when marking a Supplier DO as "received" (e.g. POST /deliveryDocument/:id/receive).
+ * If an Admin DR already exists for this DO, returns the existing one.
+ */
+export const createAdminDRForSupplierDO = async (
+	prisma: PrismaClient,
+	deliveryOrderId: string,
+	options?: AdminDROptions,
+): Promise<{ id: string; documentNumber: string; deliveryReceipt: any } | null> => {
+	const doDoc = await prisma.deliveryDocument.findUnique({
+		where: { id: deliveryOrderId },
+		include: {
+			supplier: { select: { id: true, name: true } },
+			purchaseOrder: { select: { id: true, poNumber: true } },
+		},
+	});
+
+	if (!doDoc) {
+		docServiceLogger.warn(`Delivery document (DO) not found: ${deliveryOrderId}`);
+		return null;
+	}
+
+	if (doDoc.documentType !== "DELIVERY_ORDER" || doDoc.transferStage !== "VENDOR_TO_ADMIN") {
+		docServiceLogger.warn(
+			`Document ${doDoc.documentNumber} is not a Supplier DO (VENDOR_TO_ADMIN); cannot create Admin DR`,
+		);
+		return null;
+	}
+
+	const existingDR = await prisma.deliveryDocument.findFirst({
+		where: {
+			correspondingDocumentId: deliveryOrderId,
+			documentType: "DELIVERY_RECEIPT",
+			transferStage: "VENDOR_TO_ADMIN",
+		},
+		include: {
+			order: { select: { id: true, orderNumber: true } },
+			supplier: { select: { id: true, name: true } },
+			purchaseOrder: { select: { id: true, poNumber: true } },
+			correspondingDo: true,
+		},
+	});
+
+	if (existingDR) {
+		docServiceLogger.info(
+			`Admin DR already exists for DO ${doDoc.documentNumber}: ${existingDR.documentNumber}`,
+		);
+		return {
+			id: existingDR.id,
+			documentNumber: existingDR.documentNumber,
+			deliveryReceipt: existingDR,
+		};
+	}
+
+	const items = Array.isArray(doDoc.items) ? (doDoc.items as any[]) : [];
+	const drItems = items.map((row: any) => ({
+		itemId: row.itemId ?? undefined,
+		sku: row.sku ?? "",
+		description: row.description ?? undefined,
+		quantity: typeof row.quantity === "number" ? row.quantity : 1,
+	}));
+
+	const documentNumber = await generateAdminDRNumber(prisma);
+	const documentDate = new Date();
+
+	const dr = await prisma.deliveryDocument.create({
+		data: {
+			organizationId: doDoc.organizationId,
+			documentType: "DELIVERY_RECEIPT",
+			transferStage: "VENDOR_TO_ADMIN",
+			documentNumber,
+			documentDate,
+			correspondingDocumentId: doDoc.id,
+			purchaseOrderId: doDoc.purchaseOrderId,
+			orderId: doDoc.orderId,
+			supplierId: doDoc.supplierId,
+			toName: doDoc.toName,
+			items: drItems,
+			receiverName: options?.receiverName ?? undefined,
+			receiverSignature: options?.receiverSignature ?? undefined,
+			conditionOfGoods: options?.conditionOfGoods ?? undefined,
+		},
+		include: {
+			order: { select: { id: true, orderNumber: true } },
+			supplier: { select: { id: true, name: true } },
+			purchaseOrder: { select: { id: true, poNumber: true } },
+			correspondingDo: true,
+		},
+	});
+
+	docServiceLogger.info(
+		`Created Admin DR ${dr.documentNumber} for Supplier DO ${doDoc.documentNumber}`,
+	);
+	return { id: dr.id, documentNumber: dr.documentNumber, deliveryReceipt: dr };
 };

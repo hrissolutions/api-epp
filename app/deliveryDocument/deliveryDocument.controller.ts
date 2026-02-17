@@ -6,8 +6,10 @@ import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler"
 import {
 	CreateDeliveryDocumentSchema,
 	UpdateDeliveryDocumentSchema,
+	ReceiveDeliveryDocumentSchema,
 } from "../../zod/deliveryDocument.zod";
 import { config } from "../../config/constant";
+import { createAdminDRForSupplierDO } from "../../helper/deliveryDocumentService";
 
 const logger = getLogger();
 const docLogger = logger.child({ module: "deliveryDocument" });
@@ -66,6 +68,47 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 			docLogger.error(`Create delivery document failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	/**
+	 * Mark a Supplier DO as received: creates an Admin Delivery Receipt (DR).
+	 * POST /deliveryDocument/:id/receive
+	 * Body (optional): { receiverName?, receiverSignature?, conditionOfGoods? }
+	 */
+	const receive = async (req: Request, res: Response, _next: NextFunction) => {
+		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+		if (!id) {
+			res.status(400).json(buildErrorResponse("ID is required", 400));
+			return;
+		}
+		const validation = ReceiveDeliveryDocumentSchema.safeParse(req.body || {});
+		const options = validation.success ? validation.data : undefined;
+		try {
+			const result = await createAdminDRForSupplierDO(prisma, id, options);
+			if (!result) {
+				res.status(400).json(
+					buildErrorResponse(
+						"Delivery document not found or is not a Supplier DO (VENDOR_TO_ADMIN). Cannot create Admin DR.",
+						400,
+					),
+				);
+				return;
+			}
+			docLogger.info(
+				`Receive triggered for DO; Admin DR: ${result.documentNumber} (id: ${result.id})`,
+			);
+			res.status(201).json(
+				buildSuccessResponse("Admin Delivery Receipt created", {
+					deliveryReceipt: result.deliveryReceipt,
+					documentNumber: result.documentNumber,
+				}, 201),
+			);
+		} catch (error: any) {
+			docLogger.error(`Receive (create Admin DR) failed: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
@@ -224,5 +267,5 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove };
+	return { create, getAll, getById, update, remove, receive };
 };
