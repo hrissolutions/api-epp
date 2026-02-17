@@ -621,9 +621,19 @@ export const controller = (prisma: PrismaClient) => {
 			quantity: z.number().int().min(1, "Quantity must be at least 1"),
 		});
 
+		const UserTypeCheckoutEnum = z.enum([
+			"ADMIN",
+			"EMPLOYEE",
+			"INDIVIDUAL",
+			"RETAILER",
+			"WHOLESALER",
+			"FINANCIER",
+			"VENDOR",
+		]);
 		const CheckoutSchema = z
 			.object({
 				userId: z.string().min(1, "User ID is required"),
+				userType: UserTypeCheckoutEnum.optional().default("EMPLOYEE"),
 				paymentType: z
 					.enum(["CASH", "INSTALLMENT", "POINTS", "MIXED"])
 					.default("INSTALLMENT"),
@@ -666,8 +676,9 @@ export const controller = (prisma: PrismaClient) => {
 			return;
 		}
 
-		const {
+		let {
 			userId,
+			userType,
 			paymentType,
 			installmentMonths,
 			paymentMethod,
@@ -677,6 +688,16 @@ export const controller = (prisma: PrismaClient) => {
 			items: itemsLegacy,
 			orderItems: orderItemsLegacy,
 		} = validation.data;
+		userType = userType ?? "EMPLOYEE";
+		// Only EMPLOYEE and ADMIN can use INSTALLMENT; individuals/retailers/wholesalers must pay in full
+		const installmentAllowed = userType === "EMPLOYEE" || userType === "ADMIN";
+		if (!installmentAllowed && paymentType === "INSTALLMENT") {
+			cartItemLogger.info(
+				`Checkout: userType=${userType} cannot use INSTALLMENT; forcing CASH`,
+			);
+			paymentType = "CASH";
+			installmentMonths = null;
+		}
 		const requestedItems = itemsLegacy ?? orderItemsLegacy;
 
 		// Validate installment months if payment type is INSTALLMENT
@@ -1045,6 +1066,7 @@ export const controller = (prisma: PrismaClient) => {
 				data: {
 					orderNumber,
 					userId,
+					userType: userType as any,
 					subtotal,
 					discount,
 					tax: 0,
@@ -1081,6 +1103,7 @@ export const controller = (prisma: PrismaClient) => {
 					order.total,
 					order.paymentType,
 					order.paymentMethod,
+					(order as any).userType,
 				);
 				cartItemLogger.info(`Transaction ledger created for order ${order.id}`);
 			} catch (transactionError) {

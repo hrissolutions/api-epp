@@ -408,7 +408,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 * /api/cartItem/checkout:
 	 *   post:
 	 *     summary: Checkout cart items to create an order
-	 *     description: Convert cart items for a user into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT, and clears only the checked-out items from the cart.
+	 *     description: Convert cart items for a user into an order with optional installment payment. If items array is provided, only those specific items will be checked out. Otherwise, all cart items will be checked out. Calculates totals, creates order items, generates installments if payment type is INSTALLMENT (employees only), and clears only the checked-out items from the cart. INDIVIDUAL, RETAILER, and WHOLESALER can order but cannot use INSTALLMENT; payment is forced to CASH/POINTS/MIXED.
 	 *     tags: [CartItem]
 	 *     requestBody:
 	 *       required: true
@@ -423,6 +423,11 @@ export const router = (route: Router, controller: IController): Router => {
 	 *                 type: string
 	 *                 description: User ID who owns the cart
 	 *                 example: "507f1f77bcf86cd799439011"
+	 *               userType:
+	 *                 type: string
+	 *                 enum: [ADMIN, EMPLOYEE, INDIVIDUAL, RETAILER, WHOLESALER, FINANCIER, VENDOR]
+	 *                 default: EMPLOYEE
+	 *                 description: Buyer type. Only EMPLOYEE (and ADMIN) can use INSTALLMENT; INDIVIDUAL/RETAILER/WHOLESALER pay in full only.
 	 *               items:
 	 *                 type: array
 	 *                 description: Optional array of specific items to checkout. If not provided, all cart items will be checked out.

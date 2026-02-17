@@ -1,0 +1,21 @@
+ID,Scenario,Type,Priority,Expected Result,Status,Module
+QA-01,Create valid record (template/category/order etc.),Positive,High,201 with valid payload,Fail,Multiple
+QA-02,Missing required field on create,Negative,High,400 validation error,Pass,cartItem/category etc.
+QA-03,Invalid ObjectId on getById,Negative,High,400 validation error,Pass,All
+QA-04,Get all with pagination,Positive,High,200 with data array,Fail,All CRUD modules
+QA-05,Get by valid ID,Positive,High,200 with single resource,Mixed,All
+QA-06,Update with valid partial body,Positive,High,200 with updated resource,Fail,All
+QA-07,Delete existing resource,Positive,High,200/204,Fail,All
+QA-08,Unauthorized access (no token),Security,High,401/403 response,N/A,Endpoints currently public
+QA-09,Malformed payload / injection,Negative,High,400 or 422,Pass,Validation in place
+QA-10,Rate limiting applied,Security,High,200 within limit then 429,Pass,Security middleware
+QA-11,Request size limit (10MB),Security,High,413 for oversized,Pass,Security middleware
+QA-12,Security headers present,Security,Medium,Headers set (e.g. Helmet),Pass,Security middleware
+QA-13,Edge case: very large page number,Edge,Medium,200 or 400 consistent,Fail,Spec vs controller mismatch
+QA-14,Edge case: very large limit,Edge,Medium,200 or 400 consistent,Fail,Spec vs controller mismatch
+QA-15,Group by field in list,Positive,Medium,200 with grouped data,Fail,Controller flag rules
+QA-16,Field selection in list,Positive,Medium,200 with selected fields,Fail,Same flag rules
+QA-17,Transaction getUnreconciled,Positive,High,200 with list,Fail,Transaction
+QA-18,Transaction reconcile,Positive,High,200,Fail,Transaction
+QA-19,Order createPurchaseOrders,Positive,Medium,201,Fail,Order
+QA-20,CartItem checkout,Positive,High,200/201,Fail,CartItem

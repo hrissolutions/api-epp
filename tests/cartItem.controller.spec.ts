@@ -136,7 +136,7 @@ describe("CartItem Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated cartItems", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10" };
+			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -145,7 +145,7 @@ describe("CartItem Controller", () => {
 
 		it("should group cartItems by type field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type" };
+			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -160,7 +160,7 @@ describe("CartItem Controller", () => {
 
 		it("should group cartItems by name field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "name" };
+			req.query = { groupBy: "name", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -172,7 +172,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle cartItems with null values in grouping field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type" };
+			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData.data.grouped).to.have.property("unassigned");
@@ -182,7 +182,7 @@ describe("CartItem Controller", () => {
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10" };
+			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -192,7 +192,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "" };
+			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -201,7 +201,7 @@ describe("CartItem Controller", () => {
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name" };
+			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -211,7 +211,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle query validation failure", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "invalid" };
+			req.query = { page: "invalid", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -219,7 +219,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10" };
+			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
 
 			// Mock Prisma to throw an error
 			prisma.cartItem.findMany = async () => {
@@ -236,7 +236,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10" };
+			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
 
 			// Mock Prisma to throw a non-Prisma error
 			prisma.cartItem.findMany = async () => {
@@ -253,6 +253,9 @@ describe("CartItem Controller", () => {
 			req.query = {
 				page: "1",
 				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
 				query: "email",
 				filter: JSON.stringify([{ field: "type", operator: "equals", value: "email" }]),
 			};
@@ -263,7 +266,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc" };
+			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -271,7 +274,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type" };
+			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -279,7 +282,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle documents parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { documents: "true" };
+			req.query = { document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -287,7 +290,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle count parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { count: "true" };
+			req.query = { document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -295,7 +298,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle pagination parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { pagination: "true" };
+			req.query = { document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -790,6 +793,9 @@ describe("CartItem Controller", () => {
 			req.query = {
 				page: "1",
 				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
 				filter: "invalid-json",
 			};
 			await cartItemController.getAll(req as Request, res, next);
@@ -799,7 +805,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10" };
+			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -807,7 +813,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999" };
+			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -815,7 +821,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10" };
+			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -823,7 +829,7 @@ describe("CartItem Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10" };
+			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");

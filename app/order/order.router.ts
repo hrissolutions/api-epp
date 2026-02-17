@@ -218,7 +218,7 @@ export const router = (route: Router, controller: IController): Router => {
 	 * /api/order:
 	 *   post:
 	 *     summary: Create new order
-	 *     description: Create a new order with the provided data
+	 *     description: Create a new order with the provided data. Requires userId and items/orderItems. Only EMPLOYEE (and ADMIN) can use paymentType INSTALLMENT; INDIVIDUAL, RETAILER, WHOLESALER must use CASH, POINTS, or MIXED (no installment).
 	 *     tags: [Order]
 	 *     requestBody:
 	 *       required: true
@@ -227,8 +227,17 @@ export const router = (route: Router, controller: IController): Router => {
 	 *           schema:
 	 *             type: object
 	 *             required:
-	 *               - name
+	 *               - userId
 	 *             properties:
+	 *               userId:
+	 *                 type: string
+	 *                 description: User ID (e.g. from SSO)
+	 *                 example: "507f1f77bcf86cd799439011"
+	 *               userType:
+	 *                 type: string
+	 *                 enum: [ADMIN, EMPLOYEE, INDIVIDUAL, RETAILER, WHOLESALER, FINANCIER, VENDOR]
+	 *                 default: EMPLOYEE
+	 *                 description: Buyer type. Only EMPLOYEE/ADMIN can use INSTALLMENT.
 	 *               name:
 	 *                 type: string
 	 *                 minLength: 1
