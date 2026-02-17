@@ -72,3 +72,12 @@ export const UpdateDeliveryDocumentSchema = z.object({
 });
 
 export type UpdateDeliveryDocument = z.infer<typeof UpdateDeliveryDocumentSchema>;
+
+/** Optional body for marking a Supplier DO as received (creates Admin DR). */
+export const ReceiveDeliveryDocumentSchema = z.object({
+	receiverName: z.string().optional().nullable(),
+	receiverSignature: z.string().optional().nullable(),
+	conditionOfGoods: z.string().optional().nullable(),
+});
+
+export type ReceiveDeliveryDocument = z.infer<typeof ReceiveDeliveryDocumentSchema>;
