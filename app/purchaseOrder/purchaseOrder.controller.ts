@@ -123,7 +123,7 @@ export const controller = (prisma: PrismaClient) => {
 				return;
 			}
 			res.status(200).json(
-				buildSuccessResponse("Purchase order retrieved", { purchaseOrder: po }),
+				buildSuccessResponse("Purchase order retrieved", po),
 			);
 		} catch (error) {
 			poLogger.error(`Get purchase order failed: ${error}`);
