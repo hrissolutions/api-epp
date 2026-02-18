@@ -1,0 +1,10 @@
+Defect ID,Title,Severity,Environment,Steps to Reproduce,Expected,Actual,Status,Assignee
+QA-001,CartItem getAll returns 400 when groupBy/docs not set,High,Local,"Call GET /api/cartItem with default query",200 with data,400 Invalid combination: All flags cannot be false,Open,
+QA-002,CartItem create requires userId and itemId,High,Local,"POST /api/cartItem with name only",201 or 400 with clear message,400 Validation failed Required userId itemId,Open,
+QA-003,Category getAll same flag combination failure,High,Local,"GET /api/category without documents/groupBy",200,400 All flags cannot be false,Open,
+QA-004,Order create validation mismatch in spec,High,Local,"POST /api/order with mock body in spec",201,400 validation errors,Open,
+QA-005,Transaction controller spec completely failing,Critical,Local,"Run tests/transaction.controller.spec.ts",All transaction tests pass,All fail - spec out of sync with controller,Open,
+QA-006,Products controller spec references missing module,Critical,Local,"Run npm test (with products spec)",Tests compile and run,Cannot find module ../app/products/products.controller,Open,Spec excluded (.skip)
+QA-007,Large page/limit return 400 in edge-case tests,Medium,Local,"GET list with page=999999 or limit=999999",200 or 400 consistently,Spec expects 200; controller returns 400,Open,
+QA-008,Update with missing required fields returns 400,Medium,Local,"PATCH with partial body missing required",200 or 400,Spec expects 200; actual 400,Open,
+QA-009,Non-existent resource getById returns 404,Low,Local,"GET /api/order/:id with non-existent id",404,Spec may expect different status,Open,

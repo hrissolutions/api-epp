@@ -22,7 +22,6 @@ import { invalidateCache } from "../../middleware/cache";
 const logger = getLogger();
 const approvalTypeLogger = logger.child({ module: "approvalType" });
 
-// Helper function to convert string numbers to actual numbers for form data
 const convertStringNumbers = (obj: any): any => {
 	if (obj === null || obj === undefined) {
 		return obj;

@@ -382,6 +382,7 @@ export const controller = (prisma: PrismaClient) => {
 					order.total,
 					order.paymentType,
 					order.paymentMethod,
+					(order as any).userType,
 				);
 				orderLogger.info(`Transaction ledger created for order ${order.id}`);
 			} catch (transactionError) {

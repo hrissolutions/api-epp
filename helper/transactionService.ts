@@ -6,6 +6,7 @@ const transactionLogger = logger.child({ module: "transactionService" });
 
 /**
  * Create a transaction ledger for an order
+ * @param userType - Optional; defaults to EMPLOYEE. Pass order.userType for consistency (e.g. INDIVIDUAL for non-installment orders).
  */
 export async function createTransactionForOrder(
 	prisma: PrismaClient,
@@ -14,6 +15,7 @@ export async function createTransactionForOrder(
 	totalAmount: number,
 	paymentType: string,
 	paymentMethod: any,
+	userType?: string,
 ) {
 	try {
 		const transactionNumber = `TXN-${Date.now()}`;
@@ -26,6 +28,7 @@ export async function createTransactionForOrder(
 			data: {
 				transactionNumber,
 				userId,
+				userType: (userType as any) ?? "EMPLOYEE",
 				orderId,
 				type: paymentType === "INSTALLMENT" ? "INSTALLMENT" : "PURCHASE",
 				status: "PENDING",

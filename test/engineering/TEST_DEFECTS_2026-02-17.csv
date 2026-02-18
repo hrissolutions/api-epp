@@ -1,0 +1,26 @@
+Defect ID,Module,Test Name,Severity,Status,Expected,Actual,Evidence
+DEF-001,CartItem,should return paginated cartItems,High,Open,200,400,Invalid combination: All flags cannot be false
+DEF-002,CartItem,should group cartItems by type field,High,Open,200,400,Invalid combination: All flags cannot be false
+DEF-003,CartItem,should create a new cartItem,High,Open,201,400,Validation failed: userId itemId Required
+DEF-004,CartItem,should update cartItem details,High,Open,200,400,Response shape/status assertion
+DEF-005,Category,should return paginated categorys,High,Open,200,400,Invalid combination / query flags
+DEF-006,Category,should create a new category,High,Open,201,400,Validation/required fields
+DEF-007,Category,should update category details,High,Open,200,400,Response assertion
+DEF-008,Installment,should return paginated installments,High,Open,200,400,Invalid combination flags
+DEF-009,Installment,should create a new installment,High,Open,201,400,Validation
+DEF-010,Order,should return paginated orders,High,Open,200,400,Invalid combination flags
+DEF-011,Order,should create a new order,High,Open,201,400,Validation
+DEF-012,Order,should update order details,High,Open,200,400,Response assertion
+DEF-013,OrderItem,should return paginated orderItems,High,Open,200,400,Invalid combination flags
+DEF-014,OrderItem,should create a new orderItem,High,Open,201,400,Validation
+DEF-015,OrderItem,should update orderItem details,High,Open,200,400,Response assertion
+DEF-016,Template,should return paginated templates,High,Open,200,400,Invalid combination flags
+DEF-017,Template,should create a new template,High,Open,201,400,Validation
+DEF-018,Template,should update template details,High,Open,200,400,Response assertion
+DEF-019,Transaction,should create a new transaction,Critical,Open,201,Error,Controller spec missing/outdated
+DEF-020,Transaction,should retrieve all transactions,High,Open,200,Error,
+DEF-021,WishlistItem,should return paginated wishlistItems,High,Open,200,400,Invalid combination flags
+DEF-022,WishlistItem,should create a new wishlistItem,High,Open,201,400,Validation
+DEF-023,WishlistItem,should update wishlistItem details,High,Open,200,400,Response assertion
+DEF-024,Products,products.controller.spec.ts,Critical,Open,Compiles,TS2307,Module ../app/products/products.controller not found
+DEF-025,All,Edge cases very large page/limit,Medium,Open,200,400,Specs expect 200; controller returns 400 for invalid params

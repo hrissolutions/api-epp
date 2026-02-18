@@ -1,0 +1,2 @@
+Suite,Test Name,Status,Duration (ms),Error Message,Timestamp
+"Test run","Parse error - no JSON output","Fail","","No output",2026-02-17T06:18:23.530Z

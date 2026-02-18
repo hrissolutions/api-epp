@@ -1,0 +1,24 @@
+Finding ID,Category,Check Item,Severity,Status,Evidence,Suggested Fix
+REV-001,Requirements,Requirements and acceptance criteria met,High,Fail,259 failing tests; CRUD list/create/update specs fail,Fix specs or controller query/validation rules
+REV-002,Defects,No critical/high defects remain,High,Fail,Critical: Products spec; Transaction spec; High: multiple getAll/create/update,Resolve DEF-024 DEF-019-021 and high-severity defects
+REV-003,Security,Security-sensitive paths covered (auth validation no secret leak),Medium,Partial,Auth not enforced on routes; validation and security middleware tests pass,Add auth to protected routes; add abuse-case tests
+REV-004,Tests,Tests validate changed behavior,High,Fail,Many controller tests fail; specs out of sync,Align specs with controller contract and query rules
+REV-005,Pattern,Module pattern and helper usage consistent with STANDARDS.md,Low,Pass,Codebase follows module/controller/router pattern,-
+REV-006,Contract,Response envelope and Zod usage consistent,Medium,Partial,Zod used; response shape failures in specs may be assertion issues,Verify buildSuccessResponse/buildErrorResponse usage
+REV-007,Errors,Error handling and logging reasonable,Low,Pass,Validation errors and 400/404 returned; logging in place,-
+REV-008,Docs,Documentation (e.g. @openapi) updated where needed,Low,Pass,OpenAPI on routers,-
+SEC-001,Secrets,Secrets in .env; .env in .gitignore; .env.example without secrets,High,Pass,Standard practice in repo,-
+SEC-002,Secrets,No hardcoded JWT secrets or DB URLs,High,Pass,Config/env used,-
+SEC-003,Auth,Passwords hashed before storage,N/A,N/A,No auth persistence in scope,-
+SEC-004,Auth,Tokens verified on protected routes; expiry enforced,Medium,Fail,All endpoints public; auth middleware applied only to /api/auth,Protect sensitive routes; verify token and expiry
+SEC-005,Auth,Ownership/role checks before mutations,Medium,Fail,No role checks in scope,Add where required
+SEC-006,Auth,Rate limiting on auth and sensitive endpoints,High,Pass,rateLimiter and authSecurityMiddleware in use,-
+SEC-007,Input,All external input validated with Zod,High,Pass,Validation errors observed in tests,-
+SEC-008,Input,ObjectIds validated before use in queries,High,Pass,Invalid ID returns 400,-
+SEC-009,Input,No raw client input in Prisma or raw queries,High,Pass,Controllers use validated params,-
+SEC-010,Middleware,middleware/security.ts applied; CORS and headers configured,High,Pass,index.ts applies securityMiddleware/devSecurityMiddleware; CORS from config,-
+SEC-011,Middleware,Request-size and rate limits enabled,High,Pass,Request size 10MB; rate limiter applied,-
+SEC-012,Audit,High-risk mutations use logActivity/logAudit per STANDARDS.md,Medium,Partial,Audit logging module exists; coverage per mutation not verified,Confirm audit on sensitive mutations
+SEC-013,Audit,No sensitive data in logs,Medium,Pass,No evidence of secrets in log messages,-
+SEC-014,Trust,Trust boundaries validated,High,Partial,Body/query/params validated; auth boundary not enforced on most routes,Enforce auth on protected routes
+SEC-015,Dependencies,npm audit; critical issues resolved or documented,Low,Open,Run npm audit and document or fix criticals,-
