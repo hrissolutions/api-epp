@@ -102,10 +102,14 @@ export const controller = (prisma: PrismaClient) => {
 				`Receive triggered for DO; Admin DR: ${result.documentNumber} (id: ${result.id})`,
 			);
 			res.status(201).json(
-				buildSuccessResponse("Admin Delivery Receipt created", {
-					deliveryReceipt: result.deliveryReceipt,
-					documentNumber: result.documentNumber,
-				}, 201),
+				buildSuccessResponse(
+					"Admin Delivery Receipt created",
+					{
+						deliveryReceipt: result.deliveryReceipt,
+						documentNumber: result.documentNumber,
+					},
+					201,
+				),
 			);
 		} catch (error: any) {
 			docLogger.error(`Receive (create Admin DR) failed: ${error}`);
@@ -194,9 +198,7 @@ export const controller = (prisma: PrismaClient) => {
 				res.status(404).json(buildErrorResponse("Delivery document not found", 404));
 				return;
 			}
-			res.status(200).json(
-				buildSuccessResponse("Delivery document retrieved", { deliveryDocument: doc }),
-			);
+			res.status(200).json(buildSuccessResponse("Delivery document retrieved", doc));
 		} catch (error) {
 			docLogger.error(`Get delivery document failed: ${error}`);
 			res.status(500).json(
