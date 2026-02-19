@@ -1018,6 +1018,10 @@ export const controller = (prisma: PrismaClient) => {
 							parseNumberWithCommas(row.employeePrice) ??
 							0, // Support both old and new field names
 						costPrice: parseNumberWithCommas(row.costPrice),
+						rentalPrice: parseNumberWithCommas(row.rentalPrice),
+						wholeSalePrice:
+							parseNumberWithCommas(row.wholeSalePrice) ??
+							parseNumberWithCommas(row.wholesalePrice),
 
 						// Inventory
 						stockQuantity: row.stockQuantity ? parseInt(row.stockQuantity) : 0,

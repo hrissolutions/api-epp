@@ -13,9 +13,11 @@ model Item {
   itemType ItemType @default(PRODUCT)
 
   // Pricing
-  retailPrice  Float
-  sellingPrice Float
-  costPrice    Float?
+  retailPrice    Float
+  sellingPrice   Float
+  costPrice      Float? // employeePrice
+  rentalPrice    Float? // For loan items
+  wholeSalePrice Float? // For wholesale customers
 
   // Inventory
   stockQuantity     Int @default(0)
