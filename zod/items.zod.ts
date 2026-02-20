@@ -94,7 +94,7 @@ export const CreateItemSchema = ItemSchema.omit({
 	.partial({
 		description: true,
 		costPrice: true,
-		rentalPrice: true,
+		retailerPrice: true,
 		wholeSalePrice: true,
 		imageUrl: true,
 		images: true,
