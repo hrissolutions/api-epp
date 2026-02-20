@@ -16,7 +16,7 @@ model Item {
   retailPrice    Float
   sellingPrice   Float
   costPrice      Float? // employeePrice
-  rentalPrice    Float? // For loan items
+  retailerPrice    Float? // For retailer customers
   wholeSalePrice Float? // For wholesale customers
 
   // Inventory

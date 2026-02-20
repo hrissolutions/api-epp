@@ -61,7 +61,7 @@ export const ItemSchema = z.object({
 	retailPrice: decimalSchema,
 	sellingPrice: decimalSchema,
 	costPrice: decimalSchema.optional().nullable(),
-	rentalPrice: decimalSchema.optional().nullable(),
+	retailerPrice: decimalSchema.optional().nullable(),
 	wholeSalePrice: decimalSchema.optional().nullable(),
 
 	// Inventory
