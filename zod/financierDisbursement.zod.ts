@@ -10,6 +10,9 @@ export const ReconciliationStatusEnum = z.enum([
 	"SETTLED",
 ]);
 
+/** Receipt type: OR (Official Receipt) or bank transfer receipt */
+export const ReceiptTypeEnum = z.enum(["OR", "BANK_RECEIPT"]);
+
 const objectId = (field: string) =>
 	z.string().refine((val) => isValidObjectId(val), {
 		message: `Invalid ${field} ObjectId format`,
@@ -25,6 +28,12 @@ export const FinancierDisbursementSchema = z.object({
 	currency: z.string().default("PHP"),
 	disbursedAt: z.coerce.date().optional().nullable(),
 	expectedAt: z.coerce.date().optional().nullable(),
+	receiptType: ReceiptTypeEnum.optional().nullable(),
+	receiptNumber: z.string().optional().nullable(),
+	receiptAttachmentUrl: z
+		.union([z.string().url(), z.literal("")])
+		.optional()
+		.nullable(),
 	status: DisbursementStatusEnum.default("PENDING"),
 	reconciliationStatus: ReconciliationStatusEnum.default("PENDING"),
 	reconciledAt: z.coerce.date().optional().nullable(),
@@ -44,6 +53,9 @@ export const CreateFinancierDisbursementSchema = FinancierDisbursementSchema.omi
 	referenceNo: true,
 	disbursedAt: true,
 	expectedAt: true,
+	receiptType: true,
+	receiptNumber: true,
+	receiptAttachmentUrl: true,
 	status: true,
 	reconciliationStatus: true,
 	reconciledAt: true,
@@ -68,6 +80,12 @@ export const ReconcileFinancierDisbursementSchema = z.object({
 	status: ReconciliationStatusEnum.default("MATCHED"),
 });
 
+/** Body for upload-receipt (multipart: receiptType, receiptNumber from form fields) */
+export const UploadReceiptSchema = z.object({
+	receiptType: ReceiptTypeEnum,
+	receiptNumber: z.string().optional().nullable(),
+});
+
 export const AdminFinancierSettlementSchema = z.object({
 	id: objectId("id"),
 	financierDisbursementId: objectId("financierDisbursementId"),
@@ -77,6 +95,12 @@ export const AdminFinancierSettlementSchema = z.object({
 	remittedAt: z.coerce.date().optional().nullable(),
 	dueAt: z.coerce.date().optional().nullable(),
 	referenceNo: z.string().optional().nullable(),
+	receiptType: ReceiptTypeEnum.optional().nullable(),
+	receiptNumber: z.string().optional().nullable(),
+	receiptAttachmentUrl: z
+		.union([z.string().url(), z.literal("")])
+		.optional()
+		.nullable(),
 	createdBy: z.string().optional().nullable(),
 	notes: z.string().optional().nullable(),
 	metadata: z.record(z.any()).optional().nullable(),
@@ -96,8 +120,38 @@ export const CreateAdminFinancierSettlementSchema = AdminFinancierSettlementSche
 	remittedAt: true,
 	dueAt: true,
 	referenceNo: true,
+	receiptType: true,
+	receiptNumber: true,
+	receiptAttachmentUrl: true,
 	createdBy: true,
 	notes: true,
 	metadata: true,
 	organizationId: true,
 });
+
+/** Standalone create: requires financierDisbursementId, financierConfigId, amount (for CRUD API) */
+export const CreateAdminFinancierSettlementStandaloneSchema = z.object({
+	financierDisbursementId: objectId("financierDisbursementId"),
+	financierConfigId: objectId("financierConfigId"),
+	amount: z.number().positive(),
+	currency: z.string().optional().nullable(),
+	remittedAt: z.coerce.date().optional().nullable(),
+	dueAt: z.coerce.date().optional().nullable(),
+	referenceNo: z.string().optional().nullable(),
+	receiptType: ReceiptTypeEnum.optional().nullable(),
+	receiptNumber: z.string().optional().nullable(),
+	receiptAttachmentUrl: z
+		.union([z.string().url(), z.literal("")])
+		.optional()
+		.nullable(),
+	createdBy: z.string().optional().nullable(),
+	notes: z.string().optional().nullable(),
+	metadata: z.record(z.any()).optional().nullable(),
+	organizationId: objectId("organizationId").optional().nullable(),
+});
+
+export const UpdateAdminFinancierSettlementSchema = AdminFinancierSettlementSchema.omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+}).partial();

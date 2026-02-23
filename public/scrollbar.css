@@ -1,0 +1,109 @@
+/**
+ * Scrollbar Styles for Light and Dark Mode
+ * 
+ * Supports multiple theme detection methods:
+ * - data-theme attribute: [data-theme="dark"] or [data-theme="light"]
+ * - CSS classes: .dark, .dark-mode, .light, .light-mode
+ * - System preference: @media (prefers-color-scheme: dark)
+ * 
+ * Usage: Import this file in your main CSS or HTML:
+ *   <link rel="stylesheet" href="/public/scrollbar.css">
+ *   or
+ *   @import url('/public/scrollbar.css');
+ */
+
+/* Default Light Mode - neutral gray (no blue) */
+:root {
+	--scrollbar-width: 12px;
+	--scrollbar-track: #e8e8e8;
+	--scrollbar-thumb: #b0b0b0;
+	--scrollbar-thumb-hover: #909090;
+	--scrollbar-border-radius: 6px;
+}
+
+/* Dark Mode - neutral gray */
+[data-theme="dark"],
+.dark,
+.dark-mode {
+	--scrollbar-track: #2d2d2d;
+	--scrollbar-thumb: #5a5a5a;
+	--scrollbar-thumb-hover: #6e6e6e;
+}
+
+/* Light Mode Explicit Override */
+[data-theme="light"],
+.light,
+.light-mode {
+	--scrollbar-track: #e8e8e8;
+	--scrollbar-thumb: #b0b0b0;
+	--scrollbar-thumb-hover: #909090;
+}
+
+/* Webkit Browsers (Chrome, Safari, Edge, Opera) - neutral gray, no blue */
+::-webkit-scrollbar {
+	width: var(--scrollbar-width);
+	height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+	background: var(--scrollbar-track) !important;
+	border-radius: var(--scrollbar-border-radius);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb) !important;
+	border-radius: var(--scrollbar-border-radius);
+	border: 2px solid var(--scrollbar-track);
+	transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover) !important;
+}
+
+::-webkit-scrollbar-thumb:active {
+	background: var(--scrollbar-thumb-hover) !important;
+}
+
+/* Firefox - neutral gray */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* System Preference Detection */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]):not(.light):not(.light-mode) {
+		--scrollbar-track: #2d2d2d;
+		--scrollbar-thumb: #5a5a5a;
+		--scrollbar-thumb-hover: #6e6e6e;
+	}
+}
+
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme="dark"]):not(.dark):not(.dark-mode) {
+		--scrollbar-track: #e8e8e8;
+		--scrollbar-thumb: #b0b0b0;
+		--scrollbar-thumb-hover: #909090;
+	}
+}
+
+/* Optional: Thin scrollbar variant */
+.scrollbar-thin ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.scrollbar-thin * {
+	scrollbar-width: thin;
+}
+
+/* Optional: Thick scrollbar variant */
+.scrollbar-thick ::-webkit-scrollbar {
+	width: 16px;
+	height: 16px;
+}
+
+.scrollbar-thick * {
+	scrollbar-width: auto;
+}
