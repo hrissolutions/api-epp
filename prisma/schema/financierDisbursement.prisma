@@ -4,12 +4,17 @@ model FinancierDisbursement {
   orderId              String  @db.ObjectId
   financingAgreementId String  @db.ObjectId
   financierConfigId    String  @db.ObjectId
-
+  
   referenceNo String?
   amount      Float
   currency    String   @default("PHP")
   disbursedAt DateTime?
   expectedAt  DateTime?
+
+  // Proof of transfer: financier uploads so admin can confirm money received
+  receiptType          ReceiptType?  // OR (Official Receipt) or BANK_RECEIPT
+  receiptNumber        String?       // OR number or bank reference
+  receiptAttachmentUrl String?       // URL of uploaded file (image or PDF)
 
   status               DisbursementStatus  @default(PENDING)
   reconciliationStatus ReconciliationStatus @default(PENDING)
@@ -35,6 +40,11 @@ model FinancierDisbursement {
   @@index([reconciliationStatus])
   @@index([createdAt])
   @@map("financierDisbursements")
+}
+
+enum ReceiptType {
+  OR           // Official Receipt
+  BANK_RECEIPT // Bank transfer receipt
 }
 
 enum DisbursementStatus {

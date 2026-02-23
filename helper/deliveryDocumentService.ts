@@ -19,7 +19,7 @@ export const createSupplierDOForPO = async (
 	const po = await prisma.purchaseOrder.findUnique({
 		where: { id: purchaseOrderId },
 		include: {
-			supplier: { select: { id: true, name: true } },
+			supplier: { select: { id: true, name: true, address: true } },
 			order: { select: { id: true } },
 		},
 	});
@@ -65,10 +65,14 @@ export const createSupplierDOForPO = async (
 			organizationId: po.organizationId,
 			documentType: "DELIVERY_ORDER",
 			transferStage: "VENDOR_TO_ADMIN",
+			fromParty: "SUPPLIER",
+			toParty: "ADMIN",
 			documentNumber,
 			documentDate,
 			purchaseOrderId: po.id,
 			supplierId: po.supplierId,
+			fromName: po.supplier?.name ?? undefined,
+			fromAddress: po.supplier?.address ?? undefined,
 			toName: "Admin",
 			items: doItems,
 		},
@@ -155,12 +159,16 @@ export const createAdminDRForSupplierDO = async (
 			organizationId: doDoc.organizationId,
 			documentType: "DELIVERY_RECEIPT",
 			transferStage: "VENDOR_TO_ADMIN",
+			fromParty: "SUPPLIER",
+			toParty: "ADMIN",
 			documentNumber,
 			documentDate,
 			correspondingDocumentId: doDoc.id,
 			purchaseOrderId: doDoc.purchaseOrderId,
 			orderId: doDoc.orderId,
 			supplierId: doDoc.supplierId,
+			fromName: doDoc.fromName,
+			fromAddress: doDoc.fromAddress,
 			toName: doDoc.toName,
 			items: drItems,
 			receiverName: options?.receiverName ?? undefined,
@@ -178,5 +186,15 @@ export const createAdminDRForSupplierDO = async (
 	docServiceLogger.info(
 		`Created Admin DR ${dr.documentNumber} for Supplier DO ${doDoc.documentNumber}`,
 	);
+
+	// Mark Purchase Order as RECEIVED when Admin has received from supplier
+	if (doDoc.purchaseOrderId) {
+		await prisma.purchaseOrder.update({
+			where: { id: doDoc.purchaseOrderId },
+			data: { status: "RECEIVED" },
+		});
+		docServiceLogger.info(`PurchaseOrder ${doDoc.purchaseOrderId} status set to RECEIVED`);
+	}
+
 	return { id: dr.id, documentNumber: dr.documentNumber, deliveryReceipt: dr };
 };

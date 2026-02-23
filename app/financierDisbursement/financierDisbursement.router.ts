@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { uploadDisbursementReceipt } from "../../middleware/upload";
 
 interface IController {
 	getLedger(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -12,6 +13,8 @@ interface IController {
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 	reconcile(req: Request, res: Response, next: NextFunction): Promise<void>;
+	uploadReceipt(req: Request, res: Response, next: NextFunction): Promise<void>;
+	uploadRemittanceReceipt(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (_route: Router, controller: IController): Router => {
@@ -31,11 +34,17 @@ export const router = (_route: Router, controller: IController): Router => {
 	routes.get("/soa/admin-to-financier/:financierConfigId", controller.getAdminToFinancierSoa);
 	routes.get("/soa/financier/:financierConfigId", controller.getFinancierSoa);
 	routes.post("/", controller.create);
-	routes.post("/:id/remittance", controller.createRemittance);
+	routes.patch(
+		"/remittances/:remittanceId/upload-receipt",
+		uploadDisbursementReceipt,
+		controller.uploadRemittanceReceipt,
+	);
+	routes.post("/:id/remittance", uploadDisbursementReceipt, controller.createRemittance);
 	routes.get("/:id/remittances", controller.getRemittances);
 	routes.get("/", controller.getAll);
 	routes.get("/:id", controller.getById);
 	routes.patch("/:id", controller.update);
+	routes.patch("/:id/upload-receipt", uploadDisbursementReceipt, controller.uploadReceipt);
 	routes.delete("/:id", controller.remove);
 	routes.post("/:id/reconcile", controller.reconcile);
 

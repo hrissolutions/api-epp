@@ -6,9 +6,11 @@ import {
 	CreateFinancierDisbursementSchema,
 	ReconcileFinancierDisbursementSchema,
 	UpdateFinancierDisbursementSchema,
+	UploadReceiptSchema,
 } from "../../zod/financierDisbursement.zod";
 import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler";
 import { buildSuccessResponse } from "../../helper/success-handler";
+import { uploadReceiptToCloudinary } from "../../helper/cloudinaryUpload";
 
 export const controller = (prisma: PrismaClient) => {
 	type SoaView = "ADMIN_TO_FINANCIER" | "FINANCIER";
@@ -87,16 +89,24 @@ export const controller = (prisma: PrismaClient) => {
 			credit: number;
 			eventType: "LOAN" | "PAYMENT";
 			disbursementId: string;
+			remittanceId: string | null;
 			orderNumber: string | null;
 			status: string;
 			reconciliationStatus: string;
 			referenceNo: string | null;
+			receiptType: string | null;
+			receiptNumber: string | null;
+			receiptAttachmentUrl: string | null;
 		};
 
 		const rawEntries: RawEntry[] = [];
 		for (const row of rows) {
 			const orderNumber = row.order?.orderNumber ?? null;
 			const loanDate = row.disbursedAt ?? row.createdAt;
+			const disbursementReceiptType = row.receiptType ?? null;
+			const disbursementReceiptNumber = row.receiptNumber ?? null;
+			const disbursementReceiptUrl = row.receiptAttachmentUrl ?? null;
+
 			rawEntries.push({
 				date: loanDate,
 				description:
@@ -107,14 +117,21 @@ export const controller = (prisma: PrismaClient) => {
 				credit: 0,
 				eventType: "LOAN",
 				disbursementId: row.id,
+				remittanceId: null,
 				orderNumber,
 				status: row.status,
 				reconciliationStatus: row.reconciliationStatus,
 				referenceNo: row.referenceNo ?? null,
+				receiptType: disbursementReceiptType,
+				receiptNumber: disbursementReceiptNumber,
+				receiptAttachmentUrl: disbursementReceiptUrl,
 			});
 
 			const remittances = Array.isArray(row.adminSettlements) ? row.adminSettlements : [];
 			for (const remittance of remittances) {
+				const remittanceReceiptType = remittance.receiptType ?? null;
+				const remittanceReceiptNumber = remittance.receiptNumber ?? null;
+				const remittanceReceiptUrl = remittance.receiptAttachmentUrl ?? null;
 				rawEntries.push({
 					date: remittance.remittedAt ?? remittance.createdAt,
 					description:
@@ -125,10 +142,14 @@ export const controller = (prisma: PrismaClient) => {
 					credit: remittance.amount,
 					eventType: "PAYMENT",
 					disbursementId: row.id,
+					remittanceId: remittance.id,
 					orderNumber,
 					status: row.status,
 					reconciliationStatus: row.reconciliationStatus,
 					referenceNo: remittance.referenceNo ?? row.referenceNo ?? null,
+					receiptType: remittanceReceiptType,
+					receiptNumber: remittanceReceiptNumber,
+					receiptAttachmentUrl: remittanceReceiptUrl,
 				});
 			}
 
@@ -153,10 +174,14 @@ export const controller = (prisma: PrismaClient) => {
 					}),
 					eventType: "PAYMENT",
 					disbursementId: row.id,
+					remittanceId: null,
 					orderNumber,
 					status: row.status,
 					reconciliationStatus: row.reconciliationStatus,
 					referenceNo: row.referenceNo ?? null,
+					receiptType: disbursementReceiptType,
+					receiptNumber: disbursementReceiptNumber,
+					receiptAttachmentUrl: disbursementReceiptUrl,
 				});
 			}
 		}
@@ -173,10 +198,14 @@ export const controller = (prisma: PrismaClient) => {
 				balance: runningBalance,
 				eventType: entry.eventType,
 				disbursementId: entry.disbursementId,
+				remittanceId: entry.remittanceId,
 				orderNumber: entry.orderNumber,
 				status: entry.status,
 				reconciliationStatus: entry.reconciliationStatus,
 				referenceNo: entry.referenceNo,
+				receiptType: entry.receiptType,
+				receiptNumber: entry.receiptNumber,
+				receiptAttachmentUrl: entry.receiptAttachmentUrl,
 			};
 		});
 
@@ -354,7 +383,12 @@ export const controller = (prisma: PrismaClient) => {
 	const createRemittance = async (req: Request, res: Response, _next: NextFunction) => {
 		const rawId = req.params.id;
 		const disbursementId = Array.isArray(rawId) ? rawId[0] : rawId;
-		const parsed = CreateAdminFinancierSettlementSchema.safeParse(req.body);
+		// Support both JSON and multipart: coerce amount from form string if needed
+		const body =
+			req.body?.amount != null && typeof req.body.amount !== "number"
+				? { ...req.body, amount: Number(req.body.amount) }
+				: req.body;
+		const parsed = CreateAdminFinancierSettlementSchema.safeParse(body);
 		if (!parsed.success) {
 			res.status(400).json(
 				buildErrorResponse(
@@ -390,18 +424,38 @@ export const controller = (prisma: PrismaClient) => {
 				remittanceTermDays,
 			);
 
-		const record = await (prisma as any).adminFinancierSettlement.create({
-			data: {
-				...parsed.data,
-				financierDisbursementId: disbursementId,
-				financierConfigId: existingDisbursement.financierConfigId,
-				dueAt: defaultDueAt,
-				organizationId:
-					(req as any).organizationId ??
-					parsed.data.organizationId ??
-					existingDisbursement.organizationId,
-			},
+		const createData = {
+			...parsed.data,
+			financierDisbursementId: disbursementId,
+			financierConfigId: existingDisbursement.financierConfigId,
+			dueAt: defaultDueAt,
+			organizationId:
+				(req as any).organizationId ??
+				parsed.data.organizationId ??
+				existingDisbursement.organizationId,
+		};
+
+		let record = await (prisma as any).adminFinancierSettlement.create({
+			data: createData,
 		});
+
+		// Optional: if receipt file was uploaded (admin → financier confirmation), store it on this remittance
+		const file = req.file;
+		if (file) {
+			const uploadResult = await uploadReceiptToCloudinary(file, {
+				folder: "remittance-receipts",
+			});
+			if (uploadResult.success && uploadResult.secureUrl) {
+				record = await (prisma as any).adminFinancierSettlement.update({
+					where: { id: record.id },
+					data: {
+						receiptAttachmentUrl: uploadResult.secureUrl,
+						...(parsed.data.receiptType != null && { receiptType: parsed.data.receiptType }),
+						...(parsed.data.receiptNumber != null && { receiptNumber: parsed.data.receiptNumber }),
+					},
+				});
+			}
+		}
 
 		const aggregate = await (prisma as any).adminFinancierSettlement.aggregate({
 			where: { financierDisbursementId: disbursementId },
@@ -589,6 +643,116 @@ export const controller = (prisma: PrismaClient) => {
 		);
 	};
 
+	const uploadReceipt = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawId = req.params.id;
+		const id = Array.isArray(rawId) ? rawId[0] : rawId;
+		const file = req.file;
+		if (!file) {
+			res.status(400).json(
+				buildErrorResponse("Receipt file is required. Use multipart field 'receipt'.", 400),
+			);
+			return;
+		}
+		const parsed = UploadReceiptSchema.safeParse({
+			receiptType: req.body?.receiptType,
+			receiptNumber: req.body?.receiptNumber ?? null,
+		});
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+		const existing = await prisma.financierDisbursement.findFirst({ where: { id } });
+		if (!existing) {
+			res.status(404).json(buildErrorResponse("Financier disbursement not found", 404));
+			return;
+		}
+		const uploadResult = await uploadReceiptToCloudinary(file, {
+			folder: "disbursement-receipts",
+		});
+		if (!uploadResult.success || !uploadResult.secureUrl) {
+			res.status(500).json(
+				buildErrorResponse(
+					uploadResult.error || "Failed to upload receipt file",
+					500,
+				),
+			);
+			return;
+		}
+		const updated = await prisma.financierDisbursement.update({
+			where: { id },
+			data: {
+				receiptType: parsed.data.receiptType,
+				receiptNumber: parsed.data.receiptNumber ?? null,
+				receiptAttachmentUrl: uploadResult.secureUrl,
+			},
+		});
+		res.status(200).json(
+			buildSuccessResponse("Receipt uploaded and disbursement updated", updated, 200),
+		);
+	};
+
+	const uploadRemittanceReceipt = async (req: Request, res: Response, _next: NextFunction) => {
+		const rawRemittanceId = req.params.remittanceId;
+		const remittanceId = Array.isArray(rawRemittanceId) ? rawRemittanceId[0] : rawRemittanceId;
+		const file = req.file;
+		if (!file) {
+			res.status(400).json(
+				buildErrorResponse("Receipt file is required. Use multipart field 'receipt'.", 400),
+			);
+			return;
+		}
+		const parsed = UploadReceiptSchema.safeParse({
+			receiptType: req.body?.receiptType,
+			receiptNumber: req.body?.receiptNumber ?? null,
+		});
+		if (!parsed.success) {
+			res.status(400).json(
+				buildErrorResponse(
+					"Validation failed",
+					400,
+					formatZodErrors(parsed.error.format()),
+				),
+			);
+			return;
+		}
+		const existing = await (prisma as any).adminFinancierSettlement.findFirst({
+			where: { id: remittanceId },
+		});
+		if (!existing) {
+			res.status(404).json(buildErrorResponse("Remittance not found", 404));
+			return;
+		}
+		const uploadResult = await uploadReceiptToCloudinary(file, {
+			folder: "remittance-receipts",
+		});
+		if (!uploadResult.success || !uploadResult.secureUrl) {
+			res.status(500).json(
+				buildErrorResponse(
+					uploadResult.error || "Failed to upload receipt file",
+					500,
+				),
+			);
+			return;
+		}
+		const updated = await (prisma as any).adminFinancierSettlement.update({
+			where: { id: remittanceId },
+			data: {
+				receiptType: parsed.data.receiptType,
+				receiptNumber: parsed.data.receiptNumber ?? null,
+				receiptAttachmentUrl: uploadResult.secureUrl,
+			},
+		});
+		res.status(200).json(
+			buildSuccessResponse("Receipt uploaded and remittance updated", updated, 200),
+		);
+	};
+
 	return {
 		getLedger,
 		getAdminToFinancierSoa,
@@ -601,5 +765,7 @@ export const controller = (prisma: PrismaClient) => {
 		update,
 		remove,
 		reconcile,
+		uploadReceipt,
+		uploadRemittanceReceipt,
 	};
 };

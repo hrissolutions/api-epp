@@ -57,6 +57,36 @@ export async function uploadMultipleToCloudinary(
 }
 
 /**
+ * Upload a single file (image or PDF) to Cloudinary for receipts.
+ * Uses resource_type "auto" so both images and PDFs are accepted.
+ */
+export async function uploadReceiptToCloudinary(
+	file: Express.Multer.File,
+	options: { folder?: string } = {},
+): Promise<UploadResult> {
+	try {
+		const base64 = file.buffer.toString("base64");
+		const dataUri = `data:${file.mimetype};base64,${base64}`;
+		const isPdf = file.mimetype === "application/pdf";
+		const uploadResult = await cloudinary.uploader.upload(dataUri, {
+			folder: options.folder || "disbursement-receipts",
+			resource_type: isPdf ? "raw" : "image",
+			...(isPdf ? {} : { format: "jpg", quality: "auto" }),
+		});
+		return {
+			success: true,
+			secureUrl: uploadResult.secure_url,
+			publicId: uploadResult.public_id,
+		};
+	} catch (error: any) {
+		return {
+			success: false,
+			error: error.message || "Upload failed",
+		};
+	}
+}
+
+/**
  * Delete an image from Cloudinary by public ID
  * @param publicId Cloudinary public ID
  * @returns Success status

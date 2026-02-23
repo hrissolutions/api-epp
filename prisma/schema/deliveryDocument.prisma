@@ -22,8 +22,12 @@ model DeliveryDocument {
   purchaseOrderId         String? @db.ObjectId // Supplier DO / Admin DR: the PO (Admin order to supplier for this client order). No bulk.
   orderId                 String? @db.ObjectId // Admin DO only: the Client Order being fulfilled.
 
-  // --- Parties (DO: shipper/receiver; DR: implied by stage) ---
-  supplierId   String? @db.ObjectId // Supplier DO: shipper; Admin DR: which supplier's shipment
+  // --- Parties: explicit from/to (e.g. DO admin→supplier, DR supplier→admin; DO admin→employee, DR employee→admin) ---
+  fromParty    DeliveryParty // Sender: ADMIN, SUPPLIER, or CLIENT (employee)
+  toParty      DeliveryParty // Receiver: ADMIN, SUPPLIER, or CLIENT (employee)
+  supplierId   String?       @db.ObjectId // Supplier DO: shipper; Admin DR: which supplier's shipment
+  fromName     String? // Sender display name (e.g. supplier name, "Admin")
+  fromAddress  String? // Sender address (for DO form FROM section)
   fromLocation String? // Admin DO: dispatch location (warehouse, office)
   toName       String? // Recipient name (Admin or Client)
   toAddress    String? // Recipient address
@@ -57,6 +61,8 @@ model DeliveryDocument {
   @@index([organizationId])
   @@index([documentType])
   @@index([transferStage])
+  @@index([fromParty])
+  @@index([toParty])
   @@index([documentDate])
   @@index([orderId])
   @@index([supplierId])
@@ -81,4 +87,11 @@ enum DeliveryDocumentType {
 enum DeliveryTransferStage {
   VENDOR_TO_ADMIN // Stage 1: Supplier ships to Admin; Admin signs DR (enum name kept for API/DB compatibility)
   ADMIN_TO_CLIENT // Stage 2: Admin delivers to Client; Client signs DR
+}
+
+// Party in the delivery flow: who sends (from) and who receives (to)
+enum DeliveryParty {
+  ADMIN   // Organization admin/warehouse
+  SUPPLIER // Vendor/supplier
+  CLIENT  // End client / employee (recipient)
 }

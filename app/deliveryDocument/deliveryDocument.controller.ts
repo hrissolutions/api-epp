@@ -9,7 +9,9 @@ import {
 	ReceiveDeliveryDocumentSchema,
 } from "../../zod/deliveryDocument.zod";
 import { config } from "../../config/constant";
+import { invalidateCache } from "../../middleware/cache";
 import { createAdminDRForSupplierDO } from "../../helper/deliveryDocumentService";
+import { syncOrderStatusFromDeliveryDocuments } from "../../helper/orderTrackingService";
 
 const logger = getLogger();
 const docLogger = logger.child({ module: "deliveryDocument" });
@@ -29,6 +31,8 @@ export const controller = (prisma: PrismaClient) => {
 					organizationId: (req as any).organizationId ?? data.organizationId,
 					documentType: data.documentType,
 					transferStage: data.transferStage,
+					fromParty: data.fromParty,
+					toParty: data.toParty,
 					documentNumber: data.documentNumber,
 					documentDate: data.documentDate,
 					documentTime: data.documentTime ?? undefined,
@@ -36,6 +40,8 @@ export const controller = (prisma: PrismaClient) => {
 					purchaseOrderId: data.purchaseOrderId ?? undefined,
 					orderId: data.orderId ?? undefined,
 					supplierId: data.supplierId ?? undefined,
+					fromName: data.fromName ?? undefined,
+					fromAddress: data.fromAddress ?? undefined,
 					fromLocation: data.fromLocation ?? undefined,
 					toName: data.toName ?? undefined,
 					toAddress: data.toAddress ?? undefined,
@@ -59,6 +65,26 @@ export const controller = (prisma: PrismaClient) => {
 			docLogger.info(
 				`DeliveryDocument created: ${doc.documentNumber} (${doc.documentType}/${doc.transferStage})`,
 			);
+			// Sync order status when delivery doc affects client order (Admin DO, Client DR) or links to PO
+			let orderId = doc.orderId ?? null;
+			if (!orderId && doc.purchaseOrderId) {
+				const po = await prisma.purchaseOrder.findUnique({
+					where: { id: doc.purchaseOrderId },
+					select: { orderId: true },
+				});
+				orderId = po?.orderId ?? null;
+			}
+			if (orderId) {
+				try {
+					const synced = await syncOrderStatusFromDeliveryDocuments(prisma, orderId);
+					if (synced.updated) {
+						await invalidateCache.byPattern(`cache:order:byId:${orderId}:*`);
+						await invalidateCache.byPattern("cache:order:list:*");
+					}
+				} catch (syncErr) {
+					docLogger.warn("Order status sync after delivery doc create failed:", syncErr);
+				}
+			}
 			res.status(201).json(
 				buildSuccessResponse("Delivery document created", { deliveryDocument: doc }, 201),
 			);
@@ -101,6 +127,27 @@ export const controller = (prisma: PrismaClient) => {
 			docLogger.info(
 				`Receive triggered for DO; Admin DR: ${result.documentNumber} (id: ${result.id})`,
 			);
+			const orderId =
+				result.deliveryReceipt?.orderId ??
+				(result.deliveryReceipt?.purchaseOrderId
+					? (
+							await prisma.purchaseOrder.findUnique({
+								where: { id: result.deliveryReceipt.purchaseOrderId },
+								select: { orderId: true },
+							})
+						)?.orderId
+					: null);
+			if (orderId) {
+				try {
+					const synced = await syncOrderStatusFromDeliveryDocuments(prisma, orderId);
+					if (synced.updated) {
+						await invalidateCache.byPattern(`cache:order:byId:${orderId}:*`);
+						await invalidateCache.byPattern("cache:order:list:*");
+					}
+				} catch (syncErr) {
+					docLogger.warn("Order status sync after receive (Admin DR) failed:", syncErr);
+				}
+			}
 			res.status(201).json(
 				buildSuccessResponse(
 					"Admin Delivery Receipt created",

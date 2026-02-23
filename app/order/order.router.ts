@@ -4,6 +4,7 @@ import { cache, cacheShort, cacheMedium, cacheUser } from "../../middleware/cach
 interface IController {
 	getById(req: Request, res: Response, next: NextFunction): Promise<void>;
 	getAll(req: Request, res: Response, next: NextFunction): Promise<void>;
+	getTracking(req: Request, res: Response, next: NextFunction): Promise<void>;
 	create(req: Request, res: Response, next: NextFunction): Promise<void>;
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -59,6 +60,29 @@ export const router = (route: Router, controller: IController): Router => {
 	 *       500:
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
+	/**
+	 * @openapi
+	 * /api/order/{id}/tracking:
+	 *   get:
+	 *     summary: Get order tracking timeline
+	 *     description: Returns the full tracking timeline for an order (created → approved → PO → Supplier DO → Admin received → Admin DO to client → Client received). Order status may be PROCESSING, SHIPPED, or DELIVERED based on delivery documents.
+	 *     tags: [Order]
+	 *     parameters:
+	 *       - in: path
+	 *         name: id
+	 *         required: true
+	 *         schema: { type: string, pattern: '^[0-9a-fA-F]{24}$' }
+	 *         description: Order ID
+	 *     responses:
+	 *       200:
+	 *         description: Order tracking timeline
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.get("/:id/tracking", controller.getTracking);
+
 	// Cache individual order with predictable key for invalidation
 	routes.get(
 		"/:id",
