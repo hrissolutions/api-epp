@@ -12,6 +12,11 @@ model AdminFinancierSettlement {
   dueAt       DateTime?
   referenceNo String?
 
+  // Receipt per remittance (OR or bank receipt proof)
+  receiptType          ReceiptType?
+  receiptNumber        String?
+  receiptAttachmentUrl String?
+
   createdBy String?
   notes     String?
   metadata  Json?

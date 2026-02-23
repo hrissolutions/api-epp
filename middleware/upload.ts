@@ -83,4 +83,18 @@ export const uploadProductImages = uploadItemImages;
 // Flexible upload for submissions - accepts any field name
 export const uploadSubmissionFiles = upload.any();
 
+// Receipt upload for financier disbursement: one file (image or PDF), field name "receipt"
+export const uploadDisbursementReceipt = multer({
+	storage: storage,
+	fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+		const allowed = file.mimetype.startsWith("image/") || file.mimetype === "application/pdf";
+		if (allowed) cb(null, true);
+		else cb(new Error("Only image or PDF files are allowed for receipt upload"));
+	},
+	limits: {
+		fileSize: 10 * 1024 * 1024, // 10MB
+		files: 1,
+	},
+}).single("receipt");
+
 export default upload;

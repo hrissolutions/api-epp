@@ -34,6 +34,7 @@ import {
 	createPurchaseOrdersForApprovedOrder,
 	type PurchaseOrderFulfillmentPayload,
 } from "../../helper/purchaseOrderService";
+import { getOrderTrackingTimeline } from "../../helper/orderTrackingService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -1002,6 +1003,36 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
+	const getTracking = async (req: Request, res: Response, _next: NextFunction) => {
+		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+		if (!id) {
+			res.status(400).json(buildErrorResponse(config.ERROR.QUERY_PARAMS.MISSING_ID, 400));
+			return;
+		}
+		try {
+			const timeline = await getOrderTrackingTimeline(prisma, id);
+			if (!timeline.orderNumber) {
+				res.status(404).json(buildErrorResponse(config.ERROR.ORDER.NOT_FOUND, 404));
+				return;
+			}
+			res.status(200).json(
+				buildSuccessResponse("Order tracking retrieved", {
+					orderId: timeline.orderId,
+					orderNumber: timeline.orderNumber,
+					status: timeline.status,
+					currentStage: timeline.currentStage,
+					currentStageLabel: timeline.currentStageLabel,
+					tracking: timeline.tracking,
+				}),
+			);
+		} catch (error) {
+			orderLogger.error(`Get order tracking failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
 	/**
 	 * Create purchase order(s) for an already-approved order (e.g. orders created from cart
 	 * that only had embedded items and did not get POs at approval time).
@@ -1112,5 +1143,5 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove, createPurchaseOrders };
+	return { create, getAll, getById, getTracking, update, remove, createPurchaseOrders };
 };
