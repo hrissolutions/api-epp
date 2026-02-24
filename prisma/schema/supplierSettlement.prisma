@@ -12,6 +12,11 @@ model SupplierSettlement {
   paidAt      DateTime?
   dueAt       DateTime?
 
+  // Receipt proof (OR or bank receipt) when admin pays supplier
+  receiptType          ReceiptType?
+  receiptNumber        String?
+  receiptAttachmentUrl String?
+
   status               SettlementStatus    @default(PENDING)
   reconciliationStatus ReconciliationStatus @default(PENDING)
 
@@ -26,6 +31,7 @@ model SupplierSettlement {
   order                 Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
   purchaseOrder         PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   financierDisbursement FinancierDisbursement? @relation(fields: [financierDisbursementId], references: [id], onDelete: SetNull)
+  adminSettlements      AdminSupplierSettlement[]
 
   @@index([organizationId])
   @@index([orderId])

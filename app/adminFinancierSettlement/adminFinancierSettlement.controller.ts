@@ -165,7 +165,9 @@ export const controller = (prisma: PrismaClient) => {
 					where: { id: record.id },
 					data: {
 						receiptAttachmentUrl: uploadResult.secureUrl,
-						...(parsed.data.receiptType != null && { receiptType: parsed.data.receiptType }),
+						...(parsed.data.receiptType != null && {
+							receiptType: parsed.data.receiptType,
+						}),
 						...(parsed.data.receiptNumber != null && {
 							receiptNumber: parsed.data.receiptNumber,
 						}),
@@ -192,9 +194,7 @@ export const controller = (prisma: PrismaClient) => {
 				? {
 						status: "DISBURSED" as const,
 						disbursedAt:
-							disbursement.disbursedAt ??
-							parsed.data.remittedAt ??
-							new Date(),
+							disbursement.disbursedAt ?? parsed.data.remittedAt ?? new Date(),
 					}
 				: {};
 		await prisma.financierDisbursement.update({
@@ -208,16 +208,20 @@ export const controller = (prisma: PrismaClient) => {
 		});
 
 		res.status(201).json(
-			buildSuccessResponse("Admin financier settlement created", {
-				adminFinancierSettlement: record,
-				summary: {
-					disbursementId: disbursement.id,
-					disbursementAmount: disbursement.amount,
-					totalRemitted,
-					outstanding: Math.max(disbursement.amount - totalRemitted, 0),
-					reconciliationStatus: nextReconciliationStatus,
+			buildSuccessResponse(
+				"Admin financier settlement created",
+				{
+					adminFinancierSettlement: record,
+					summary: {
+						disbursementId: disbursement.id,
+						disbursementAmount: disbursement.amount,
+						totalRemitted,
+						outstanding: Math.max(disbursement.amount - totalRemitted, 0),
+						reconciliationStatus: nextReconciliationStatus,
+					},
 				},
-			}, 201),
+				201,
+			),
 		);
 	};
 
@@ -280,9 +284,7 @@ export const controller = (prisma: PrismaClient) => {
 			return;
 		}
 		await prisma.adminFinancierSettlement.delete({ where: { id } });
-		res.status(200).json(
-			buildSuccessResponse("Admin financier settlement deleted", {}, 200),
-		);
+		res.status(200).json(buildSuccessResponse("Admin financier settlement deleted", {}, 200));
 	};
 
 	return {
