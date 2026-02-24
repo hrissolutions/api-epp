@@ -8,6 +8,10 @@ model CartItem {
   itemId         String   @db.ObjectId
   quantity       Int      @default(1)
 
+  // Selected installment plan for employee cart
+  installmentCount Int?
+  rate             Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
