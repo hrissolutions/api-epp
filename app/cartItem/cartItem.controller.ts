@@ -95,7 +95,7 @@ export const controller = (prisma: PrismaClient) => {
 		}
 
 		try {
-			const { userId, itemId, quantity = 1 } = validation.data;
+			const { userId, itemId, quantity = 1, installmentCount, rate } = validation.data;
 
 			// Ensure quantity is at least 1
 			const quantityToAdd = quantity || 1;
@@ -171,6 +171,8 @@ export const controller = (prisma: PrismaClient) => {
 					},
 					data: {
 						quantity: newQuantity,
+						installmentCount: installmentCount ?? null,
+						rate: rate ?? null,
 					},
 				});
 				isUpdate = true;
@@ -184,6 +186,8 @@ export const controller = (prisma: PrismaClient) => {
 						userId,
 						itemId: itemId,
 						quantity: quantityToAdd,
+						installmentCount: installmentCount ?? null,
+						rate: rate ?? null,
 						organizationId: (req as any).organizationId,
 					},
 				});

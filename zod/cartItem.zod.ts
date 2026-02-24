@@ -13,6 +13,8 @@ export const CartItemSchema = z.object({
 		message: "Invalid itemId ObjectId format",
 	}),
 	quantity: z.number().int().min(1).default(1),
+	installmentCount: z.number().int().optional().nullable(),
+	rate: z.number().optional().nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
