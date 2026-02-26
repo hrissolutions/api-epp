@@ -34,12 +34,15 @@ import {
 	createPurchaseOrdersForApprovedOrder,
 	type PurchaseOrderFulfillmentPayload,
 } from "../../helper/purchaseOrderService";
-import { getOrderTrackingTimeline } from "../../helper/orderTrackingService";
+import {
+	getOrderTrackingTimeline,
+	computeOrderCurrentStage,
+} from "../../helper/orderTrackingService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
 
-/** Include for order detail (orderItems, transaction, installments, workflow, approvals) */
+/** Include for order detail (orderItems, transaction, installments, workflow, approvals, delivery docs for readable status) */
 const ORDER_DETAIL_INCLUDE = {
 	orderItems: true,
 	transaction: true,
@@ -47,6 +50,17 @@ const ORDER_DETAIL_INCLUDE = {
 	financingAgreement: { select: { interestRate: true } },
 	workflow: true,
 	approvals: { orderBy: { approvalLevel: "asc" as const } },
+	deliveryDocuments: {
+		select: { id: true, documentType: true, transferStage: true, documentDate: true, documentNumber: true },
+	},
+	purchaseOrders: {
+		select: {
+			id: true,
+			deliveryDocuments: {
+				select: { id: true, documentType: true, transferStage: true, documentDate: true },
+			},
+		},
+	},
 } as const;
 
 /**
@@ -66,6 +80,7 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	);
 	const netPrincipalTotal = Number((principalAmount - Number(order?.pointsUsed ?? 0)).toFixed(2));
 
+	const { currentStage, currentStageLabel } = computeOrderCurrentStage(order);
 	const response: Record<string, unknown> = {
 		order: {
 			...order,
@@ -80,6 +95,10 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 			principalAmount,
 			workflow: undefined,
 			approvals: undefined,
+			deliveryDocuments: undefined,
+			purchaseOrders: undefined,
+			currentStage,
+			readableStatus: currentStageLabel,
 		},
 		orderItems: orderItems.length > 0 ? orderItems : undefined,
 		transaction: transaction

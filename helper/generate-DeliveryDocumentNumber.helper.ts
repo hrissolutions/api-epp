@@ -6,6 +6,8 @@ const docLogger = logger.child({ module: "generateDeliveryDocumentNumber" });
 
 const PREFIX_DO = "DO-V-"; // Supplier DO prefix (DO-V- kept for backward compatibility)
 const PREFIX_DR_V = "DR-V-"; // Admin DR prefix (VENDOR_TO_ADMIN receipt)
+const PREFIX_DO_A = "DO-A-"; // Admin DO prefix (ADMIN_TO_CLIENT delivery order)
+const PREFIX_DR_A = "DR-A-"; // Client DR prefix (ADMIN_TO_CLIENT receipt)
 
 /**
  * Generates a unique Supplier DO number: DO-V-YYYYMMDD-A0001
@@ -116,5 +118,117 @@ export const generateAdminDRNumber = async (
 	} catch (error) {
 		docLogger.error(`Error generating Admin DR number: ${error}`);
 		return `${PREFIX_DR_V}${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+	}
+};
+
+/**
+ * Generates a unique Admin DO number (ADMIN_TO_CLIENT delivery order): DO-A-YYYYMMDD-A0001
+ */
+export const generateAdminDONumber = async (
+	prisma: PrismaClient,
+	date?: Date,
+): Promise<string> => {
+	try {
+		const today = date || new Date();
+		const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+		const prefix = `${PREFIX_DO_A}${dateStr}-`;
+
+		const todayDocs = await prisma.deliveryDocument.findMany({
+			where: {
+				documentNumber: { startsWith: prefix },
+				documentType: "DELIVERY_ORDER",
+				transferStage: "ADMIN_TO_CLIENT",
+			},
+			select: { documentNumber: true },
+			orderBy: { createdAt: "desc" },
+		});
+
+		const sequences = todayDocs
+			.map((d) => {
+				const match = d.documentNumber.match(new RegExp(`^${prefix}([A-Z])(\\d{4})$`));
+				if (match) return { letter: match[1], number: parseInt(match[2], 10) };
+				return null;
+			})
+			.filter((s): s is { letter: string; number: number } => s !== null);
+
+		if (sequences.length === 0) {
+			const docNumber = `${prefix}A0001`;
+			docLogger.info(`Generated Admin DO number: ${docNumber}`);
+			return docNumber;
+		}
+
+		const highest = sequences.reduce((max, s) => {
+			const maxV = (max.letter.charCodeAt(0) - 65) * 10000 + max.number;
+			const sV = (s.letter.charCodeAt(0) - 65) * 10000 + s.number;
+			return sV > maxV ? s : max;
+		}, sequences[0]);
+
+		const nextNumber = highest.number >= 9999 ? 1 : highest.number + 1;
+		const nextLetter =
+			highest.number >= 9999
+				? String.fromCharCode(highest.letter.charCodeAt(0) + 1)
+				: highest.letter;
+		const docNumber = `${prefix}${nextLetter}${String(nextNumber).padStart(4, "0")}`;
+		docLogger.info(`Generated Admin DO number: ${docNumber}`);
+		return docNumber;
+	} catch (error) {
+		docLogger.error(`Error generating Admin DO number: ${error}`);
+		return `${PREFIX_DO_A}${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+	}
+};
+
+/**
+ * Generates a unique Client DR number (ADMIN_TO_CLIENT receipt): DR-A-YYYYMMDD-A0001
+ */
+export const generateClientDRNumber = async (
+	prisma: PrismaClient,
+	date?: Date,
+): Promise<string> => {
+	try {
+		const today = date || new Date();
+		const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+		const prefix = `${PREFIX_DR_A}${dateStr}-`;
+
+		const todayDocs = await prisma.deliveryDocument.findMany({
+			where: {
+				documentNumber: { startsWith: prefix },
+				documentType: "DELIVERY_RECEIPT",
+				transferStage: "ADMIN_TO_CLIENT",
+			},
+			select: { documentNumber: true },
+			orderBy: { createdAt: "desc" },
+		});
+
+		const sequences = todayDocs
+			.map((d) => {
+				const match = d.documentNumber.match(new RegExp(`^${prefix}([A-Z])(\\d{4})$`));
+				if (match) return { letter: match[1], number: parseInt(match[2], 10) };
+				return null;
+			})
+			.filter((s): s is { letter: string; number: number } => s !== null);
+
+		if (sequences.length === 0) {
+			const docNumber = `${prefix}A0001`;
+			docLogger.info(`Generated Client DR number: ${docNumber}`);
+			return docNumber;
+		}
+
+		const highest = sequences.reduce((max, s) => {
+			const maxV = (max.letter.charCodeAt(0) - 65) * 10000 + max.number;
+			const sV = (s.letter.charCodeAt(0) - 65) * 10000 + s.number;
+			return sV > maxV ? s : max;
+		}, sequences[0]);
+
+		const nextNumber = highest.number >= 9999 ? 1 : highest.number + 1;
+		const nextLetter =
+			highest.number >= 9999
+				? String.fromCharCode(highest.letter.charCodeAt(0) + 1)
+				: highest.letter;
+		const docNumber = `${prefix}${nextLetter}${String(nextNumber).padStart(4, "0")}`;
+		docLogger.info(`Generated Client DR number: ${docNumber}`);
+		return docNumber;
+	} catch (error) {
+		docLogger.error(`Error generating Client DR number: ${error}`);
+		return `${PREFIX_DR_A}${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 	}
 };
