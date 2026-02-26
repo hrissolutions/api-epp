@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { uploadDisbursementReceipt } from "../../middleware/upload";
+import { cache } from "../../middleware/cache";
 
 interface IController {
 	getAll(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -13,6 +14,36 @@ export const router = (_route: Router, controller: IController): Router => {
 	const route = _route;
 	const routes = Router();
 	const path = "/admin-financier-settlement";
+
+	/**
+	 * @openapi
+	 * /api/admin-financier-settlement/{id}:
+	 *   get:
+	 *     summary: Get admin financier settlement by ID
+	 *     tags: [AdminFinancierSettlement]
+	 *     parameters:
+	 *       - in: path
+	 *         name: id
+	 *         required: true
+	 *         schema: { type: string, pattern: "^[0-9a-fA-F]{24}$" }
+	 *     responses:
+	 *       200:
+	 *         description: Settlement retrieved
+	 *       404:
+	 *         description: Settlement not found
+	 */
+	// Cache individual admin financier settlement with predictable key for invalidation
+	routes.get(
+		"/:id",
+		cache({
+			ttl: 90,
+			keyGenerator: (req: Request) => {
+				const fields = (req.query as any).fields || "full";
+				return `cache:adminFinancierSettlement:byId:${req.params.id}:${fields}`;
+			},
+		}),
+		controller.getById,
+	);
 
 	/**
 	 * @openapi
@@ -77,26 +108,18 @@ export const router = (_route: Router, controller: IController): Router => {
 	 *       500:
 	 *         description: Internal server error
 	 */
-	routes.get("/", controller.getAll);
-
-	/**
-	 * @openapi
-	 * /api/admin-financier-settlement/{id}:
-	 *   get:
-	 *     summary: Get admin financier settlement by ID
-	 *     tags: [AdminFinancierSettlement]
-	 *     parameters:
-	 *       - in: path
-	 *         name: id
-	 *         required: true
-	 *         schema: { type: string, pattern: "^[0-9a-fA-F]{24}$" }
-	 *     responses:
-	 *       200:
-	 *         description: Settlement retrieved
-	 *       404:
-	 *         description: Settlement not found
-	 */
-	routes.get("/:id", controller.getById);
+	// Cache admin financier settlement list with predictable key for invalidation
+	routes.get(
+		"/",
+		cache({
+			ttl: 60,
+			keyGenerator: (req: Request) => {
+				const queryKey = Buffer.from(JSON.stringify(req.query || {})).toString("base64");
+				return `cache:adminFinancierSettlement:list:${queryKey}`;
+			},
+		}),
+		controller.getAll,
+	);
 
 	/**
 	 * @openapi
