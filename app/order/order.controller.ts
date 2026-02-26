@@ -34,12 +34,16 @@ import {
 	createPurchaseOrdersForApprovedOrder,
 	type PurchaseOrderFulfillmentPayload,
 } from "../../helper/purchaseOrderService";
-import { getOrderTrackingTimeline } from "../../helper/orderTrackingService";
+import {
+	getOrderTrackingTimeline,
+	computeOrderCurrentStage,
+} from "../../helper/orderTrackingService";
+import { createAdminDOForOrder } from "../../helper/deliveryDocumentService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
 
-/** Include for order detail (orderItems, transaction, installments, workflow, approvals) */
+/** Include for order detail (orderItems, transaction, installments, workflow, approvals, delivery docs for readable status) */
 const ORDER_DETAIL_INCLUDE = {
 	orderItems: true,
 	transaction: true,
@@ -47,6 +51,17 @@ const ORDER_DETAIL_INCLUDE = {
 	financingAgreement: { select: { interestRate: true } },
 	workflow: true,
 	approvals: { orderBy: { approvalLevel: "asc" as const } },
+	deliveryDocuments: {
+		select: { id: true, documentType: true, transferStage: true, documentDate: true, documentNumber: true },
+	},
+	purchaseOrders: {
+		select: {
+			id: true,
+			deliveryDocuments: {
+				select: { id: true, documentType: true, transferStage: true, documentDate: true },
+			},
+		},
+	},
 } as const;
 
 /**
@@ -66,6 +81,7 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	);
 	const netPrincipalTotal = Number((principalAmount - Number(order?.pointsUsed ?? 0)).toFixed(2));
 
+	const { currentStage, currentStageLabel } = computeOrderCurrentStage(order);
 	const response: Record<string, unknown> = {
 		order: {
 			...order,
@@ -80,6 +96,10 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 			principalAmount,
 			workflow: undefined,
 			approvals: undefined,
+			deliveryDocuments: undefined,
+			purchaseOrders: undefined,
+			currentStage,
+			readableStatus: currentStageLabel,
 		},
 		orderItems: orderItems.length > 0 ? orderItems : undefined,
 		transaction: transaction
@@ -1143,5 +1163,79 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, getTracking, update, remove, createPurchaseOrders };
+	/**
+	 * Dispatch an approved order to the client: creates an Admin DO (ADMIN_TO_CLIENT).
+	 * POST /order/:id/dispatch
+	 * Body (optional): { trackingNumber?, expectedDeliveryDate?, expectedDeliveryTime?,
+	 *   internalDeliveryPersonnel?, carrierInfo?, toName?, toAddress?, clientUserId? }
+	 */
+	const dispatch = async (req: Request, res: Response, _next: NextFunction) => {
+		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+		if (!id) {
+			res.status(400).json(buildErrorResponse("Order ID is required", 400));
+			return;
+		}
+		try {
+			const order = await prisma.order.findUnique({
+				where: { id },
+				select: { id: true, orderNumber: true, status: true, isFullyApproved: true },
+			});
+			if (!order) {
+				res.status(404).json(buildErrorResponse(config.ERROR.ORDER.NOT_FOUND, 404));
+				return;
+			}
+			if (!["APPROVED", "PROCESSING"].includes(order.status)) {
+				res.status(400).json(
+					buildErrorResponse(
+						`Order must be APPROVED or PROCESSING to dispatch. Current status: ${order.status}`,
+						400,
+					),
+				);
+				return;
+			}
+			const body = req.body ?? {};
+			const result = await createAdminDOForOrder(prisma, id, {
+				trackingNumber: body.trackingNumber ?? null,
+				expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : null,
+				expectedDeliveryTime: body.expectedDeliveryTime ?? null,
+				internalDeliveryPersonnel: body.internalDeliveryPersonnel ?? null,
+				carrierInfo: body.carrierInfo ?? null,
+				toName: body.toName ?? null,
+				toAddress: body.toAddress ?? null,
+				clientUserId: body.clientUserId ?? null,
+			});
+			if (!result) {
+				res.status(500).json(buildErrorResponse("Failed to create Admin delivery order", 500));
+				return;
+			}
+			try {
+				const { syncOrderStatusFromDeliveryDocuments } = await import("../../helper/orderTrackingService");
+				const synced = await syncOrderStatusFromDeliveryDocuments(prisma, id);
+				if (synced.updated) {
+					await invalidateCache.byPattern(`cache:order:byId:${id}:*`);
+					await invalidateCache.byPattern("cache:order:list:*");
+				}
+			} catch (syncErr) {
+				orderLogger.warn("Order status sync after dispatch failed:", syncErr);
+			}
+			orderLogger.info(`Order ${order.orderNumber} dispatched: Admin DO ${result.documentNumber}`);
+			res.status(201).json(
+				buildSuccessResponse(
+					`Order ${order.orderNumber} dispatched to client`,
+					{
+						deliveryOrder: result.deliveryOrder,
+						documentNumber: result.documentNumber,
+					},
+					201,
+				),
+			);
+		} catch (error: any) {
+			orderLogger.error(`Dispatch order failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	return { create, getAll, getById, getTracking, update, remove, createPurchaseOrders, dispatch };
 };

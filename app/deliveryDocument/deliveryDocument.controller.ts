@@ -10,7 +10,10 @@ import {
 } from "../../zod/deliveryDocument.zod";
 import { config } from "../../config/constant";
 import { invalidateCache } from "../../middleware/cache";
-import { createAdminDRForSupplierDO } from "../../helper/deliveryDocumentService";
+import {
+	createAdminDRForSupplierDO,
+	createClientDRForAdminDO,
+} from "../../helper/deliveryDocumentService";
 import { syncOrderStatusFromDeliveryDocuments } from "../../helper/orderTrackingService";
 
 const logger = getLogger();
@@ -337,5 +340,62 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove, receive };
+	/**
+	 * Mark an Admin DO as delivered: creates a Client Delivery Receipt (DR).
+	 * POST /deliveryDocument/:id/confirm-receipt
+	 * Body (optional): { receiverName?, receiverSignature?, conditionOfGoods? }
+	 */
+	const confirmReceipt = async (req: Request, res: Response, _next: NextFunction) => {
+		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+		if (!id) {
+			res.status(400).json(buildErrorResponse("ID is required", 400));
+			return;
+		}
+		const validation = ReceiveDeliveryDocumentSchema.safeParse(req.body || {});
+		const options = validation.success ? validation.data : undefined;
+		try {
+			const result = await createClientDRForAdminDO(prisma, id, options);
+			if (!result) {
+				res.status(400).json(
+					buildErrorResponse(
+						"Delivery document not found or is not an Admin DO (ADMIN_TO_CLIENT). Cannot create Client DR.",
+						400,
+					),
+				);
+				return;
+			}
+			docLogger.info(
+				`Confirm receipt triggered for Admin DO; Client DR: ${result.documentNumber} (id: ${result.id})`,
+			);
+			const orderId = result.deliveryReceipt?.orderId ?? null;
+			if (orderId) {
+				try {
+					const synced = await syncOrderStatusFromDeliveryDocuments(prisma, orderId);
+					if (synced.updated) {
+						await invalidateCache.byPattern(`cache:order:byId:${orderId}:*`);
+						await invalidateCache.byPattern("cache:order:list:*");
+					}
+				} catch (syncErr) {
+					docLogger.warn("Order status sync after confirm receipt failed:", syncErr);
+				}
+			}
+			res.status(201).json(
+				buildSuccessResponse(
+					"Client Delivery Receipt created",
+					{
+						deliveryReceipt: result.deliveryReceipt,
+						documentNumber: result.documentNumber,
+					},
+					201,
+				),
+			);
+		} catch (error: any) {
+			docLogger.error(`Confirm receipt (create Client DR) failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	return { create, getAll, getById, update, remove, receive, confirmReceipt };
 };

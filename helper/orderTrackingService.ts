@@ -28,20 +28,86 @@ export type CurrentStage =
 	| "ORDER_PLACED"
 	| "ORDER_APPROVED"
 	| "PURCHASE_ORDER_CREATED"
-	| "SUPPLIER_DELIVERY_ORDER"
-	| "ADMIN_RECEIVED_FROM_SUPPLIER"
-	| "ADMIN_DELIVERY_ORDER"
-	| "CLIENT_RECEIVED";
+	| "SUPPLIER_DELIVERY_ORDER" // Supplier → Admin (DO)
+	| "ADMIN_RECEIVED_FROM_SUPPLIER" // Admin DR
+	| "ADMIN_DELIVERY_ORDER" // Admin → Client (DO)
+	| "CLIENT_RECEIVED" // Client DR
+	| "CANCELLED"
+	| "REJECTED"
+	| "RETURNED";
 
-const CURRENT_STAGE_LABELS: Record<CurrentStage, string> = {
+export const CURRENT_STAGE_LABELS: Record<CurrentStage, string> = {
 	ORDER_PLACED: "Order placed",
-	ORDER_APPROVED: "Waiting for purchase order",
-	PURCHASE_ORDER_CREATED: "Ordered from supplier",
-	SUPPLIER_DELIVERY_ORDER: "Supplier delivering to admin",
-	ADMIN_RECEIVED_FROM_SUPPLIER: "Processing your order",
+	ORDER_APPROVED: "Order approved",
+	PURCHASE_ORDER_CREATED: "Being prepared",
+	SUPPLIER_DELIVERY_ORDER: "Being prepared",
+	ADMIN_RECEIVED_FROM_SUPPLIER: "Being prepared",
 	ADMIN_DELIVERY_ORDER: "Out for delivery to you",
 	CLIENT_RECEIVED: "Delivered",
+	CANCELLED: "Cancelled",
+	REJECTED: "Rejected",
+	RETURNED: "Returned",
 };
+
+/** Minimal order shape needed to compute current delivery stage from already-loaded data (no DB call). */
+export type OrderDataForStage = {
+	status: string;
+	approvedAt?: Date | null;
+	deliveryDocuments?: Array<{ documentType: string; transferStage: string }>;
+	purchaseOrders?: Array<{
+		deliveryDocuments?: Array<{ documentType: string; transferStage: string }>;
+	}>;
+};
+
+/**
+ * Compute the current delivery stage for an order from already-loaded data.
+ * Use when order + delivery docs are already included — avoids an extra DB round-trip.
+ */
+export function computeOrderCurrentStage(order: OrderDataForStage): {
+	currentStage: CurrentStage;
+	currentStageLabel: string;
+} {
+	if (order.status === "CANCELLED")
+		return { currentStage: "CANCELLED", currentStageLabel: CURRENT_STAGE_LABELS.CANCELLED };
+	if (order.status === "REJECTED")
+		return { currentStage: "REJECTED", currentStageLabel: CURRENT_STAGE_LABELS.REJECTED };
+	if (order.status === "RETURNED")
+		return { currentStage: "RETURNED", currentStageLabel: CURRENT_STAGE_LABELS.RETURNED };
+
+	const deliveryDocs = order.deliveryDocuments ?? [];
+	const purchaseOrders = order.purchaseOrders ?? [];
+
+	const hasClientDr = deliveryDocs.some(
+		(d) => d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "ADMIN_TO_CLIENT",
+	);
+	const hasAdminDo = deliveryDocs.some(
+		(d) => d.documentType === "DELIVERY_ORDER" && d.transferStage === "ADMIN_TO_CLIENT",
+	);
+	const allPosReceived =
+		purchaseOrders.length > 0 &&
+		purchaseOrders.every((po) =>
+			po.deliveryDocuments?.some(
+				(d) => d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "VENDOR_TO_ADMIN",
+			),
+		);
+	const hasAnySupplierDo = purchaseOrders.some((po) =>
+		po.deliveryDocuments?.some(
+			(d) => d.documentType === "DELIVERY_ORDER" && d.transferStage === "VENDOR_TO_ADMIN",
+		),
+	);
+	const hasAnyPo = purchaseOrders.length > 0;
+
+	let currentStage: CurrentStage;
+	if (hasClientDr) currentStage = "CLIENT_RECEIVED";
+	else if (hasAdminDo) currentStage = "ADMIN_DELIVERY_ORDER";
+	else if (allPosReceived) currentStage = "ADMIN_RECEIVED_FROM_SUPPLIER";
+	else if (hasAnySupplierDo) currentStage = "SUPPLIER_DELIVERY_ORDER";
+	else if (hasAnyPo) currentStage = "PURCHASE_ORDER_CREATED";
+	else if (order.approvedAt) currentStage = "ORDER_APPROVED";
+	else currentStage = "ORDER_PLACED";
+
+	return { currentStage, currentStageLabel: CURRENT_STAGE_LABELS[currentStage] };
+}
 
 /**
  * Build the full tracking timeline for an order: creation → approval → PO(s) → Supplier DO →
@@ -139,7 +205,7 @@ export async function getOrderTrackingTimeline(
 		events.push({
 			stage: "ORDER_APPROVED",
 			label: "Order approved",
-			description: "All approvals completed. Admin can create purchase order(s) to supplier.",
+			description: "Your order has been approved and is being processed.",
 			date: order.approvedAt,
 			referenceId: order.id,
 		});
@@ -149,12 +215,10 @@ export async function getOrderTrackingTimeline(
 	for (const po of order.purchaseOrders) {
 		events.push({
 			stage: "PURCHASE_ORDER_CREATED",
-			label: "Purchase order created",
-			description: `PO ${po.poNumber} created for supplier ${(po.supplier as any)?.name ?? "—"}.`,
+			label: "Being prepared",
+			description: "Your order is being prepared.",
 			date: po.createdAt,
 			referenceId: po.id,
-			referenceNumber: po.poNumber,
-			metadata: { supplier: (po.supplier as any)?.name, poStatus: po.status },
 		});
 
 		// Supplier DO (Supplier → Admin)
@@ -164,12 +228,10 @@ export async function getOrderTrackingTimeline(
 		if (supplierDo) {
 			events.push({
 				stage: "SUPPLIER_DELIVERY_ORDER",
-				label: "Supplier delivery order",
-				description: `Supplier sent goods to admin. DO ${supplierDo.documentNumber}.`,
+				label: "Being prepared",
+				description: "Your order is being prepared.",
 				date: supplierDo.documentDate,
 				referenceId: supplierDo.id,
-				referenceNumber: supplierDo.documentNumber,
-				metadata: { trackingNumber: supplierDo.trackingNumber ?? undefined },
 			});
 		}
 
@@ -181,11 +243,10 @@ export async function getOrderTrackingTimeline(
 		if (adminDr) {
 			events.push({
 				stage: "ADMIN_RECEIVED_FROM_SUPPLIER",
-				label: "Admin received from supplier",
-				description: `Admin received goods from supplier. DR ${adminDr.documentNumber}${adminDr.receiverName ? ` (signed by ${adminDr.receiverName})` : ""}.`,
+				label: "Being prepared",
+				description: "Your order is being prepared.",
 				date: adminDr.documentDate,
 				referenceId: adminDr.id,
-				referenceNumber: adminDr.documentNumber,
 			});
 		}
 	}
@@ -204,10 +265,9 @@ export async function getOrderTrackingTimeline(
 		events.push({
 			stage: "ADMIN_DELIVERY_ORDER",
 			label: "Out for delivery to you",
-			description: `Admin sent your order. DO ${doDoc.documentNumber}.`,
+			description: "Your order is on its way to you.",
 			date: doDoc.documentDate,
 			referenceId: doDoc.id,
-			referenceNumber: doDoc.documentNumber,
 			metadata: {
 				trackingNumber: doDoc.trackingNumber ?? order.trackingNumber ?? undefined,
 			},
@@ -217,11 +277,10 @@ export async function getOrderTrackingTimeline(
 	for (const dr of clientDrList) {
 		events.push({
 			stage: "CLIENT_RECEIVED",
-			label: "Delivered to you",
-			description: `You received the order. DR ${dr.documentNumber}${dr.receiverName ? ` (signed by ${dr.receiverName})` : ""}.`,
+			label: "Delivered",
+			description: "Your order has been delivered.",
 			date: dr.documentDate,
 			referenceId: dr.id,
-			referenceNumber: dr.documentNumber,
 		});
 	}
 

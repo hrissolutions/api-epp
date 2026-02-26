@@ -9,6 +9,7 @@ interface IController {
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 	createPurchaseOrders(req: Request, res: Response, next: NextFunction): Promise<void>;
+	dispatch(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -441,6 +442,46 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.post("/:id/create-purchase-orders", controller.createPurchaseOrders);
+
+	/**
+	 * @openapi
+	 * /api/order/{id}/dispatch:
+	 *   post:
+	 *     summary: Dispatch order to client
+	 *     description: Creates an Admin Delivery Order (DO) for dispatching an approved/processing order to the client. Mirrors the supplier→admin receive flow.
+	 *     tags: [Order]
+	 *     parameters:
+	 *       - in: path
+	 *         name: id
+	 *         required: true
+	 *         schema: { type: string, pattern: '^[0-9a-fA-F]{24}$' }
+	 *         description: Order ID
+	 *     requestBody:
+	 *       required: false
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             properties:
+	 *               trackingNumber:            { type: string, nullable: true }
+	 *               expectedDeliveryDate:      { type: string, format: date-time, nullable: true }
+	 *               expectedDeliveryTime:      { type: string, nullable: true }
+	 *               internalDeliveryPersonnel: { type: string, nullable: true }
+	 *               carrierInfo:               { type: string, nullable: true }
+	 *               toName:                    { type: string, nullable: true }
+	 *               toAddress:                 { type: string, nullable: true }
+	 *               clientUserId:              { type: string, nullable: true }
+	 *     responses:
+	 *       201:
+	 *         description: Admin delivery order created
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/:id/dispatch", controller.dispatch);
 
 	/**
 	 * @openapi
