@@ -14,12 +14,15 @@ export type TrackingStage =
 	| "CLIENT_RECEIVED"; // Client DR
 
 export type TrackingEvent = {
+	step: number;
 	stage: TrackingStage;
 	label: string;
 	description: string;
 	date: Date | null;
-	referenceId?: string;
-	referenceNumber?: string;
+	referenceId: string | null;
+	referenceNumber: string | null;
+	completed: boolean;
+	active: boolean;
 	metadata?: Record<string, unknown>;
 };
 
@@ -188,138 +191,124 @@ export async function getOrderTrackingTimeline(
 		};
 	}
 
-	const events: TrackingEvent[] = [];
+	// Collect data from delivery documents
+	const firstPo = order.purchaseOrders[0] ?? null;
+	const supplierDo = order.purchaseOrders
+		.flatMap((po) => po.deliveryDocuments ?? [])
+		.find((d) => d.documentType === "DELIVERY_ORDER" && d.transferStage === "VENDOR_TO_ADMIN") ?? null;
+	const adminDr = order.purchaseOrders
+		.flatMap((po) => po.deliveryDocuments ?? [])
+		.find((d) => d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "VENDOR_TO_ADMIN") ?? null;
+	const adminDo = order.deliveryDocuments?.find(
+		(d) => d.documentType === "DELIVERY_ORDER" && d.transferStage === "ADMIN_TO_CLIENT",
+	) ?? null;
+	const clientDr = order.deliveryDocuments?.find(
+		(d) => d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "ADMIN_TO_CLIENT",
+	) ?? null;
 
-	// 1. Order created
-	events.push({
-		stage: "ORDER_CREATED",
-		label: "Order created",
-		description: `Order ${order.orderNumber} was placed.`,
-		date: order.orderDate,
-		referenceId: order.id,
-		referenceNumber: order.orderNumber,
-	});
-
-	// 2. Order approved
-	if (order.approvedAt) {
-		events.push({
-			stage: "ORDER_APPROVED",
-			label: "Order approved",
-			description: "Your order has been approved and is being processed.",
-			date: order.approvedAt,
-			referenceId: order.id,
-		});
-	}
-
-	// 3. Purchase order(s) created and their delivery chain
-	for (const po of order.purchaseOrders) {
-		events.push({
-			stage: "PURCHASE_ORDER_CREATED",
-			label: "Being prepared",
-			description: "Your order is being prepared.",
-			date: po.createdAt,
-			referenceId: po.id,
-		});
-
-		// Supplier DO (Supplier → Admin)
-		const supplierDo = po.deliveryDocuments?.find(
-			(d) => d.documentType === "DELIVERY_ORDER" && d.transferStage === "VENDOR_TO_ADMIN",
-		);
-		if (supplierDo) {
-			events.push({
-				stage: "SUPPLIER_DELIVERY_ORDER",
-				label: "Being prepared",
-				description: "Your order is being prepared.",
-				date: supplierDo.documentDate,
-				referenceId: supplierDo.id,
-			});
-		}
-
-		// Admin DR (Admin received from supplier)
-		const adminDr = po.deliveryDocuments?.find(
-			(d) =>
-				d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "VENDOR_TO_ADMIN",
-		);
-		if (adminDr) {
-			events.push({
-				stage: "ADMIN_RECEIVED_FROM_SUPPLIER",
-				label: "Being prepared",
-				description: "Your order is being prepared.",
-				date: adminDr.documentDate,
-				referenceId: adminDr.id,
-			});
-		}
-	}
-
-	// 4. Admin DO (Admin → Client) and Client DR — from order.deliveryDocuments (orderId set)
-	const adminDoList = order.deliveryDocuments?.filter(
-		(d) =>
-			d.documentType === "DELIVERY_ORDER" && d.transferStage === "ADMIN_TO_CLIENT",
-	) ?? [];
-	const clientDrList = order.deliveryDocuments?.filter(
-		(d) =>
-			d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "ADMIN_TO_CLIENT",
-	) ?? [];
-
-	for (const doDoc of adminDoList) {
-		events.push({
-			stage: "ADMIN_DELIVERY_ORDER",
-			label: "Out for delivery to you",
-			description: "Your order is on its way to you.",
-			date: doDoc.documentDate,
-			referenceId: doDoc.id,
-			metadata: {
-				trackingNumber: doDoc.trackingNumber ?? order.trackingNumber ?? undefined,
-			},
-		});
-	}
-
-	for (const dr of clientDrList) {
-		events.push({
-			stage: "CLIENT_RECEIVED",
-			label: "Delivered",
-			description: "Your order has been delivered.",
-			date: dr.documentDate,
-			referenceId: dr.id,
-		});
-	}
-
-	// Sort by date
-	events.sort((a, b) => {
-		if (!a.date) return 1;
-		if (!b.date) return -1;
-		return new Date(a.date).getTime() - new Date(b.date).getTime();
-	});
-
-	// Current stage for the user who ordered: based on delivery documents (orderId in deliveryOrder/deliveryReceipt)
-	const hasClientDr =
-		(clientDrList?.length ?? 0) > 0;
-	const hasAdminDo = (adminDoList?.length ?? 0) > 0;
+	// Compute current stage
+	const hasAnyPo = order.purchaseOrders.length > 0;
 	const allPosReceived =
 		order.purchaseOrders.length > 0 &&
-		order.purchaseOrders.every((po) => {
-			const adminDr = po.deliveryDocuments?.find(
-				(d) =>
-					d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "VENDOR_TO_ADMIN",
-			);
-			return !!adminDr;
-		});
-	const hasAnySupplierDo = order.purchaseOrders.some((po) =>
-		po.deliveryDocuments?.some(
-			(d) =>
-				d.documentType === "DELIVERY_ORDER" && d.transferStage === "VENDOR_TO_ADMIN",
-		),
-	);
-	const hasAnyPo = order.purchaseOrders.length > 0;
+		order.purchaseOrders.every((po) =>
+			po.deliveryDocuments?.some(
+				(d) => d.documentType === "DELIVERY_RECEIPT" && d.transferStage === "VENDOR_TO_ADMIN",
+			),
+		);
 
 	let currentStage: CurrentStage;
-	if (hasClientDr) currentStage = "CLIENT_RECEIVED";
-	else if (hasAdminDo) currentStage = "ADMIN_DELIVERY_ORDER";
+	if (clientDr) currentStage = "CLIENT_RECEIVED";
+	else if (adminDo) currentStage = "ADMIN_DELIVERY_ORDER";
 	else if (allPosReceived) currentStage = "ADMIN_RECEIVED_FROM_SUPPLIER";
-	else if (hasAnySupplierDo) currentStage = "SUPPLIER_DELIVERY_ORDER";
+	else if (supplierDo) currentStage = "SUPPLIER_DELIVERY_ORDER";
 	else if (hasAnyPo) currentStage = "PURCHASE_ORDER_CREATED";
 	else if (order.approvedAt) currentStage = "ORDER_APPROVED";
 	else currentStage = "ORDER_PLACED";
+
+	// Build standardized fixed-order stages — always all 7, date null if not reached yet
+	const stageData: Array<{
+		step: number;
+		stage: TrackingStage;
+		label: string;
+		description: string;
+		date: Date | null;
+		referenceId: string | null;
+		referenceNumber: string | null;
+		metadata?: Record<string, unknown>;
+	}> = [
+		{
+			step: 1,
+			stage: "ORDER_CREATED",
+			label: "Order created",
+			description: `Order ${order.orderNumber} was placed.`,
+			date: order.orderDate,
+			referenceId: order.id,
+			referenceNumber: order.orderNumber,
+		},
+		{
+			step: 2,
+			stage: "ORDER_APPROVED",
+			label: "Order approved",
+			description: "Your order has been approved and is being processed.",
+			date: order.approvedAt ?? null,
+			referenceId: order.approvedAt ? order.id : null,
+			referenceNumber: null,
+		},
+		{
+			step: 3,
+			stage: "PURCHASE_ORDER_CREATED",
+			label: "Being prepared",
+			description: "Your order is being prepared.",
+			date: firstPo?.createdAt ?? null,
+			referenceId: firstPo?.id ?? null,
+			referenceNumber: firstPo?.poNumber ?? null,
+		},
+		{
+			step: 4,
+			stage: "SUPPLIER_DELIVERY_ORDER",
+			label: "Being prepared",
+			description: "Your order is being prepared.",
+			date: supplierDo?.documentDate ?? null,
+			referenceId: supplierDo?.id ?? null,
+			referenceNumber: supplierDo?.documentNumber ?? null,
+		},
+		{
+			step: 5,
+			stage: "ADMIN_RECEIVED_FROM_SUPPLIER",
+			label: "Being prepared",
+			description: "Your order is being prepared.",
+			date: adminDr?.documentDate ?? null,
+			referenceId: adminDr?.id ?? null,
+			referenceNumber: adminDr?.documentNumber ?? null,
+		},
+		{
+			step: 6,
+			stage: "ADMIN_DELIVERY_ORDER",
+			label: "Out for delivery to you",
+			description: "Your order is on its way to you.",
+			date: adminDo?.documentDate ?? null,
+			referenceId: adminDo?.id ?? null,
+			referenceNumber: adminDo?.documentNumber ?? null,
+			metadata: adminDo
+				? { trackingNumber: adminDo.trackingNumber ?? order.trackingNumber ?? null }
+				: undefined,
+		},
+		{
+			step: 7,
+			stage: "CLIENT_RECEIVED",
+			label: "Delivered",
+			description: "Your order has been delivered.",
+			date: clientDr?.documentDate ?? null,
+			referenceId: clientDr?.id ?? null,
+			referenceNumber: clientDr?.documentNumber ?? null,
+		},
+	];
+
+	const events: TrackingEvent[] = stageData.map((s) => ({
+		...s,
+		completed: s.date !== null,
+		active: s.stage === currentStage,
+	}));
 
 	return {
 		orderId: order.id,

@@ -6,7 +6,6 @@ import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler"
 import { CreatePurchaseOrderSchema, UpdatePurchaseOrderSchema } from "../../zod/purchaseOrder.zod";
 import { config } from "../../config/constant";
 import { generatePONumber } from "../../helper/generate-PONumber.helper";
-import { createSupplierDOForPO } from "../../helper/deliveryDocumentService";
 
 const logger = getLogger();
 const poLogger = logger.child({ module: "purchaseOrder" });
@@ -298,60 +297,6 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-
-	const dispatch = async (req: Request, res: Response, _next: NextFunction) => {
-		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-		if (!id) {
-			res.status(400).json(buildErrorResponse("ID is required", 400));
-			return;
-		}
-		try {
-			const po = await prisma.purchaseOrder.findFirst({
-				where: { id },
-				include: {
-					order: { select: { id: true, orderNumber: true } },
-					supplier: { select: { id: true, name: true, code: true } },
-					deliveryDocuments: true,
-				},
-			});
-			if (!po) {
-				res.status(404).json(buildErrorResponse("Purchase order not found", 404));
-				return;
-			}
-			if (po.status !== "CONFIRMED") {
-				res.status(400).json(
-					buildErrorResponse(
-						`Purchase order cannot dispatch: current status is ${po.status}. Only CONFIRMED POs can generate a Supplier DO.`,
-						400,
-					),
-				);
-				return;
-			}
-			const supplierDo = await createSupplierDOForPO(prisma, id);
-			if (!supplierDo) {
-				res.status(400).json(
-					buildErrorResponse("Failed to create Supplier DO: PO has no items.", 400),
-				);
-				return;
-			}
-			poLogger.info(
-				`PurchaseOrder ${po.poNumber} dispatched; Supplier DO ${supplierDo.documentNumber} created`,
-			);
-			res.status(201).json(
-				buildSuccessResponse(
-					"Supplier Delivery Order created",
-					{ deliveryOrder: supplierDo },
-					201,
-				),
-			);
-		} catch (error) {
-			poLogger.error(`Dispatch purchase order failed: ${error}`);
-			res.status(500).json(
-				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
-			);
-		}
-	};
-
 	const remove = async (req: Request, res: Response, _next: NextFunction) => {
 		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 		if (!id) {
@@ -373,5 +318,5 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove, approve, confirm, dispatch };
+	return { create, getAll, getById, update, remove, approve, confirm };
 };

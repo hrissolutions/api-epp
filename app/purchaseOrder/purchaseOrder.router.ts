@@ -9,7 +9,6 @@ interface IController {
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 	approve(req: Request, res: Response, next: NextFunction): Promise<void>;
 	confirm(req: Request, res: Response, next: NextFunction): Promise<void>;
-	dispatch(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export const router = (route: Router, controller: IController): Router => {
@@ -339,46 +338,6 @@ export const router = (route: Router, controller: IController): Router => {
 	 *         $ref: '#/components/responses/InternalServerError'
 	 */
 	routes.post("/:id/confirm", controller.confirm);
-
-	/**
-	 * @openapi
-	 * /api/purchaseOrder/{id}/dispatch:
-	 *   post:
-	 *     summary: Dispatch purchase order (creates Supplier DO)
-	 *     description: Manually triggers the creation of a Supplier Delivery Order (DO) from the PO data. PO must be in CONFIRMED status. DO items, supplier info, and quantities are taken from the Purchase Order.
-	 *     tags: [PurchaseOrder]
-	 *     parameters:
-	 *       - in: path
-	 *         name: id
-	 *         required: true
-	 *         schema:
-	 *           type: string
-	 *           pattern: '^[0-9a-fA-F]{24}$'
-	 *         description: Purchase Order ID
-	 *         example: "507f1f77bcf86cd799439011"
-	 *     responses:
-	 *       201:
-	 *         description: Supplier Delivery Order created successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               allOf:
-	 *                 - $ref: '#/components/schemas/Success'
-	 *                 - type: object
-	 *                   properties:
-	 *                     data:
-	 *                       type: object
-	 *                       properties:
-	 *                         deliveryOrder:
-	 *                           $ref: '#/components/schemas/DeliveryDocument'
-	 *       400:
-	 *         $ref: '#/components/responses/BadRequest'
-	 *       404:
-	 *         $ref: '#/components/responses/NotFound'
-	 *       500:
-	 *         $ref: '#/components/responses/InternalServerError'
-	 */
-	routes.post("/:id/dispatch", controller.dispatch);
 
 	/**
 	 * @openapi

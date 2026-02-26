@@ -13,6 +13,8 @@ import { invalidateCache } from "../../middleware/cache";
 import {
 	createAdminDRForSupplierDO,
 	createClientDRForAdminDO,
+	createSupplierDOForPO,
+	createAdminDOForOrder,
 } from "../../helper/deliveryDocumentService";
 import { syncOrderStatusFromDeliveryDocuments } from "../../helper/orderTrackingService";
 
@@ -99,6 +101,159 @@ export const controller = (prisma: PrismaClient) => {
 			docLogger.error(`Create delivery document failed: ${error}`);
 			res.status(500).json(
 				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	/**
+	 * Dispatch a confirmed Purchase Order: creates a Supplier Delivery Order (DO).
+	 * POST /deliveryDocument/:purchaseOrderId/dispatch
+	 */
+	const dispatch = async (req: Request, res: Response, _next: NextFunction) => {
+		const purchaseOrderId = Array.isArray(req.params.purchaseOrderId)
+			? req.params.purchaseOrderId[0]
+			: req.params.purchaseOrderId;
+		if (!purchaseOrderId) {
+			res.status(400).json(buildErrorResponse("purchaseOrderId is required", 400));
+			return;
+		}
+		try {
+			const po = await prisma.purchaseOrder.findFirst({
+				where: { id: purchaseOrderId },
+				select: { id: true, poNumber: true, status: true },
+			});
+			if (!po) {
+				res.status(404).json(buildErrorResponse("Purchase order not found", 404));
+				return;
+			}
+			if (po.status !== "CONFIRMED") {
+				res.status(400).json(
+					buildErrorResponse(
+						`Purchase order cannot dispatch: current status is ${po.status}. Only CONFIRMED POs can generate a Supplier DO.`,
+						400,
+					),
+				);
+				return;
+			}
+			const supplierDo = await createSupplierDOForPO(prisma, purchaseOrderId);
+			if (!supplierDo) {
+				res.status(400).json(
+					buildErrorResponse("Failed to create Supplier DO: PO has no items.", 400),
+				);
+				return;
+			}
+			const fullDoc = await prisma.deliveryDocument.findFirst({
+				where: { id: supplierDo.id },
+				include: {
+					order: { select: { id: true, orderNumber: true } },
+					supplier: { select: { id: true, name: true } },
+					purchaseOrder: { select: { id: true, poNumber: true } },
+					correspondingDo: true,
+					receiptsForThisDo: true,
+				},
+			});
+			docLogger.info(
+				`PurchaseOrder ${po.poNumber} dispatched; Supplier DO ${supplierDo.documentNumber} created`,
+			);
+			res.status(201).json(
+				buildSuccessResponse(
+					"Supplier Delivery Order created",
+					{ deliveryOrder: fullDoc },
+					201,
+				),
+			);
+		} catch (error) {
+			docLogger.error(`Dispatch (create Supplier DO) failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
+			);
+		}
+	};
+
+	/**
+	 * Dispatch an approved order to the client: creates an Admin Delivery Order (DO).
+	 * POST /deliveryDocument/:orderId/dispatch-to-client
+	 * Body (optional): { trackingNumber?, expectedDeliveryDate?, expectedDeliveryTime?,
+	 *   internalDeliveryPersonnel?, carrierInfo?, toName?, toAddress?, clientUserId? }
+	 */
+	const dispatchOrder = async (req: Request, res: Response, _next: NextFunction) => {
+		const orderId = Array.isArray(req.params.orderId)
+			? req.params.orderId[0]
+			: req.params.orderId;
+		if (!orderId) {
+			res.status(400).json(buildErrorResponse("orderId is required", 400));
+			return;
+		}
+		try {
+			const order = await prisma.order.findUnique({
+				where: { id: orderId },
+				select: { id: true, orderNumber: true, status: true },
+			});
+			if (!order) {
+				res.status(404).json(buildErrorResponse("Order not found", 404));
+				return;
+			}
+			if (!["APPROVED", "PROCESSING"].includes(order.status)) {
+				res.status(400).json(
+					buildErrorResponse(
+						`Order must be APPROVED or PROCESSING to dispatch. Current status: ${order.status}`,
+						400,
+					),
+				);
+				return;
+			}
+			const body = req.body ?? {};
+			const result = await createAdminDOForOrder(prisma, orderId, {
+				trackingNumber: body.trackingNumber ?? null,
+				expectedDeliveryDate: body.expectedDeliveryDate
+					? new Date(body.expectedDeliveryDate)
+					: null,
+				expectedDeliveryTime: body.expectedDeliveryTime ?? null,
+				internalDeliveryPersonnel: body.internalDeliveryPersonnel ?? null,
+				carrierInfo: body.carrierInfo ?? null,
+				toName: body.toName ?? null,
+				toAddress: body.toAddress ?? null,
+				clientUserId: body.clientUserId ?? null,
+			});
+			if (!result) {
+				res.status(500).json(
+					buildErrorResponse("Failed to create Admin Delivery Order", 500),
+				);
+				return;
+			}
+			const fullDoc = await prisma.deliveryDocument.findFirst({
+				where: { id: result.id },
+				include: {
+					order: { select: { id: true, orderNumber: true } },
+					supplier: { select: { id: true, name: true } },
+					purchaseOrder: { select: { id: true, poNumber: true } },
+					correspondingDo: true,
+					receiptsForThisDo: true,
+				},
+			});
+			try {
+				const synced = await syncOrderStatusFromDeliveryDocuments(prisma, orderId);
+				if (synced.updated) {
+					await invalidateCache.byPattern(`cache:order:byId:${orderId}:*`);
+					await invalidateCache.byPattern("cache:order:list:*");
+				}
+			} catch (syncErr) {
+				docLogger.warn("Order status sync after dispatch failed:", syncErr);
+			}
+			docLogger.info(
+				`Order ${order.orderNumber} dispatched to client; Admin DO ${result.documentNumber} created`,
+			);
+			res.status(201).json(
+				buildSuccessResponse(
+					`Order ${order.orderNumber} dispatched to client`,
+					{ deliveryOrder: fullDoc },
+					201,
+				),
+			);
+		} catch (error: any) {
+			docLogger.error(`Dispatch order (create Admin DO) failed: ${error}`);
+			res.status(500).json(
+				buildErrorResponse(error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
 			);
 		}
 	};
@@ -397,5 +552,15 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	return { create, getAll, getById, update, remove, receive, confirmReceipt };
+	return {
+		create,
+		getAll,
+		getById,
+		update,
+		remove,
+		dispatch,
+		dispatchOrder,
+		receive,
+		confirmReceipt,
+	};
 };

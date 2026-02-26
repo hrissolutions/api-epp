@@ -7,6 +7,8 @@ interface IController {
 	create(req: Request, res: Response, next: NextFunction): Promise<void>;
 	update(req: Request, res: Response, next: NextFunction): Promise<void>;
 	remove(req: Request, res: Response, next: NextFunction): Promise<void>;
+	dispatch(req: Request, res: Response, next: NextFunction): Promise<void>;
+	dispatchOrder(req: Request, res: Response, next: NextFunction): Promise<void>;
 	receive(req: Request, res: Response, next: NextFunction): Promise<void>;
 	confirmReceipt(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
@@ -14,6 +16,101 @@ interface IController {
 export const router = (route: Router, controller: IController): Router => {
 	const routes = Router();
 	const path = "/deliveryDocument";
+
+	/**
+	 * @openapi
+	 * /api/deliveryDocument/{purchaseOrderId}/dispatch:
+	 *   post:
+	 *     summary: Dispatch purchase order (creates Supplier DO)
+	 *     description: Creates a Supplier Delivery Order (DO) from a confirmed Purchase Order. PO must be in CONFIRMED status. DO items, supplier info, and quantities are taken from the Purchase Order.
+	 *     tags: [DeliveryDocument]
+	 *     parameters:
+	 *       - in: path
+	 *         name: purchaseOrderId
+	 *         required: true
+	 *         schema:
+	 *           type: string
+	 *           pattern: '^[0-9a-fA-F]{24}$'
+	 *         description: Purchase Order ID
+	 *         example: "507f1f77bcf86cd799439011"
+	 *     responses:
+	 *       201:
+	 *         description: Supplier Delivery Order created successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               allOf:
+	 *                 - $ref: '#/components/schemas/Success'
+	 *                 - type: object
+	 *                   properties:
+	 *                     data:
+	 *                       type: object
+	 *                       properties:
+	 *                         deliveryOrder:
+	 *                           $ref: '#/components/schemas/DeliveryDocument'
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/:purchaseOrderId/dispatch", controller.dispatch);
+
+	/**
+	 * @openapi
+	 * /api/deliveryDocument/{orderId}/dispatch-to-client:
+	 *   post:
+	 *     summary: Dispatch order to client (creates Admin DO)
+	 *     description: Creates an Admin Delivery Order (DO) for dispatching an approved/processing order to the client. Order must be APPROVED or PROCESSING.
+	 *     tags: [DeliveryDocument]
+	 *     parameters:
+	 *       - in: path
+	 *         name: orderId
+	 *         required: true
+	 *         schema:
+	 *           type: string
+	 *           pattern: '^[0-9a-fA-F]{24}$'
+	 *         description: Order ID
+	 *         example: "507f1f77bcf86cd799439011"
+	 *     requestBody:
+	 *       required: false
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             properties:
+	 *               trackingNumber:            { type: string, nullable: true }
+	 *               expectedDeliveryDate:      { type: string, format: date-time, nullable: true }
+	 *               expectedDeliveryTime:      { type: string, nullable: true }
+	 *               internalDeliveryPersonnel: { type: string, nullable: true }
+	 *               carrierInfo:               { type: string, nullable: true }
+	 *               toName:                    { type: string, nullable: true }
+	 *               toAddress:                 { type: string, nullable: true }
+	 *               clientUserId:              { type: string, nullable: true }
+	 *     responses:
+	 *       201:
+	 *         description: Admin Delivery Order created successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               allOf:
+	 *                 - $ref: '#/components/schemas/Success'
+	 *                 - type: object
+	 *                   properties:
+	 *                     data:
+	 *                       type: object
+	 *                       properties:
+	 *                         deliveryOrder:
+	 *                           $ref: '#/components/schemas/DeliveryDocument'
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/InternalServerError'
+	 */
+	routes.post("/:orderId/dispatch-to-client", controller.dispatchOrder);
 
 	/**
 	 * @openapi

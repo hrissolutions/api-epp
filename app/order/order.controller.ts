@@ -38,7 +38,6 @@ import {
 	getOrderTrackingTimeline,
 	computeOrderCurrentStage,
 } from "../../helper/orderTrackingService";
-import { createAdminDOForOrder } from "../../helper/deliveryDocumentService";
 
 const logger = getLogger();
 const orderLogger = logger.child({ module: "order" });
@@ -1163,79 +1162,5 @@ export const controller = (prisma: PrismaClient) => {
 		}
 	};
 
-	/**
-	 * Dispatch an approved order to the client: creates an Admin DO (ADMIN_TO_CLIENT).
-	 * POST /order/:id/dispatch
-	 * Body (optional): { trackingNumber?, expectedDeliveryDate?, expectedDeliveryTime?,
-	 *   internalDeliveryPersonnel?, carrierInfo?, toName?, toAddress?, clientUserId? }
-	 */
-	const dispatch = async (req: Request, res: Response, _next: NextFunction) => {
-		const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-		if (!id) {
-			res.status(400).json(buildErrorResponse("Order ID is required", 400));
-			return;
-		}
-		try {
-			const order = await prisma.order.findUnique({
-				where: { id },
-				select: { id: true, orderNumber: true, status: true, isFullyApproved: true },
-			});
-			if (!order) {
-				res.status(404).json(buildErrorResponse(config.ERROR.ORDER.NOT_FOUND, 404));
-				return;
-			}
-			if (!["APPROVED", "PROCESSING"].includes(order.status)) {
-				res.status(400).json(
-					buildErrorResponse(
-						`Order must be APPROVED or PROCESSING to dispatch. Current status: ${order.status}`,
-						400,
-					),
-				);
-				return;
-			}
-			const body = req.body ?? {};
-			const result = await createAdminDOForOrder(prisma, id, {
-				trackingNumber: body.trackingNumber ?? null,
-				expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : null,
-				expectedDeliveryTime: body.expectedDeliveryTime ?? null,
-				internalDeliveryPersonnel: body.internalDeliveryPersonnel ?? null,
-				carrierInfo: body.carrierInfo ?? null,
-				toName: body.toName ?? null,
-				toAddress: body.toAddress ?? null,
-				clientUserId: body.clientUserId ?? null,
-			});
-			if (!result) {
-				res.status(500).json(buildErrorResponse("Failed to create Admin delivery order", 500));
-				return;
-			}
-			try {
-				const { syncOrderStatusFromDeliveryDocuments } = await import("../../helper/orderTrackingService");
-				const synced = await syncOrderStatusFromDeliveryDocuments(prisma, id);
-				if (synced.updated) {
-					await invalidateCache.byPattern(`cache:order:byId:${id}:*`);
-					await invalidateCache.byPattern("cache:order:list:*");
-				}
-			} catch (syncErr) {
-				orderLogger.warn("Order status sync after dispatch failed:", syncErr);
-			}
-			orderLogger.info(`Order ${order.orderNumber} dispatched: Admin DO ${result.documentNumber}`);
-			res.status(201).json(
-				buildSuccessResponse(
-					`Order ${order.orderNumber} dispatched to client`,
-					{
-						deliveryOrder: result.deliveryOrder,
-						documentNumber: result.documentNumber,
-					},
-					201,
-				),
-			);
-		} catch (error: any) {
-			orderLogger.error(`Dispatch order failed: ${error}`);
-			res.status(500).json(
-				buildErrorResponse(error.message || config.ERROR.COMMON.INTERNAL_SERVER_ERROR, 500),
-			);
-		}
-	};
-
-	return { create, getAll, getById, getTracking, update, remove, createPurchaseOrders, dispatch };
+	return { create, getAll, getById, getTracking, update, remove, createPurchaseOrders };
 };
