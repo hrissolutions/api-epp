@@ -204,6 +204,27 @@ export const controller = (prisma: PrismaClient) => {
 						order: { select: { id: true, orderNumber: true } },
 						supplier: { select: { id: true, name: true } },
 						purchaseOrder: { select: { id: true, poNumber: true } },
+						// Parent (for DR): the DO this receipt acknowledges
+						correspondingDo: {
+							select: {
+								id: true,
+								documentNumber: true,
+								documentType: true,
+								transferStage: true,
+								documentDate: true,
+							},
+						},
+						// Children (for DO): DR(s) issued for this delivery order
+						receiptsForThisDo: {
+							select: {
+								id: true,
+								documentNumber: true,
+								documentType: true,
+								transferStage: true,
+								documentDate: true,
+								receiverName: true,
+							},
+						},
 					},
 				}),
 				prisma.deliveryDocument.count({ where }),
