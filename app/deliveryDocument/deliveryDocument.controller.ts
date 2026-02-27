@@ -9,6 +9,7 @@ import {
 	ReceiveDeliveryDocumentSchema,
 } from "../../zod/deliveryDocument.zod";
 import { config } from "../../config/constant";
+import { groupDataByField } from "../../helper/dataGrouping";
 import { invalidateCache } from "../../middleware/cache";
 import {
 	createAdminDRForSupplierDO,
@@ -341,6 +342,7 @@ export const controller = (prisma: PrismaClient) => {
 				["VENDOR_TO_ADMIN", "ADMIN_TO_CLIENT"].includes(req.query.transferStage)
 					? (req.query.transferStage as "VENDOR_TO_ADMIN" | "ADMIN_TO_CLIENT")
 					: undefined;
+			const groupBy = typeof req.query.groupBy === "string" ? req.query.groupBy : undefined;
 			const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
 			const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 10));
 			const skip = (page - 1) * limit;
@@ -388,11 +390,14 @@ export const controller = (prisma: PrismaClient) => {
 				prisma.deliveryDocument.count({ where }),
 			]);
 
+			const deliveryDocuments = groupBy ? groupDataByField(list as any[], groupBy) : list;
+
 			res.status(200).json(
 				buildSuccessResponse("Delivery documents retrieved", {
-					deliveryDocuments: list,
+					deliveryDocuments,
 					pagination: buildPagination(total, page, limit),
 					count: total,
+					...(groupBy && { groupedBy: groupBy }),
 				}),
 			);
 		} catch (error) {

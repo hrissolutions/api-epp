@@ -13,11 +13,11 @@ model Item {
   itemType ItemType @default(PRODUCT)
 
   // Pricing
-  retailPrice    Float
-  sellingPrice   Float //price sold to uzaro
-  costPrice      Float? // employeePrice
-  retailerPrice    Float? // For retailer customers
-  wholeSalePrice Float? // For wholesale customers
+  srp            Float   // Market reference price (SRP) — all EPP prices must be below this
+  supplierPrice  Float?  // Price supplier sells to Uzaro; Financier lends this amount
+  employeePrice  Float?  // EPP employee customer price (supplierPrice + employee markup)
+  wholesalePrice Float?  // Wholesale/bulk buyer price
+  standardPrice  Float?  // Retailer and regular user price
 
   // Inventory
   stockQuantity     Int @default(0)

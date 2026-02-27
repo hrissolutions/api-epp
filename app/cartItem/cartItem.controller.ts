@@ -957,8 +957,15 @@ export const controller = (prisma: PrismaClient) => {
 					continue;
 				}
 
-				// Use sellingPrice if available, otherwise retailPrice
-				const unitPrice = item.sellingPrice || item.retailPrice;
+				// Select price based on userType
+				const unitPrice =
+					userType === "EMPLOYEE"
+						? (item.employeePrice ?? item.supplierPrice ?? item.srp)
+						: userType === "WHOLESALER"
+							? (item.wholesalePrice ?? item.srp)
+							: userType === "RETAILER" || userType === "INDIVIDUAL"
+								? (item.standardPrice ?? item.srp)
+								: (item.supplierPrice ?? item.srp); // ADMIN / FINANCIER / VENDOR
 				const itemSubtotal = unitPrice * quantityToCheckout;
 				subtotal += itemSubtotal;
 

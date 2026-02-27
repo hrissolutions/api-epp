@@ -51,7 +51,13 @@ const ORDER_DETAIL_INCLUDE = {
 	workflow: true,
 	approvals: { orderBy: { approvalLevel: "asc" as const } },
 	deliveryDocuments: {
-		select: { id: true, documentType: true, transferStage: true, documentDate: true, documentNumber: true },
+		select: {
+			id: true,
+			documentType: true,
+			transferStage: true,
+			documentDate: true,
+			documentNumber: true,
+		},
 	},
 	purchaseOrders: {
 		select: {
@@ -84,7 +90,7 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	const response: Record<string, unknown> = {
 		order: {
 			...order,
-			orderItems: undefined,
+			// orderItems: undefined,
 			transaction: undefined,
 			installments: undefined,
 			financingAgreement: undefined,
@@ -219,7 +225,11 @@ export const controller = (prisma: PrismaClient) => {
 
 		try {
 			// Calculate order totals from items (needed for workflow check and order data)
-			const totals = await calculateOrderTotals(prisma, validation.data.items);
+			const totals = await calculateOrderTotals(
+				prisma,
+				validation.data.items,
+				validation.data.userType,
+			);
 
 			// Validate item availability and stock (same rules as cart checkout)
 			const itemIds = [...new Set(totals.items.map((i) => i.itemId))];

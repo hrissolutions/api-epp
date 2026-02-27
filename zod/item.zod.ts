@@ -55,9 +55,11 @@ export const ItemSchema = z.object({
 	itemType: z.enum(["PRODUCT", "LOAN"]).default("PRODUCT"),
 
 	// Pricing
-	retailPrice: decimalSchema,
-	sellingPrice: decimalSchema,
-	costPrice: decimalSchema.optional().nullable(),
+	srp: decimalSchema,                                         // Market reference price (SRP)
+	supplierPrice: decimalSchema.optional().nullable(),         // Price supplier sells to Uzaro; Financier lends this amount
+	employeePrice: decimalSchema.optional().nullable(),  // EPP employee customer price
+	wholesalePrice: decimalSchema.optional().nullable(), // Wholesale/bulk buyer price
+	standardPrice: decimalSchema.optional().nullable(),  // Retailer and regular user price
 
 	// Inventory
 	stockQuantity: z.number().int().min(0).default(0),
@@ -87,7 +89,10 @@ export const CreateItemSchema = ItemSchema.omit({
 	updatedAt: true,
 }).partial({
 	description: true,
-	costPrice: true,
+	supplierPrice: true,
+	employeePrice: true,
+	wholesalePrice: true,
+	standardPrice: true,
 	imageUrl: true,
 	images: true,
 	specifications: true,
