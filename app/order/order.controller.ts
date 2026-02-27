@@ -90,7 +90,7 @@ function buildOrderDetailResponse(order: any): Record<string, unknown> {
 	const response: Record<string, unknown> = {
 		order: {
 			...order,
-			orderItems: undefined,
+			// orderItems: undefined,
 			transaction: undefined,
 			installments: undefined,
 			financingAgreement: undefined,
