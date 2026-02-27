@@ -6,6 +6,7 @@ import { buildErrorResponse, formatZodErrors } from "../../helper/error-handler"
 import { CreatePurchaseOrderSchema, UpdatePurchaseOrderSchema } from "../../zod/purchaseOrder.zod";
 import { config } from "../../config/constant";
 import { generatePONumber } from "../../helper/generate-PONumber.helper";
+import { groupDataByField } from "../../helper/dataGrouping";
 
 const logger = getLogger();
 const poLogger = logger.child({ module: "purchaseOrder" });
@@ -65,6 +66,7 @@ export const controller = (prisma: PrismaClient) => {
 	const getAll = async (req: Request, res: Response, _next: NextFunction) => {
 		try {
 			const orderId = typeof req.query.orderId === "string" ? req.query.orderId : undefined;
+			const groupBy = typeof req.query.groupBy === "string" ? req.query.groupBy : undefined;
 			const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
 			const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 10));
 			const skip = (page - 1) * limit;
@@ -87,11 +89,14 @@ export const controller = (prisma: PrismaClient) => {
 				prisma.purchaseOrder.count({ where }),
 			]);
 
+			const purchaseOrders = groupBy ? groupDataByField(list as any[], groupBy) : list;
+
 			res.status(200).json(
 				buildSuccessResponse("Purchase orders retrieved", {
-					purchaseOrders: list,
+					purchaseOrders,
 					pagination: buildPagination(total, page, limit),
 					count: total,
+					...(groupBy && { groupedBy: groupBy }),
 				}),
 			);
 		} catch (error) {
@@ -121,9 +126,7 @@ export const controller = (prisma: PrismaClient) => {
 				res.status(404).json(buildErrorResponse("Purchase order not found", 404));
 				return;
 			}
-			res.status(200).json(
-				buildSuccessResponse("Purchase order retrieved", po),
-			);
+			res.status(200).json(buildSuccessResponse("Purchase order retrieved", po));
 		} catch (error) {
 			poLogger.error(`Get purchase order failed: ${error}`);
 			res.status(500).json(
@@ -220,9 +223,7 @@ export const controller = (prisma: PrismaClient) => {
 				},
 			});
 
-			poLogger.info(
-				`PurchaseOrder ${po.poNumber} approved`,
-			);
+			poLogger.info(`PurchaseOrder ${po.poNumber} approved`);
 
 			res.status(200).json(
 				buildSuccessResponse("Purchase order approved", {
@@ -271,7 +272,7 @@ export const controller = (prisma: PrismaClient) => {
 				data: { status: "CONFIRMED" },
 			});
 
-				const updated = await prisma.purchaseOrder.findFirst({
+			const updated = await prisma.purchaseOrder.findFirst({
 				where: { id },
 				include: {
 					order: { select: { id: true, orderNumber: true } },
@@ -280,9 +281,7 @@ export const controller = (prisma: PrismaClient) => {
 				},
 			});
 
-			poLogger.info(
-				`PurchaseOrder ${po.poNumber} confirmed`,
-			);
+			poLogger.info(`PurchaseOrder ${po.poNumber} confirmed`);
 
 			res.status(200).json(
 				buildSuccessResponse("Purchase order confirmed", {

@@ -1012,16 +1012,11 @@ export const controller = (prisma: PrismaClient) => {
 						itemType: itemType,
 
 						// Pricing - handle multiple price fields with comma separators
-						retailPrice: parseNumberWithCommas(row.retailPrice) ?? 0,
-						sellingPrice:
-							parseNumberWithCommas(row.sellingPrice) ??
-							parseNumberWithCommas(row.employeePrice) ??
-							0, // Support both old and new field names
-						costPrice: parseNumberWithCommas(row.costPrice),
-						rentalPrice: parseNumberWithCommas(row.rentalPrice),
-						wholeSalePrice:
-							parseNumberWithCommas(row.wholeSalePrice) ??
-							parseNumberWithCommas(row.wholesalePrice),
+						srp: parseNumberWithCommas(row.srp) ?? 0,
+						supplierPrice: parseNumberWithCommas(row.supplierPrice) ?? 0,
+						employeePrice: parseNumberWithCommas(row.employeePrice),
+						wholesalePrice: parseNumberWithCommas(row.wholesalePrice),
+						standardPrice: parseNumberWithCommas(row.standardPrice),
 
 						// Inventory
 						stockQuantity: row.stockQuantity ? parseInt(row.stockQuantity) : 0,
