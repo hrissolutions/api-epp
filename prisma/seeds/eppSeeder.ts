@@ -841,12 +841,19 @@ export async function seedEPP() {
 		];
 
 		for (const itemData of items) {
+			const { retailPrice, sellingPrice, costPrice, ...itemBaseData } = itemData;
+
 			await prisma.item.upsert({
 				where: { sku: itemData.sku },
 				update: {},
 				create: {
-					...itemData,
+					...itemBaseData,
 					itemType: ItemType.PRODUCT,
+					// Map legacy seed pricing fields to current Item schema fields.
+					srp: retailPrice,
+					employeePrice: sellingPrice,
+					supplierPrice: costPrice,
+					standardPrice: retailPrice,
 				},
 			});
 		}
