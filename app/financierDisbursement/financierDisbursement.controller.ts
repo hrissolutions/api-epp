@@ -107,14 +107,18 @@ export const controller = (prisma: PrismaClient) => {
 			const disbursementReceiptNumber = row.receiptNumber ?? null;
 			const disbursementReceiptUrl = row.receiptAttachmentUrl ?? null;
 
+			// Admin view: loan received = debit (balance increases). Financier view: loan given = credit (balance goes negative).
+			const loanDebit = view === "FINANCIER" ? 0 : row.amount;
+			const loanCredit = view === "FINANCIER" ? row.amount : 0;
+
 			rawEntries.push({
 				date: loanDate,
 				description:
 					view === "FINANCIER"
 						? `Loan to Admin${orderNumber ? ` (${orderNumber})` : ""}`
 						: `Loan from Financier${orderNumber ? ` (${orderNumber})` : ""}`,
-				debit: row.amount,
-				credit: 0,
+				debit: loanDebit,
+				credit: loanCredit,
 				eventType: "LOAN",
 				disbursementId: row.id,
 				remittanceId: null,
@@ -132,14 +136,17 @@ export const controller = (prisma: PrismaClient) => {
 				const remittanceReceiptType = remittance.receiptType ?? null;
 				const remittanceReceiptNumber = remittance.receiptNumber ?? null;
 				const remittanceReceiptUrl = remittance.receiptAttachmentUrl ?? null;
+				// Admin view: payment to financier = credit (balance decreases). Financier view: payment received = debit (balance less negative).
+				const payDebit = view === "FINANCIER" ? remittance.amount : 0;
+				const payCredit = view === "FINANCIER" ? 0 : remittance.amount;
 				rawEntries.push({
 					date: remittance.remittedAt ?? remittance.createdAt,
 					description:
 						view === "FINANCIER"
 							? `Payment Received from Admin${orderNumber ? ` (${orderNumber})` : ""}`
 							: `Payment to Financier${orderNumber ? ` (${orderNumber})` : ""}`,
-					debit: 0,
-					credit: remittance.amount,
+					debit: payDebit,
+					credit: payCredit,
 					eventType: "PAYMENT",
 					disbursementId: row.id,
 					remittanceId: remittance.id,
@@ -160,18 +167,19 @@ export const controller = (prisma: PrismaClient) => {
 					row.reconciliationStatus === "PARTIAL" ||
 					row.reconciliationStatus === "SETTLED");
 			if (hasLegacyPaymentEvent) {
+				const legacyCreditAmount = resolveCreditAmount({
+					amount: row.amount,
+					reconciliationStatus: row.reconciliationStatus,
+					metadata: row.metadata,
+				});
 				rawEntries.push({
 					date: row.reconciledAt ?? row.updatedAt,
 					description:
 						view === "FINANCIER"
 							? `Payment Received from Admin${orderNumber ? ` (${orderNumber})` : ""}`
 							: `Payment to Financier${orderNumber ? ` (${orderNumber})` : ""}`,
-					debit: 0,
-					credit: resolveCreditAmount({
-						amount: row.amount,
-						reconciliationStatus: row.reconciliationStatus,
-						metadata: row.metadata,
-					}),
+					debit: view === "FINANCIER" ? legacyCreditAmount : 0,
+					credit: view === "FINANCIER" ? 0 : legacyCreditAmount,
 					eventType: "PAYMENT",
 					disbursementId: row.id,
 					remittanceId: null,
@@ -194,7 +202,9 @@ export const controller = (prisma: PrismaClient) => {
 				date: entry.date,
 				description: entry.description,
 				debit: entry.debit,
+				debitLabel: "Amount in",
 				credit: entry.credit,
+				creditLabel: "Amount out",
 				balance: runningBalance,
 				eventType: entry.eventType,
 				disbursementId: entry.disbursementId,
@@ -220,6 +230,8 @@ export const controller = (prisma: PrismaClient) => {
 				totalDebit,
 				totalCredit,
 				outstandingBalance: totalDebit - totalCredit,
+				debitLabel: "Amount in",
+				creditLabel: "Amount out",
 			},
 			entries,
 		};
@@ -450,8 +462,12 @@ export const controller = (prisma: PrismaClient) => {
 					where: { id: record.id },
 					data: {
 						receiptAttachmentUrl: uploadResult.secureUrl,
-						...(parsed.data.receiptType != null && { receiptType: parsed.data.receiptType }),
-						...(parsed.data.receiptNumber != null && { receiptNumber: parsed.data.receiptNumber }),
+						...(parsed.data.receiptType != null && {
+							receiptType: parsed.data.receiptType,
+						}),
+						...(parsed.data.receiptNumber != null && {
+							receiptNumber: parsed.data.receiptNumber,
+						}),
 					},
 				});
 			}
@@ -677,10 +693,7 @@ export const controller = (prisma: PrismaClient) => {
 		});
 		if (!uploadResult.success || !uploadResult.secureUrl) {
 			res.status(500).json(
-				buildErrorResponse(
-					uploadResult.error || "Failed to upload receipt file",
-					500,
-				),
+				buildErrorResponse(uploadResult.error || "Failed to upload receipt file", 500),
 			);
 			return;
 		}
@@ -733,10 +746,7 @@ export const controller = (prisma: PrismaClient) => {
 		});
 		if (!uploadResult.success || !uploadResult.secureUrl) {
 			res.status(500).json(
-				buildErrorResponse(
-					uploadResult.error || "Failed to upload receipt file",
-					500,
-				),
+				buildErrorResponse(uploadResult.error || "Failed to upload receipt file", 500),
 			);
 			return;
 		}

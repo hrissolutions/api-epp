@@ -109,11 +109,15 @@ export const controller = (prisma: PrismaClient) => {
 						? `Payment received from Admin${poNumber ? ` (${poNumber})` : ""}`
 						: `Payment to Supplier${poNumber ? ` (${poNumber})` : ""}`;
 
+			// Admin view: purchase (we owe) = debit, balance positive. Supplier view: invoice (they're owed) = credit, balance negative.
+			const purchaseDebit = view === "SUPPLIER" ? 0 : row.amount;
+			const purchaseCredit = view === "SUPPLIER" ? row.amount : 0;
+
 			rawEntries.push({
 				date: row.dueAt ?? row.createdAt,
 				description: purchaseDesc,
-				debit: row.amount,
-				credit: 0,
+				debit: purchaseDebit,
+				credit: purchaseCredit,
 				eventType: "PURCHASE",
 				settlementId: row.id,
 				remittanceId: null,
@@ -132,11 +136,14 @@ export const controller = (prisma: PrismaClient) => {
 				: [];
 			if (adminSettlements.length > 0) {
 				for (const rem of adminSettlements) {
+					// Admin view: payment to supplier = credit. Supplier view: payment received = debit.
+					const payDebit = view === "SUPPLIER" ? rem.amount : 0;
+					const payCredit = view === "SUPPLIER" ? 0 : rem.amount;
 					rawEntries.push({
 						date: rem.remittedAt ?? rem.createdAt,
 						description: paymentDesc,
-						debit: 0,
-						credit: rem.amount,
+						debit: payDebit,
+						credit: payCredit,
 						eventType: "PAYMENT",
 						settlementId: row.id,
 						remittanceId: rem.id,
@@ -153,15 +160,16 @@ export const controller = (prisma: PrismaClient) => {
 			} else {
 				const hasPaymentEvent = row.status === "PAID" || row.status === "PARTIAL";
 				if (hasPaymentEvent) {
+					const legacyAmount = resolveCreditAmount({
+						amount: row.amount,
+						status: row.status,
+						metadata: row.metadata,
+					});
 					rawEntries.push({
 						date: row.paidAt ?? row.updatedAt,
 						description: paymentDesc,
-						debit: 0,
-						credit: resolveCreditAmount({
-							amount: row.amount,
-							status: row.status,
-							metadata: row.metadata,
-						}),
+						debit: view === "SUPPLIER" ? legacyAmount : 0,
+						credit: view === "SUPPLIER" ? 0 : legacyAmount,
 						eventType: "PAYMENT",
 						settlementId: row.id,
 						remittanceId: null,
@@ -193,7 +201,9 @@ export const controller = (prisma: PrismaClient) => {
 				date: entry.date,
 				description: entry.description,
 				debit: entry.debit,
+				debitLabel: "Amount in",
 				credit: entry.credit,
+				creditLabel: "Amount out",
 				balance: runningBalance,
 				eventType: entry.eventType,
 				settlementId: entry.settlementId,
@@ -228,6 +238,8 @@ export const controller = (prisma: PrismaClient) => {
 						totalDebit,
 						totalCredit,
 						outstandingBalance: totalDebit - totalCredit,
+						debitLabel: "Amount in",
+						creditLabel: "Amount out",
 					},
 					entries,
 				},
