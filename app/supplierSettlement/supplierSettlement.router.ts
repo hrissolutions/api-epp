@@ -342,7 +342,9 @@ export const router = (_route: Router, controller: IController): Router => {
 	 * /api/supplier-settlement/{id}/remittance:
 	 *   post:
 	 *     summary: Create supplier settlement remittance
-	 *     description: Record a payment remittance for a supplier settlement. Optional file "receipt" (image/PDF) uploads to Cloudinary.
+	 *     description: |
+	 *       Record a payment remittance for a supplier settlement.
+	 *       Use multipart/form-data when uploading a receipt (image or PDF). File field name must be "receipt".
 	 *     tags: [SupplierSettlement]
 	 *     parameters:
 	 *       - in: path
@@ -351,11 +353,36 @@ export const router = (_route: Router, controller: IController): Router => {
 	 *         schema:
 	 *           type: string
 	 *           pattern: '^[0-9a-fA-F]{24}$'
-	 *         description: Settlement ID
+	 *         description: Settlement ID (supplierSettlementId)
 	 *         example: "507f1f77bcf86cd799439011"
 	 *     requestBody:
 	 *       required: true
 	 *       content:
+	 *         multipart/form-data:
+	 *           schema:
+	 *             type: object
+	 *             required:
+	 *               - amount
+	 *             properties:
+	 *               amount:
+	 *                 type: number
+	 *                 description: Payment amount (number or string)
+	 *               receipt:
+	 *                 type: string
+	 *                 format: binary
+	 *                 description: Receipt image or PDF (optional)
+	 *               receiptType:
+	 *                 type: string
+	 *                 enum: [OR, BANK_RECEIPT]
+	 *               receiptNumber:
+	 *                 type: string
+	 *               referenceNo:
+	 *                 type: string
+	 *               notes:
+	 *                 type: string
+	 *               remittedAt:
+	 *                 type: string
+	 *                 format: date-time
 	 *         application/json:
 	 *           schema:
 	 *             type: object
@@ -372,20 +399,6 @@ export const router = (_route: Router, controller: IController): Router => {
 	 *               referenceNo:
 	 *                 type: string
 	 *               notes:
-	 *                 type: string
-	 *         multipart/form-data:
-	 *           schema:
-	 *             type: object
-	 *             properties:
-	 *               amount:
-	 *                 type: number
-	 *               receipt:
-	 *                 type: string
-	 *                 format: binary
-	 *               receiptType:
-	 *                 type: string
-	 *                 enum: [OR, BANK_RECEIPT]
-	 *               receiptNumber:
 	 *                 type: string
 	 *     responses:
 	 *       201:
