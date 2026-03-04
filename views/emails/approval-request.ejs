@@ -21,7 +21,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4c6fff 0%, #6a5fff 100%);
             color: white;
             padding: 20px;
             border-radius: 8px 8px 0 0;
@@ -29,11 +29,11 @@
         }
         .header h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 26px;
         }
         .badge {
             display: inline-block;
-            background-color: #667eea;
+            background-color: #4c6fff;
             color: white;
             padding: 5px 12px;
             border-radius: 20px;
@@ -66,13 +66,13 @@
         .amount {
             font-size: 24px;
             font-weight: bold;
-            color: #667eea;
+            color: #4c6fff;
             margin: 15px 0;
         }
         .button {
             display: inline-block;
             padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4c6fff 0%, #6a5fff 100%);
             color: white;
             text-decoration: none;
             border-radius: 6px;
@@ -99,15 +99,15 @@
             border-top: 1px solid #dee2e6;
         }
         .installment-section {
-            background-color: #e7f3ff;
-            border-left: 4px solid #2196F3;
+            background-color: #f5f7ff;
+            border-left: 4px solid #4c6fff;
             padding: 20px;
             margin: 20px 0;
             border-radius: 6px;
         }
         .installment-section h3 {
             margin-top: 0;
-            color: #1976D2;
+            color: #4c6fff;
             font-size: 18px;
         }
         .installment-table {
@@ -119,7 +119,7 @@
             overflow: hidden;
         }
         .installment-table th {
-            background-color: #2196F3;
+            background-color: #4c6fff;
             color: white;
             padding: 12px;
             text-align: left;
@@ -145,11 +145,11 @@
             text-transform: uppercase;
         }
         .status-pending {
-            background-color: #FFC107;
-            color: #000;
+            background-color: #ffe08a;
+            color: #5a3b00;
         }
         .status-scheduled {
-            background-color: #2196F3;
+            background-color: #4c6fff;
             color: white;
         }
         .status-deducted {
@@ -161,11 +161,11 @@
             color: white;
         }
         .approver-email {
-            background-color: #f0f0f0;
+            background-color: #f5f7ff;
             padding: 8px 12px;
             border-radius: 4px;
             font-size: 13px;
-            color: #666;
+            color: #333;
             margin-bottom: 15px;
         }
     </style>
@@ -182,7 +182,8 @@
 
         <% if (approverEmail) { %>
         <div class="approver-email">
-            <strong>Approver Email:</strong> <%= approverEmail %>
+        <strong>Approver Email:</strong>
+        <a href="mailto:<%= approverEmail %>" style="color: #1a0dab; text-decoration: none;"><%= approverEmail %></a>
         </div>
         <% } %>
 
@@ -203,7 +204,7 @@
             </div>
             <div class="detail-row">
                 <span class="detail-label">Order Total:</span>
-                <span class="detail-value amount">$<%= orderTotal %></span>
+                <span class="detail-value amount">₱<%= orderTotal %></span>
             </div>
         </div>
 
@@ -234,7 +235,7 @@
                     <% installments.forEach(function(inst) { %>
                     <tr>
                         <td><strong><%= inst.installmentNumber %></strong></td>
-                        <td><strong>$<%= inst.amount %></strong></td>
+                        <td><strong>₱<%= inst.amount %></strong></td>
                         <td><%= inst.scheduledDate %></td>
                         <td><%= inst.cutOffDate %></td>
                         <td>
@@ -247,7 +248,7 @@
                 </tbody>
             </table>
             <p style="margin-top: 15px; font-size: 13px; color: #666;">
-                <strong>Total Installment Amount:</strong> $<%= orderTotal %><br>
+                <strong>Total Installment Amount:</strong> ₱<%= orderTotal %><br>
                 <em>All installments will be automatically deducted from payroll on their scheduled dates.</em>
             </p>
         </div>
