@@ -100,14 +100,11 @@ export const controller = (prisma: PrismaClient) => {
 				view === "SUPPLIER"
 					? `Invoice from Admin${poNumber ? ` (${poNumber})` : ""}`
 					: `Purchase${poNumber ? ` (${poNumber})` : ""}`;
+			// Admin view: payment to supplier. Supplier view: payment received from admin. No financier reference.
 			const paymentDesc =
-				row.financierDisbursementId !== null
-					? view === "SUPPLIER"
-						? `Payment received${poNumber ? ` (${poNumber})` : ""}`
-						: `Payment from Financier${poNumber ? ` (${poNumber})` : ""}`
-					: view === "SUPPLIER"
-						? `Payment received from Admin${poNumber ? ` (${poNumber})` : ""}`
-						: `Payment to Supplier${poNumber ? ` (${poNumber})` : ""}`;
+				view === "SUPPLIER"
+					? `Payment received from Admin${poNumber ? ` (${poNumber})` : ""}`
+					: `Payment to Supplier${poNumber ? ` (${poNumber})` : ""}`;
 
 			// Admin view: purchase (we owe) = debit, balance positive. Supplier view: invoice (they're owed) = credit, balance negative.
 			const purchaseDebit = view === "SUPPLIER" ? 0 : row.amount;
@@ -346,13 +343,44 @@ export const controller = (prisma: PrismaClient) => {
 		res.status(200).json(buildSuccessResponse("Supplier settlement deleted", {}, 200));
 	};
 
+	// Normalize body from multipart/form-data (all fields come as strings)
+	const normalizeFormBody = (raw: Record<string, unknown>): Record<string, unknown> => {
+		const out: Record<string, unknown> = {};
+		if (raw.amount != null && raw.amount !== "") {
+			const n = Number(raw.amount);
+			out.amount = Number.isFinite(n) ? n : raw.amount;
+		}
+		for (const k of [
+			"currency",
+			"referenceNo",
+			"receiptType",
+			"receiptNumber",
+			"createdBy",
+			"notes",
+		]) {
+			if (raw[k] != null) {
+				const v = raw[k];
+				out[k] = typeof v === "string" && v.trim() === "" ? undefined : v;
+			}
+		}
+		for (const k of ["remittedAt", "dueAt"]) {
+			if (raw[k] != null && (raw[k] as string).toString().trim() !== "") {
+				out[k] = raw[k];
+			}
+		}
+		return out;
+	};
+
 	const createRemittance = async (req: Request, res: Response, _next: NextFunction) => {
 		const rawId = req.params.id;
 		const supplierSettlementId = Array.isArray(rawId) ? rawId[0] : rawId;
+		// Support both JSON and multipart/form-data (required when uploading receipt image/PDF)
+		const rawBody = req.body ?? {};
 		const body =
-			req.body?.amount != null && typeof req.body.amount !== "number"
-				? { ...req.body, amount: Number(req.body.amount) }
-				: req.body;
+			typeof rawBody.amount === "string" ||
+			(rawBody.amount != null && typeof rawBody.amount !== "number")
+				? normalizeFormBody(rawBody as Record<string, unknown>)
+				: rawBody;
 		const parsed = CreateRemittanceBySettlementIdSchema.safeParse(body);
 		if (!parsed.success) {
 			res.status(400).json(
