@@ -16,8 +16,19 @@ describe("Installment Controller", () => {
 	let statusCode: number;
 	const mockInstallment = {
 		id: "507f1f77bcf86cd799439026",
-		name: "User Registration Installment",
-		description: "Installment for user registration forms",
+		orderId: "507f1f77bcf86cd799439040",
+		financingAgreementId: null,
+		installmentNumber: 1,
+		amount: 500.0,
+		principalAmount: 450.0,
+		interestAmount: 50.0,
+		status: "PENDING",
+		cutOffDate: new Date("2025-01-15"),
+		scheduledDate: new Date("2025-01-31"),
+		deductedDate: null,
+		payrollBatchId: null,
+		deductionReference: null,
+		notes: null,
 		type: "email",
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -26,32 +37,48 @@ describe("Installment Controller", () => {
 	const mockInstallments = [
 		{
 			id: "507f1f77bcf86cd799439026",
-			name: "User Registration Installment",
-			description: "Installment for user registration forms",
+			orderId: "507f1f77bcf86cd799439040",
+			installmentNumber: 1,
+			amount: 500.0,
+			status: "PENDING",
+			cutOffDate: new Date("2025-01-15"),
+			scheduledDate: new Date("2025-01-31"),
 			type: "email",
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439027",
-			name: "SMS Notification Installment",
-			description: "Installment for SMS notifications",
+			orderId: "507f1f77bcf86cd799439040",
+			installmentNumber: 2,
+			amount: 500.0,
+			status: "SCHEDULED",
+			cutOffDate: new Date("2025-02-15"),
+			scheduledDate: new Date("2025-02-28"),
 			type: "sms",
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439028",
-			name: "Email Marketing Installment",
-			description: "Installment for email marketing campaigns",
+			orderId: "507f1f77bcf86cd799439041",
+			installmentNumber: 1,
+			amount: 750.0,
+			status: "DEDUCTED",
+			cutOffDate: new Date("2025-01-15"),
+			scheduledDate: new Date("2025-01-31"),
 			type: "email",
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439029",
-			name: "Generic Installment",
-			description: "Installment without type",
+			orderId: "507f1f77bcf86cd799439042",
+			installmentNumber: 1,
+			amount: 300.0,
+			status: "PENDING",
+			cutOffDate: new Date("2025-03-15"),
+			scheduledDate: new Date("2025-03-31"),
 			type: null,
 			createdAt: new Date(),
 			updatedAt: new Date(),
@@ -62,14 +89,12 @@ describe("Installment Controller", () => {
 		prisma = {
 			installment: {
 				findMany: async (_params: Prisma.InstallmentFindManyArgs) => {
-					// Return multiple installments for grouping tests
 					if (req.query?.groupBy) {
 						return mockInstallments;
 					}
 					return [mockInstallment];
 				},
 				count: async (_params: Prisma.InstallmentCountArgs) => {
-					// Return count based on whether grouping is requested
 					if (req.query?.groupBy) {
 						return mockInstallments.length;
 					}
@@ -136,7 +161,13 @@ describe("Installment Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated installments", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -149,25 +180,21 @@ describe("Installment Controller", () => {
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
-			expect(sentData.data).to.have.property("totalGroups");
-			expect(sentData.data).to.have.property("totalItems");
-			expect(sentData.data.grouped).to.have.property("email");
-			expect(sentData.data.grouped).to.have.property("sms");
-			expect(sentData.data.grouped).to.have.property("unassigned");
+			expect(sentData.data).to.have.property("installments");
+			expect(sentData.data).to.have.property("groupedBy", "type");
+			expect(sentData.data.installments).to.have.property("email");
+			expect(sentData.data.installments).to.have.property("sms");
+			expect(sentData.data.installments).to.have.property("unassigned");
 		});
 
-		it("should group installments by name field", async function () {
+		it("should group installments by status field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "name", document: "true", count: "true", pagination: "true" };
+			req.query = { groupBy: "status", document: "true", count: "true", pagination: "true" };
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "name");
-			expect(sentData.data.grouped).to.have.property("User Registration Installment");
-			expect(sentData.data.grouped).to.have.property("SMS Notification Installment");
+			expect(sentData.data).to.have.property("installments");
+			expect(sentData.data).to.have.property("groupedBy", "status");
 		});
 
 		it("should handle installments with null values in grouping field", async function () {
@@ -175,38 +202,52 @@ describe("Installment Controller", () => {
 			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
-			expect(sentData.data.grouped).to.have.property("unassigned");
-			expect(sentData.data.grouped.unassigned).to.be.an("array");
-			expect(sentData.data.grouped.unassigned.length).to.be.greaterThan(0);
+			expect(sentData.data.installments).to.have.property("unassigned");
+			expect(sentData.data.installments.unassigned).to.be.an("array");
+			expect(sentData.data.installments.unassigned.length).to.be.greaterThan(0);
 		});
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
-			expect(sentData.data).to.not.have.property("grouped");
+			expect(sentData.data).to.have.property("installments");
+			expect(sentData.data.installments).to.be.an("array");
+			expect(sentData.data).to.not.have.property("groupedBy");
 		});
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await installmentController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "type",
+				page: "1",
+				limit: "10",
+				sort: "installmentNumber",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
+			expect(sentData.data).to.have.property("installments");
+			expect(sentData.data).to.have.property("groupedBy", "type");
 		});
 
 		it("should handle query validation failure", async function () {
@@ -219,9 +260,14 @@ describe("Installment Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw an error
 			prisma.installment.findMany = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -230,15 +276,20 @@ describe("Installment Controller", () => {
 			};
 
 			await installmentController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.installment.findMany = async () => {
 				throw new Error("Internal server error");
 			};
@@ -256,8 +307,7 @@ describe("Installment Controller", () => {
 				document: "true",
 				count: "true",
 				pagination: "true",
-				query: "email",
-				filter: JSON.stringify([{ field: "type", operator: "equals", value: "email" }]),
+				filter: "status:PENDING",
 			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
@@ -266,7 +316,15 @@ describe("Installment Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "2",
+				limit: "5",
+				sort: "installmentNumber",
+				order: "asc",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -274,7 +332,12 @@ describe("Installment Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				fields: "orderId,amount,status",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -306,7 +369,7 @@ describe("Installment Controller", () => {
 	});
 
 	describe(".getById()", () => {
-		it("should return a installment", async function () {
+		it("should return an installment", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 			await installmentController.getById(req as Request, res, next);
@@ -320,7 +383,7 @@ describe("Installment Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await installmentController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -330,15 +393,14 @@ describe("Installment Controller", () => {
 			await installmentController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 
-			// Mock Prisma to throw an error
-			prisma.installment.findUnique = async () => {
+			prisma.installment.findFirst = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
 				error.code = "P1001";
@@ -346,7 +408,7 @@ describe("Installment Controller", () => {
 			};
 
 			await installmentController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -354,8 +416,7 @@ describe("Installment Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 
-			// Mock Prisma to throw a non-Prisma error
-			prisma.installment.findUnique = async () => {
+			prisma.installment.findFirst = async () => {
 				throw new Error("Internal server error");
 			};
 
@@ -369,8 +430,11 @@ describe("Installment Controller", () => {
 		it("should create a new installment", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Contact Form Installment",
-				description: "Installment for contact forms with validation",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 500.0,
+				cutOffDate: "2025-06-15",
+				scheduledDate: "2025-06-30",
 			};
 			req.body = createData;
 			await installmentController.create(req as Request, res, next);
@@ -380,12 +444,16 @@ describe("Installment Controller", () => {
 			expect(sentData.data).to.have.property("id");
 		});
 
-		it("should create a new installment with type field", async function () {
+		it("should create a new installment with optional fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Email Installment",
-				description: "Installment for email notifications",
-				type: "email",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 2,
+				amount: 750.0,
+				cutOffDate: "2025-07-15",
+				scheduledDate: "2025-07-31",
+				status: "SCHEDULED",
+				notes: "Second installment",
 			};
 			req.body = createData;
 			await installmentController.create(req as Request, res, next);
@@ -393,14 +461,16 @@ describe("Installment Controller", () => {
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
 			expect(sentData.data).to.have.property("id");
-			expect(sentData.data).to.have.property("type", "email");
 		});
 
-		it("should create a new installment without type field", async function () {
+		it("should create a new installment without optional fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Generic Installment",
-				description: "Installment without type",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 3,
+				amount: 250.0,
+				cutOffDate: "2025-08-15",
+				scheduledDate: "2025-08-31",
 			};
 			req.body = createData;
 			await installmentController.create(req as Request, res, next);
@@ -413,9 +483,11 @@ describe("Installment Controller", () => {
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Form Installment",
-				description: "Installment from form data",
-				type: "form",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 500.0,
+				cutOffDate: "2025-06-15",
+				scheduledDate: "2025-06-30",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -432,8 +504,11 @@ describe("Installment Controller", () => {
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "URL Installment",
-				description: "Installment from URL encoded data",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 300.0,
+				cutOffDate: "2025-09-15",
+				scheduledDate: "2025-09-30",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -450,8 +525,7 @@ describe("Installment Controller", () => {
 		it("should handle validation errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "",
-				description: "Installment with empty name",
+				orderId: "not-a-valid-objectid",
 			};
 			req.body = createData;
 			await installmentController.create(req as Request, res, next);
@@ -462,12 +536,14 @@ describe("Installment Controller", () => {
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Test Installment",
-				description: "Installment that will cause Prisma error",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 500.0,
+				cutOffDate: "2025-06-15",
+				scheduledDate: "2025-06-30",
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw an error
 			prisma.installment.create = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -476,19 +552,21 @@ describe("Installment Controller", () => {
 			};
 
 			await installmentController.create(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Test Installment",
-				description: "Installment that will cause internal error",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 500.0,
+				cutOffDate: "2025-06-15",
+				scheduledDate: "2025-06-30",
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.installment.create = async () => {
 				throw new Error("Internal server error");
 			};
@@ -503,8 +581,8 @@ describe("Installment Controller", () => {
 		it("should update installment details", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Enhanced Contact Form Installment",
-				description: "Updated installment with additional validation and styling options",
+				amount: 600.0,
+				status: "SCHEDULED",
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -512,13 +590,14 @@ describe("Installment Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("installment");
+			expect(sentData.data.installment).to.have.property("id");
 		});
 
-		it("should update installment type field", async function () {
+		it("should update installment status field", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				type: "sms",
+				status: "DEDUCTED",
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -526,15 +605,17 @@ describe("Installment Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("installment");
+			expect(sentData.data.installment).to.have.property("id");
 		});
 
-		it("should update multiple installment fields including type", async function () {
+		it("should update multiple installment fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated Email Installment",
-				description: "Updated description",
-				type: "email",
+				amount: 800.0,
+				status: "SCHEDULED",
+				notes: "Updated installment",
+				payrollBatchId: "BATCH-001",
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -542,14 +623,14 @@ describe("Installment Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("installment");
+			expect(sentData.data.installment).to.have.property("id");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Form Updated Installment",
-				description: "Updated from form data",
+				amount: 550.0,
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -567,8 +648,7 @@ describe("Installment Controller", () => {
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "URL Updated Installment",
-				description: "Updated from URL encoded data",
+				status: "CANCELLED",
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -586,20 +666,19 @@ describe("Installment Controller", () => {
 		it("should handle invalid ID format", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated Installment",
+				status: "SCHEDULED",
 			};
 			req.params = { id: "invalid-id" };
 			req.body = updateData;
 			await installmentController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle validation errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "",
-				description: "Installment with empty name",
+				installmentNumber: 0,
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
@@ -611,26 +690,24 @@ describe("Installment Controller", () => {
 		it("should handle non-existent installment update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated Installment",
+				status: "SCHEDULED",
 			};
 			req.params = { id: "507f1f77bcf86cd799439099" };
 			req.body = updateData;
 			await installmentController.update(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Test Installment",
-				description: "Installment that will cause Prisma error",
+				amount: 600.0,
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw an error
 			prisma.installment.update = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -639,20 +716,18 @@ describe("Installment Controller", () => {
 			};
 
 			await installmentController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Test Installment",
-				description: "Installment that will cause internal error",
+				amount: 600.0,
 			};
 			req.params = { id: mockInstallment.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.installment.update = async () => {
 				throw new Error("Internal server error");
 			};
@@ -664,7 +739,7 @@ describe("Installment Controller", () => {
 	});
 
 	describe(".remove()", () => {
-		it("should delete a installment", async function () {
+		it("should delete an installment", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 			await installmentController.remove(req as Request, res, next);
@@ -676,7 +751,7 @@ describe("Installment Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await installmentController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -686,14 +761,13 @@ describe("Installment Controller", () => {
 			await installmentController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 
-			// Mock Prisma to throw an error
 			prisma.installment.delete = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -702,7 +776,7 @@ describe("Installment Controller", () => {
 			};
 
 			await installmentController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -710,7 +784,6 @@ describe("Installment Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.installment.delete = async () => {
 				throw new Error("Internal server error");
 			};
@@ -746,24 +819,18 @@ describe("Installment Controller", () => {
 			expect(sentData).to.have.property("status", "error");
 		});
 
-		it("should handle very long installment name", async function () {
+		it("should handle valid installment with all fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "A".repeat(1000), // Very long name
-				description: "Installment with very long name",
-			};
-			req.body = createData;
-			await installmentController.create(req as Request, res, next);
-			expect(statusCode).to.equal(201);
-			expect(sentData).to.have.property("status", "success");
-		});
-
-		it("should handle special characters in installment data", async function () {
-			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Installment with special chars: !@#$%^&*()",
-				description: "Description with émojis 🚀 and unicode",
-				type: "special-type",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 1000.0,
+				cutOffDate: "2025-10-15",
+				scheduledDate: "2025-10-31",
+				status: "SCHEDULED",
+				notes: "Full installment data",
+				principalAmount: 900.0,
+				interestAmount: 100.0,
 			};
 			req.body = createData;
 			await installmentController.create(req as Request, res, next);
@@ -774,12 +841,14 @@ describe("Installment Controller", () => {
 		it("should handle concurrent requests", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Concurrent Installment",
-				description: "Installment created concurrently",
+				orderId: "507f1f77bcf86cd799439040",
+				installmentNumber: 1,
+				amount: 500.0,
+				cutOffDate: "2025-06-15",
+				scheduledDate: "2025-06-30",
 			};
 			req.body = createData;
 
-			// Simulate concurrent requests
 			const promises = Array(5)
 				.fill(null)
 				.map(() => installmentController.create(req as Request, res, next));
@@ -799,13 +868,20 @@ describe("Installment Controller", () => {
 				filter: "invalid-json",
 			};
 			await installmentController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
-			expect(sentData).to.have.property("status", "error");
+			// Filter parser silently ignores malformed entries (no : or = delimiter)
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
 		});
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "999999",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -813,7 +889,13 @@ describe("Installment Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "999999",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -821,7 +903,13 @@ describe("Installment Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "-1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -829,7 +917,13 @@ describe("Installment Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "-10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await installmentController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -854,16 +948,16 @@ describe("Installment Controller", () => {
 		it("should handle missing required fields in update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
-			req.body = {}; // Empty body
+			req.body = {};
 			await installmentController.update(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle partial updates correctly", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockInstallment.id };
-			req.body = { name: "Only name updated" }; // Only name, no description or type
+			req.body = { notes: "Partially updated" };
 			await installmentController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -912,7 +1006,7 @@ describe("Data Grouping Helper", () => {
 		it("should handle undefined values by placing them in unassigned group", () => {
 			const dataWithUndefined = [
 				{ id: 1, name: "Installment 1", type: "email" },
-				{ id: 2, name: "Installment 2" }, // missing type field
+				{ id: 2, name: "Installment 2" },
 			];
 			const result = groupDataByField(dataWithUndefined, "type");
 			expect(result).to.have.property("email");

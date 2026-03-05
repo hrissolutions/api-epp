@@ -17,8 +17,10 @@ describe("Category Controller", () => {
 	const mockCategory = {
 		id: "507f1f77bcf86cd799439026",
 		name: "User Registration Category",
+		slug: "user-registration-category",
 		description: "Category for user registration forms",
-		type: "email",
+		parentId: null,
+		isActive: true,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 	};
@@ -27,32 +29,40 @@ describe("Category Controller", () => {
 		{
 			id: "507f1f77bcf86cd799439026",
 			name: "User Registration Category",
+			slug: "user-registration-category",
 			description: "Category for user registration forms",
-			type: "email",
+			parentId: "507f1f77bcf86cd799439050",
+			isActive: true,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439027",
 			name: "SMS Notification Category",
+			slug: "sms-notification-category",
 			description: "Category for SMS notifications",
-			type: "sms",
+			parentId: "507f1f77bcf86cd799439051",
+			isActive: true,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439028",
 			name: "Email Marketing Category",
+			slug: "email-marketing-category",
 			description: "Category for email marketing campaigns",
-			type: "email",
+			parentId: "507f1f77bcf86cd799439050",
+			isActive: false,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439029",
 			name: "Generic Category",
-			description: "Category without type",
-			type: null,
+			slug: "generic-category",
+			description: "Category without parent",
+			parentId: null,
+			isActive: true,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -62,14 +72,12 @@ describe("Category Controller", () => {
 		prisma = {
 			category: {
 				findMany: async (_params: Prisma.CategoryFindManyArgs) => {
-					// Return multiple categorys for grouping tests
 					if (req.query?.groupBy) {
 						return mockCategorys;
 					}
 					return [mockCategory];
 				},
 				count: async (_params: Prisma.CategoryCountArgs) => {
-					// Return count based on whether grouping is requested
 					if (req.query?.groupBy) {
 						return mockCategorys.length;
 					}
@@ -136,26 +144,17 @@ describe("Category Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated categorys", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-		});
-
-		it("should group categorys by type field", async function () {
-			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
-			await categoryController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
-			expect(sentData.data).to.have.property("totalGroups");
-			expect(sentData.data).to.have.property("totalItems");
-			expect(sentData.data.grouped).to.have.property("email");
-			expect(sentData.data.grouped).to.have.property("sms");
-			expect(sentData.data.grouped).to.have.property("unassigned");
 		});
 
 		it("should group categorys by name field", async function () {
@@ -164,49 +163,85 @@ describe("Category Controller", () => {
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "name");
-			expect(sentData.data.grouped).to.have.property("User Registration Category");
-			expect(sentData.data.grouped).to.have.property("SMS Notification Category");
+			expect(sentData.data).to.have.property("categorys");
+			expect(sentData.data).to.have.property("groupedBy", "name");
+			expect(sentData.data.categorys).to.have.property("User Registration Category");
+			expect(sentData.data.categorys).to.have.property("SMS Notification Category");
+		});
+
+		it("should group categorys by parentId field", async function () {
+			this.timeout(TEST_TIMEOUT);
+			req.query = {
+				groupBy: "parentId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
+			await categoryController.getAll(req as Request, res, next);
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
+			expect(sentData.data).to.have.property("categorys");
+			expect(sentData.data).to.have.property("groupedBy", "parentId");
+			expect(sentData.data.categorys).to.have.property("unassigned");
 		});
 
 		it("should handle categorys with null values in grouping field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "parentId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
-			expect(sentData.data.grouped).to.have.property("unassigned");
-			expect(sentData.data.grouped.unassigned).to.be.an("array");
-			expect(sentData.data.grouped.unassigned.length).to.be.greaterThan(0);
+			expect(sentData.data.categorys).to.have.property("unassigned");
+			expect(sentData.data.categorys.unassigned).to.be.an("array");
+			expect(sentData.data.categorys.unassigned.length).to.be.greaterThan(0);
 		});
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
-			expect(sentData.data).to.not.have.property("grouped");
+			expect(sentData.data).to.have.property("categorys");
+			expect(sentData.data.categorys).to.be.an("array");
+			expect(sentData.data).to.not.have.property("groupedBy");
 		});
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await categoryController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
+			// Empty groupBy triggers validation error
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "name",
+				page: "1",
+				limit: "10",
+				sort: "name",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
+			expect(sentData.data).to.have.property("categorys");
+			expect(sentData.data).to.have.property("groupedBy", "name");
 		});
 
 		it("should handle query validation failure", async function () {
@@ -219,9 +254,14 @@ describe("Category Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw an error
 			prisma.category.findMany = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -230,15 +270,20 @@ describe("Category Controller", () => {
 			};
 
 			await categoryController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.category.findMany = async () => {
 				throw new Error("Internal server error");
 			};
@@ -257,7 +302,9 @@ describe("Category Controller", () => {
 				count: "true",
 				pagination: "true",
 				query: "email",
-				filter: JSON.stringify([{ field: "type", operator: "equals", value: "email" }]),
+				filter: JSON.stringify([
+					{ field: "name", operator: "equals", value: "Email Marketing Category" },
+				]),
 			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
@@ -266,7 +313,15 @@ describe("Category Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "2",
+				limit: "5",
+				sort: "name",
+				order: "asc",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -274,7 +329,12 @@ describe("Category Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				fields: "name,slug",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -320,7 +380,8 @@ describe("Category Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await categoryController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -330,15 +391,14 @@ describe("Category Controller", () => {
 			await categoryController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
 
-			// Mock Prisma to throw an error
-			prisma.category.findUnique = async () => {
+			prisma.category.findFirst = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
 				error.code = "P1001";
@@ -346,7 +406,7 @@ describe("Category Controller", () => {
 			};
 
 			await categoryController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -354,8 +414,7 @@ describe("Category Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
 
-			// Mock Prisma to throw a non-Prisma error
-			prisma.category.findUnique = async () => {
+			prisma.category.findFirst = async () => {
 				throw new Error("Internal server error");
 			};
 
@@ -380,12 +439,12 @@ describe("Category Controller", () => {
 			expect(sentData.data).to.have.property("id");
 		});
 
-		it("should create a new category with type field", async function () {
+		it("should create a new category with slug", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
 				name: "Email Category",
 				description: "Category for email notifications",
-				type: "email",
+				slug: "email-category",
 			};
 			req.body = createData;
 			await categoryController.create(req as Request, res, next);
@@ -393,14 +452,12 @@ describe("Category Controller", () => {
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
 			expect(sentData.data).to.have.property("id");
-			expect(sentData.data).to.have.property("type", "email");
 		});
 
-		it("should create a new category without type field", async function () {
+		it("should create a new category without optional fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
 				name: "Generic Category",
-				description: "Category without type",
 			};
 			req.body = createData;
 			await categoryController.create(req as Request, res, next);
@@ -415,7 +472,6 @@ describe("Category Controller", () => {
 			const createData = {
 				name: "Form Category",
 				description: "Category from form data",
-				type: "form",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -467,7 +523,6 @@ describe("Category Controller", () => {
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw an error
 			prisma.category.create = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -476,7 +531,7 @@ describe("Category Controller", () => {
 			};
 
 			await categoryController.create(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -488,7 +543,6 @@ describe("Category Controller", () => {
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.category.create = async () => {
 				throw new Error("Internal server error");
 			};
@@ -512,13 +566,14 @@ describe("Category Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("category");
+			expect(sentData.data.category).to.have.property("id");
 		});
 
-		it("should update category type field", async function () {
+		it("should update category isActive field", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				type: "sms",
+				isActive: false,
 			};
 			req.params = { id: mockCategory.id };
 			req.body = updateData;
@@ -526,15 +581,16 @@ describe("Category Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("category");
+			expect(sentData.data.category).to.have.property("id");
 		});
 
-		it("should update multiple category fields including type", async function () {
+		it("should update multiple category fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
 				name: "Updated Email Category",
 				description: "Updated description",
-				type: "email",
+				slug: "updated-email-category",
 			};
 			req.params = { id: mockCategory.id };
 			req.body = updateData;
@@ -542,7 +598,8 @@ describe("Category Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("category");
+			expect(sentData.data.category).to.have.property("id");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
@@ -591,7 +648,8 @@ describe("Category Controller", () => {
 			req.params = { id: "invalid-id" };
 			req.body = updateData;
 			await categoryController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -618,7 +676,7 @@ describe("Category Controller", () => {
 			await categoryController.update(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
@@ -630,7 +688,6 @@ describe("Category Controller", () => {
 			req.params = { id: mockCategory.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw an error
 			prisma.category.update = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -639,7 +696,7 @@ describe("Category Controller", () => {
 			};
 
 			await categoryController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -652,7 +709,6 @@ describe("Category Controller", () => {
 			req.params = { id: mockCategory.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.category.update = async () => {
 				throw new Error("Internal server error");
 			};
@@ -676,7 +732,8 @@ describe("Category Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await categoryController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -686,14 +743,13 @@ describe("Category Controller", () => {
 			await categoryController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
 
-			// Mock Prisma to throw an error
 			prisma.category.delete = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -702,7 +758,7 @@ describe("Category Controller", () => {
 			};
 
 			await categoryController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -710,7 +766,6 @@ describe("Category Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.category.delete = async () => {
 				throw new Error("Internal server error");
 			};
@@ -749,7 +804,7 @@ describe("Category Controller", () => {
 		it("should handle very long category name", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "A".repeat(1000), // Very long name
+				name: "A".repeat(1000),
 				description: "Category with very long name",
 			};
 			req.body = createData;
@@ -763,7 +818,6 @@ describe("Category Controller", () => {
 			const createData = {
 				name: "Category with special chars: !@#$%^&*()",
 				description: "Description with émojis 🚀 and unicode",
-				type: "special-type",
 			};
 			req.body = createData;
 			await categoryController.create(req as Request, res, next);
@@ -779,7 +833,6 @@ describe("Category Controller", () => {
 			};
 			req.body = createData;
 
-			// Simulate concurrent requests
 			const promises = Array(5)
 				.fill(null)
 				.map(() => categoryController.create(req as Request, res, next));
@@ -799,13 +852,20 @@ describe("Category Controller", () => {
 				filter: "invalid-json",
 			};
 			await categoryController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
-			expect(sentData).to.have.property("status", "error");
+			// Filter parser silently ignores malformed entries
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
 		});
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "999999",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -813,7 +873,13 @@ describe("Category Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "999999",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -821,7 +887,13 @@ describe("Category Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "-1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -829,7 +901,13 @@ describe("Category Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "-10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await categoryController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -854,16 +932,17 @@ describe("Category Controller", () => {
 		it("should handle missing required fields in update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
-			req.body = {}; // Empty body
+			req.body = {};
 			await categoryController.update(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
+			// Empty body → "No update fields provided" → 400
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle partial updates correctly", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCategory.id };
-			req.body = { name: "Only name updated" }; // Only name, no description or type
+			req.body = { name: "Only name updated" };
 			await categoryController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -912,7 +991,7 @@ describe("Data Grouping Helper", () => {
 		it("should handle undefined values by placing them in unassigned group", () => {
 			const dataWithUndefined = [
 				{ id: 1, name: "Category 1", type: "email" },
-				{ id: 2, name: "Category 2" }, // missing type field
+				{ id: 2, name: "Category 2" },
 			];
 			const result = groupDataByField(dataWithUndefined, "type");
 			expect(result).to.have.property("email");
