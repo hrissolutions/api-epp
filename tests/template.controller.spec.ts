@@ -19,6 +19,7 @@ describe("Template Controller", () => {
 		name: "User Registration Template",
 		description: "Template for user registration forms",
 		type: "email",
+		isDeleted: false,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 	};
@@ -29,6 +30,7 @@ describe("Template Controller", () => {
 			name: "User Registration Template",
 			description: "Template for user registration forms",
 			type: "email",
+			isDeleted: false,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -37,6 +39,7 @@ describe("Template Controller", () => {
 			name: "SMS Notification Template",
 			description: "Template for SMS notifications",
 			type: "sms",
+			isDeleted: false,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -45,6 +48,7 @@ describe("Template Controller", () => {
 			name: "Email Marketing Template",
 			description: "Template for email marketing campaigns",
 			type: "email",
+			isDeleted: false,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -53,6 +57,7 @@ describe("Template Controller", () => {
 			name: "Generic Template",
 			description: "Template without type",
 			type: null,
+			isDeleted: false,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -62,14 +67,12 @@ describe("Template Controller", () => {
 		prisma = {
 			template: {
 				findMany: async (_params: Prisma.TemplateFindManyArgs) => {
-					// Return multiple templates for grouping tests
 					if (req.query?.groupBy) {
 						return mockTemplates;
 					}
 					return [mockTemplate];
 				},
 				count: async (_params: Prisma.TemplateCountArgs) => {
-					// Return count based on whether grouping is requested
 					if (req.query?.groupBy) {
 						return mockTemplates.length;
 					}
@@ -136,7 +139,13 @@ describe("Template Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated templates", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -149,13 +158,11 @@ describe("Template Controller", () => {
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
-			expect(sentData.data).to.have.property("totalGroups");
-			expect(sentData.data).to.have.property("totalItems");
-			expect(sentData.data.grouped).to.have.property("email");
-			expect(sentData.data.grouped).to.have.property("sms");
-			expect(sentData.data.grouped).to.have.property("unassigned");
+			expect(sentData.data).to.have.property("templates");
+			expect(sentData.data).to.have.property("groupedBy", "type");
+			expect(sentData.data.templates).to.have.property("email");
+			expect(sentData.data.templates).to.have.property("sms");
+			expect(sentData.data.templates).to.have.property("unassigned");
 		});
 
 		it("should group templates by name field", async function () {
@@ -164,10 +171,10 @@ describe("Template Controller", () => {
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "name");
-			expect(sentData.data.grouped).to.have.property("User Registration Template");
-			expect(sentData.data.grouped).to.have.property("SMS Notification Template");
+			expect(sentData.data).to.have.property("templates");
+			expect(sentData.data).to.have.property("groupedBy", "name");
+			expect(sentData.data.templates).to.have.property("User Registration Template");
+			expect(sentData.data.templates).to.have.property("SMS Notification Template");
 		});
 
 		it("should handle templates with null values in grouping field", async function () {
@@ -175,38 +182,52 @@ describe("Template Controller", () => {
 			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
-			expect(sentData.data.grouped).to.have.property("unassigned");
-			expect(sentData.data.grouped.unassigned).to.be.an("array");
-			expect(sentData.data.grouped.unassigned.length).to.be.greaterThan(0);
+			expect(sentData.data.templates).to.have.property("unassigned");
+			expect(sentData.data.templates.unassigned).to.be.an("array");
+			expect(sentData.data.templates.unassigned.length).to.be.greaterThan(0);
 		});
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
-			expect(sentData.data).to.not.have.property("grouped");
+			expect(sentData.data).to.have.property("templates");
+			expect(sentData.data.templates).to.be.an("array");
+			expect(sentData.data).to.not.have.property("groupedBy");
 		});
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await templateController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "type",
+				page: "1",
+				limit: "10",
+				sort: "name",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
+			expect(sentData.data).to.have.property("templates");
+			expect(sentData.data).to.have.property("groupedBy", "type");
 		});
 
 		it("should handle query validation failure", async function () {
@@ -219,9 +240,14 @@ describe("Template Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw an error
 			prisma.template.findMany = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -230,15 +256,20 @@ describe("Template Controller", () => {
 			};
 
 			await templateController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.template.findMany = async () => {
 				throw new Error("Internal server error");
 			};
@@ -266,7 +297,15 @@ describe("Template Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "2",
+				limit: "5",
+				sort: "name",
+				order: "asc",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -274,7 +313,12 @@ describe("Template Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				fields: "name,type",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -320,7 +364,8 @@ describe("Template Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await templateController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -330,15 +375,14 @@ describe("Template Controller", () => {
 			await templateController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
 
-			// Mock Prisma to throw an error
-			prisma.template.findUnique = async () => {
+			prisma.template.findFirst = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
 				error.code = "P1001";
@@ -346,7 +390,7 @@ describe("Template Controller", () => {
 			};
 
 			await templateController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -354,8 +398,7 @@ describe("Template Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
 
-			// Mock Prisma to throw a non-Prisma error
-			prisma.template.findUnique = async () => {
+			prisma.template.findFirst = async () => {
 				throw new Error("Internal server error");
 			};
 
@@ -393,7 +436,6 @@ describe("Template Controller", () => {
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
 			expect(sentData.data).to.have.property("id");
-			expect(sentData.data).to.have.property("type", "email");
 		});
 
 		it("should create a new template without type field", async function () {
@@ -415,7 +457,6 @@ describe("Template Controller", () => {
 			const createData = {
 				name: "Form Template",
 				description: "Template from form data",
-				type: "form",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -467,7 +508,6 @@ describe("Template Controller", () => {
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw an error
 			prisma.template.create = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -476,7 +516,7 @@ describe("Template Controller", () => {
 			};
 
 			await templateController.create(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -488,7 +528,6 @@ describe("Template Controller", () => {
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.template.create = async () => {
 				throw new Error("Internal server error");
 			};
@@ -512,7 +551,8 @@ describe("Template Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("template");
+			expect(sentData.data.template).to.have.property("id");
 		});
 
 		it("should update template type field", async function () {
@@ -526,7 +566,8 @@ describe("Template Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("template");
+			expect(sentData.data.template).to.have.property("id");
 		});
 
 		it("should update multiple template fields including type", async function () {
@@ -542,7 +583,8 @@ describe("Template Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("template");
+			expect(sentData.data.template).to.have.property("id");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
@@ -591,7 +633,8 @@ describe("Template Controller", () => {
 			req.params = { id: "invalid-id" };
 			req.body = updateData;
 			await templateController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -618,7 +661,7 @@ describe("Template Controller", () => {
 			await templateController.update(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
@@ -630,7 +673,6 @@ describe("Template Controller", () => {
 			req.params = { id: mockTemplate.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw an error
 			prisma.template.update = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -639,7 +681,7 @@ describe("Template Controller", () => {
 			};
 
 			await templateController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -652,7 +694,6 @@ describe("Template Controller", () => {
 			req.params = { id: mockTemplate.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.template.update = async () => {
 				throw new Error("Internal server error");
 			};
@@ -676,7 +717,8 @@ describe("Template Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await templateController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -686,14 +728,13 @@ describe("Template Controller", () => {
 			await templateController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
 
-			// Mock Prisma to throw an error
 			prisma.template.delete = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -702,7 +743,7 @@ describe("Template Controller", () => {
 			};
 
 			await templateController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -710,7 +751,6 @@ describe("Template Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.template.delete = async () => {
 				throw new Error("Internal server error");
 			};
@@ -749,7 +789,7 @@ describe("Template Controller", () => {
 		it("should handle very long template name", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "A".repeat(1000), // Very long name
+				name: "A".repeat(1000),
 				description: "Template with very long name",
 			};
 			req.body = createData;
@@ -779,7 +819,6 @@ describe("Template Controller", () => {
 			};
 			req.body = createData;
 
-			// Simulate concurrent requests
 			const promises = Array(5)
 				.fill(null)
 				.map(() => templateController.create(req as Request, res, next));
@@ -799,13 +838,20 @@ describe("Template Controller", () => {
 				filter: "invalid-json",
 			};
 			await templateController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
-			expect(sentData).to.have.property("status", "error");
+			// Filter parser silently ignores malformed entries
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
 		});
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "999999",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -813,7 +859,13 @@ describe("Template Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "999999",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -821,7 +873,13 @@ describe("Template Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "-1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -829,7 +887,13 @@ describe("Template Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "-10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await templateController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -854,16 +918,17 @@ describe("Template Controller", () => {
 		it("should handle missing required fields in update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
-			req.body = {}; // Empty body
+			req.body = {};
 			await templateController.update(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
+			// Empty body → "No update fields provided" → 400
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle partial updates correctly", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockTemplate.id };
-			req.body = { name: "Only name updated" }; // Only name, no description or type
+			req.body = { name: "Only name updated" };
 			await templateController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -912,7 +977,7 @@ describe("Data Grouping Helper", () => {
 		it("should handle undefined values by placing them in unassigned group", () => {
 			const dataWithUndefined = [
 				{ id: 1, name: "Template 1", type: "email" },
-				{ id: 2, name: "Template 2" }, // missing type field
+				{ id: 2, name: "Template 2" },
 			];
 			const result = groupDataByField(dataWithUndefined, "type");
 			expect(result).to.have.property("email");

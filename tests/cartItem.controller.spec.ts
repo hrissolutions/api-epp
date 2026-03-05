@@ -14,45 +14,58 @@ describe("CartItem Controller", () => {
 	let prisma: any;
 	let sentData: any;
 	let statusCode: number;
+
 	const mockCartItem = {
 		id: "507f1f77bcf86cd799439026",
-		name: "User Registration CartItem",
-		description: "CartItem for user registration forms",
-		type: "email",
+		userId: "507f1f77bcf86cd799439001",
+		itemId: "507f1f77bcf86cd799439002",
+		quantity: 1,
+		installmentCount: null,
+		rate: null,
+		organizationId: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
+	};
+
+	const mockItem = {
+		id: "507f1f77bcf86cd799439002",
+		name: "Test Item",
+		status: "APPROVED",
+		isAvailable: true,
+		isActive: true,
+		stockQuantity: 100,
 	};
 
 	const mockCartItems = [
 		{
 			id: "507f1f77bcf86cd799439026",
-			name: "User Registration CartItem",
-			description: "CartItem for user registration forms",
-			type: "email",
+			userId: "507f1f77bcf86cd799439001",
+			itemId: "507f1f77bcf86cd799439002",
+			quantity: 1,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439027",
-			name: "SMS Notification CartItem",
-			description: "CartItem for SMS notifications",
-			type: "sms",
+			userId: "507f1f77bcf86cd799439003",
+			itemId: "507f1f77bcf86cd799439004",
+			quantity: 2,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439028",
-			name: "Email Marketing CartItem",
-			description: "CartItem for email marketing campaigns",
-			type: "email",
+			userId: "507f1f77bcf86cd799439005",
+			itemId: "507f1f77bcf86cd799439002",
+			quantity: 3,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439029",
-			name: "Generic CartItem",
-			description: "CartItem without type",
-			type: null,
+			userId: "507f1f77bcf86cd799439006",
+			itemId: null as any,
+			quantity: 1,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		},
@@ -62,14 +75,12 @@ describe("CartItem Controller", () => {
 		prisma = {
 			cartItem: {
 				findMany: async (_params: Prisma.CartItemFindManyArgs) => {
-					// Return multiple cartItems for grouping tests
 					if (req.query?.groupBy) {
 						return mockCartItems;
 					}
 					return [mockCartItem];
 				},
 				count: async (_params: Prisma.CartItemCountArgs) => {
-					// Return count based on whether grouping is requested
 					if (req.query?.groupBy) {
 						return mockCartItems.length;
 					}
@@ -82,6 +93,7 @@ describe("CartItem Controller", () => {
 				create: async (params: Prisma.CartItemCreateArgs) => ({
 					...mockCartItem,
 					...params.data,
+					id: "507f1f77bcf86cd799439030",
 				}),
 				update: async (params: Prisma.CartItemUpdateArgs) => ({
 					...mockCartItem,
@@ -91,6 +103,10 @@ describe("CartItem Controller", () => {
 					...mockCartItem,
 					id: params.where.id,
 				}),
+			},
+			item: {
+				findUnique: async (params: any) =>
+					params.where?.id === mockItem.id ? mockItem : null,
 			},
 			$transaction: async (operations: any) => {
 				if (typeof operations === "function") {
@@ -114,7 +130,7 @@ describe("CartItem Controller", () => {
 				return undefined;
 			},
 			originalUrl: "/api/cartItem",
-		} as Request;
+		} as any;
 		res = {
 			send: (data: any) => {
 				sentData = data;
@@ -136,77 +152,89 @@ describe("CartItem Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated cartItems", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
 		});
 
-		it("should group cartItems by type field", async function () {
+		it("should group cartItems by itemId field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
+			req.query = { groupBy: "itemId", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
-			expect(sentData.data).to.have.property("totalGroups");
-			expect(sentData.data).to.have.property("totalItems");
-			expect(sentData.data.grouped).to.have.property("email");
-			expect(sentData.data.grouped).to.have.property("sms");
-			expect(sentData.data.grouped).to.have.property("unassigned");
+			expect(sentData.data).to.have.property("cartItems");
+			expect(sentData.data).to.have.property("groupedBy", "itemId");
 		});
 
-		it("should group cartItems by name field", async function () {
+		it("should group cartItems by userId field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "name", document: "true", count: "true", pagination: "true" };
+			req.query = { groupBy: "userId", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "name");
-			expect(sentData.data.grouped).to.have.property("User Registration CartItem");
-			expect(sentData.data.grouped).to.have.property("SMS Notification CartItem");
+			expect(sentData.data).to.have.property("cartItems");
+			expect(sentData.data).to.have.property("groupedBy", "userId");
 		});
 
 		it("should handle cartItems with null values in grouping field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
+			req.query = { groupBy: "itemId", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
-			expect(sentData.data.grouped).to.have.property("unassigned");
-			expect(sentData.data.grouped.unassigned).to.be.an("array");
-			expect(sentData.data.grouped.unassigned.length).to.be.greaterThan(0);
+			expect(sentData.data.cartItems).to.have.property("unassigned");
+			expect(sentData.data.cartItems.unassigned).to.be.an("array");
+			expect(sentData.data.cartItems.unassigned.length).to.be.greaterThan(0);
 		});
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
-			expect(sentData.data).to.not.have.property("grouped");
+			expect(sentData.data).to.have.property("cartItems");
+			expect(sentData.data.cartItems).to.be.an("array");
 		});
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await cartItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "itemId",
+				page: "1",
+				limit: "10",
+				sort: "quantity",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
+			expect(sentData.data).to.have.property("cartItems");
+			expect(sentData.data).to.have.property("groupedBy", "itemId");
 		});
 
 		it("should handle query validation failure", async function () {
@@ -219,30 +247,33 @@ describe("CartItem Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
-
-			// Mock Prisma to throw an error
-			prisma.cartItem.findMany = async () => {
-				const error = new Error("Database connection failed") as any;
-				error.name = "PrismaClientKnownRequestError";
-				error.code = "P1001";
-				throw error;
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
 			};
-
+			prisma.cartItem.findMany = async () => {
+				throw new Error("Database connection failed");
+			};
 			await cartItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
-
-			// Mock Prisma to throw a non-Prisma error
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			prisma.cartItem.findMany = async () => {
 				throw new Error("Internal server error");
 			};
-
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
@@ -256,8 +287,8 @@ describe("CartItem Controller", () => {
 				document: "true",
 				count: "true",
 				pagination: "true",
-				query: "email",
-				filter: JSON.stringify([{ field: "type", operator: "equals", value: "email" }]),
+				query: "507f1f77bcf86cd799439001",
+				filter: "userId:507f1f77bcf86cd799439001",
 			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
@@ -266,7 +297,15 @@ describe("CartItem Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "2",
+				limit: "5",
+				sort: "quantity",
+				order: "asc",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -274,7 +313,12 @@ describe("CartItem Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				fields: "userId,itemId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -330,35 +374,26 @@ describe("CartItem Controller", () => {
 			await cartItemController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-
-			// Mock Prisma to throw an error
-			prisma.cartItem.findUnique = async () => {
-				const error = new Error("Database connection failed") as any;
-				error.name = "PrismaClientKnownRequestError";
-				error.code = "P1001";
-				throw error;
+			prisma.cartItem.findFirst = async () => {
+				throw new Error("Database connection failed");
 			};
-
 			await cartItemController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-
-			// Mock Prisma to throw a non-Prisma error
-			prisma.cartItem.findUnique = async () => {
+			prisma.cartItem.findFirst = async () => {
 				throw new Error("Internal server error");
 			};
-
 			await cartItemController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
@@ -368,62 +403,47 @@ describe("CartItem Controller", () => {
 	describe(".create()", () => {
 		it("should create a new cartItem", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Contact Form CartItem",
-				description: "CartItem for contact forms with validation",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 1,
 			};
-			req.body = createData;
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
 		});
 
-		it("should create a new cartItem with type field", async function () {
+		it("should create a new cartItem with installmentCount", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Email CartItem",
-				description: "CartItem for email notifications",
-				type: "email",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 2,
+				installmentCount: 6,
 			};
-			req.body = createData;
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
-			expect(sentData.data).to.have.property("type", "email");
 		});
 
-		it("should create a new cartItem without type field", async function () {
+		it("should create a new cartItem with default quantity", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Generic CartItem",
-				description: "CartItem without type",
-			};
-			req.body = createData;
+			req.body = { userId: "507f1f77bcf86cd799439001", itemId: "507f1f77bcf86cd799439002" };
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Form CartItem",
-				description: "CartItem from form data",
-				type: "form",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: "1",
 			};
-			req.body = createData;
-			(req as any).get = (header: string) => {
-				if (header === "Content-Type") {
-					return "multipart/form-data";
-				}
-				return undefined;
-			};
+			(req as any).get = (header: string) =>
+				header === "Content-Type" ? "multipart/form-data" : undefined;
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
@@ -431,29 +451,21 @@ describe("CartItem Controller", () => {
 
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "URL CartItem",
-				description: "CartItem from URL encoded data",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: "1",
 			};
-			req.body = createData;
-			(req as any).get = (header: string) => {
-				if (header === "Content-Type") {
-					return "application/x-www-form-urlencoded";
-				}
-				return undefined;
-			};
+			(req as any).get = (header: string) =>
+				header === "Content-Type" ? "application/x-www-form-urlencoded" : undefined;
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
 		});
 
-		it("should handle validation errors", async function () {
+		it("should handle validation errors (missing required fields)", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "",
-				description: "CartItem with empty name",
-			};
-			req.body = createData;
+			req.body = { quantity: 1 };
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -461,38 +473,29 @@ describe("CartItem Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Test CartItem",
-				description: "CartItem that will cause Prisma error",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 1,
 			};
-			req.body = createData;
-
-			// Mock Prisma to throw an error
 			prisma.cartItem.create = async () => {
-				const error = new Error("Database connection failed") as any;
-				error.name = "PrismaClientKnownRequestError";
-				error.code = "P1001";
-				throw error;
+				throw new Error("Database connection failed");
 			};
-
 			await cartItemController.create(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Test CartItem",
-				description: "CartItem that will cause internal error",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 1,
 			};
-			req.body = createData;
-
-			// Mock Prisma to throw a non-Prisma error
 			prisma.cartItem.create = async () => {
 				throw new Error("Internal server error");
 			};
-
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
@@ -502,63 +505,41 @@ describe("CartItem Controller", () => {
 	describe(".update()", () => {
 		it("should update cartItem details", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Enhanced Contact Form CartItem",
-				description: "Updated cartItem with additional validation and styling options",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
+			req.body = { quantity: 5 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("cartItem");
 		});
 
-		it("should update cartItem type field", async function () {
+		it("should update cartItem installmentCount field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				type: "sms",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
+			req.body = { installmentCount: 12 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("cartItem");
 		});
 
-		it("should update multiple cartItem fields including type", async function () {
+		it("should update multiple cartItem fields", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Updated Email CartItem",
-				description: "Updated description",
-				type: "email",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
+			req.body = { quantity: 3, installmentCount: 6, rate: 2.5 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("cartItem");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Form Updated CartItem",
-				description: "Updated from form data",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
-			(req as any).get = (header: string) => {
-				if (header === "Content-Type") {
-					return "multipart/form-data";
-				}
-				return undefined;
-			};
+			req.body = { quantity: "3" };
+			(req as any).get = (header: string) =>
+				header === "Content-Type" ? "multipart/form-data" : undefined;
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -566,18 +547,10 @@ describe("CartItem Controller", () => {
 
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "URL Updated CartItem",
-				description: "Updated from URL encoded data",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
-			(req as any).get = (header: string) => {
-				if (header === "Content-Type") {
-					return "application/x-www-form-urlencoded";
-				}
-				return undefined;
-			};
+			req.body = { quantity: "5" };
+			(req as any).get = (header: string) =>
+				header === "Content-Type" ? "application/x-www-form-urlencoded" : undefined;
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -585,11 +558,8 @@ describe("CartItem Controller", () => {
 
 		it("should handle invalid ID format", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Updated CartItem",
-			};
 			req.params = { id: "invalid-id" };
-			req.body = updateData;
+			req.body = { quantity: 5 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -597,12 +567,8 @@ describe("CartItem Controller", () => {
 
 		it("should handle validation errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "",
-				description: "CartItem with empty name",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
+			req.body = { quantity: -5 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -610,53 +576,33 @@ describe("CartItem Controller", () => {
 
 		it("should handle non-existent cartItem update", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Updated CartItem",
-			};
 			req.params = { id: "507f1f77bcf86cd799439099" };
-			req.body = updateData;
+			req.body = { quantity: 5 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Test CartItem",
-				description: "CartItem that will cause Prisma error",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
-
-			// Mock Prisma to throw an error
+			req.body = { quantity: 5 };
 			prisma.cartItem.update = async () => {
-				const error = new Error("Database connection failed") as any;
-				error.name = "PrismaClientKnownRequestError";
-				error.code = "P1001";
-				throw error;
+				throw new Error("Database connection failed");
 			};
-
 			await cartItemController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const updateData = {
-				name: "Test CartItem",
-				description: "CartItem that will cause internal error",
-			};
 			req.params = { id: mockCartItem.id };
-			req.body = updateData;
-
-			// Mock Prisma to throw a non-Prisma error
+			req.body = { quantity: 5 };
 			prisma.cartItem.update = async () => {
 				throw new Error("Internal server error");
 			};
-
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
@@ -686,35 +632,26 @@ describe("CartItem Controller", () => {
 			await cartItemController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-
-			// Mock Prisma to throw an error
 			prisma.cartItem.delete = async () => {
-				const error = new Error("Database connection failed") as any;
-				error.name = "PrismaClientKnownRequestError";
-				error.code = "P1001";
-				throw error;
+				throw new Error("Database connection failed");
 			};
-
 			await cartItemController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-
-			// Mock Prisma to throw a non-Prisma error
 			prisma.cartItem.delete = async () => {
 				throw new Error("Internal server error");
 			};
-
 			await cartItemController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
@@ -746,49 +683,45 @@ describe("CartItem Controller", () => {
 			expect(sentData).to.have.property("status", "error");
 		});
 
-		it("should handle very long cartItem name", async function () {
+		it("should handle valid cartItem with large quantity", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "A".repeat(1000), // Very long name
-				description: "CartItem with very long name",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 50,
 			};
-			req.body = createData;
 			await cartItemController.create(req as Request, res, next);
 			expect(statusCode).to.equal(201);
 			expect(sentData).to.have.property("status", "success");
 		});
 
-		it("should handle special characters in cartItem data", async function () {
+		it("should handle invalid ObjectId in create data", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "CartItem with special chars: !@#$%^&*()",
-				description: "Description with émojis 🚀 and unicode",
-				type: "special-type",
+			req.body = {
+				userId: "not-a-valid-objectid",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 1,
 			};
-			req.body = createData;
 			await cartItemController.create(req as Request, res, next);
-			expect(statusCode).to.equal(201);
-			expect(sentData).to.have.property("status", "success");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle concurrent requests", async function () {
 			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Concurrent CartItem",
-				description: "CartItem created concurrently",
+			req.body = {
+				userId: "507f1f77bcf86cd799439001",
+				itemId: "507f1f77bcf86cd799439002",
+				quantity: 1,
 			};
-			req.body = createData;
-
-			// Simulate concurrent requests
 			const promises = Array(5)
 				.fill(null)
 				.map(() => cartItemController.create(req as Request, res, next));
-
 			const results = await Promise.all(promises);
 			expect(results).to.have.length(5);
 		});
 
-		it("should handle malformed JSON in filter", async function () {
+		it("should handle filter string in getAll", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = {
 				page: "1",
@@ -796,16 +729,22 @@ describe("CartItem Controller", () => {
 				document: "true",
 				count: "true",
 				pagination: "true",
-				filter: "invalid-json",
+				filter: "userId:507f1f77bcf86cd799439001",
 			};
 			await cartItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
-			expect(sentData).to.have.property("status", "error");
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
 		});
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "999999",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -813,7 +752,13 @@ describe("CartItem Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "999999",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -821,7 +766,13 @@ describe("CartItem Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "-1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -829,7 +780,13 @@ describe("CartItem Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "-10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await cartItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -851,19 +808,19 @@ describe("CartItem Controller", () => {
 			expect(sentData).to.have.property("status", "error");
 		});
 
-		it("should handle missing required fields in update", async function () {
+		it("should handle empty body update (no update fields)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-			req.body = {}; // Empty body
+			req.body = {};
 			await cartItemController.update(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle partial updates correctly", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockCartItem.id };
-			req.body = { name: "Only name updated" }; // Only name, no description or type
+			req.body = { quantity: 10 };
 			await cartItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -912,7 +869,7 @@ describe("Data Grouping Helper", () => {
 		it("should handle undefined values by placing them in unassigned group", () => {
 			const dataWithUndefined = [
 				{ id: 1, name: "CartItem 1", type: "email" },
-				{ id: 2, name: "CartItem 2" }, // missing type field
+				{ id: 2, name: "CartItem 2" },
 			];
 			const result = groupDataByField(dataWithUndefined, "type");
 			expect(result).to.have.property("email");

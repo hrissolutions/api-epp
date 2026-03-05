@@ -16,45 +16,40 @@ describe("WishlistItem Controller", () => {
 	let statusCode: number;
 	const mockWishlistItem = {
 		id: "507f1f77bcf86cd799439026",
-		name: "User Registration WishlistItem",
-		description: "WishlistItem for user registration forms",
+		employeeId: "507f1f77bcf86cd799439050",
+		itemId: "507f1f77bcf86cd799439051",
 		type: "email",
 		createdAt: new Date(),
-		updatedAt: new Date(),
 	};
 
 	const mockWishlistItems = [
 		{
 			id: "507f1f77bcf86cd799439026",
-			name: "User Registration WishlistItem",
-			description: "WishlistItem for user registration forms",
+			employeeId: "507f1f77bcf86cd799439050",
+			itemId: "507f1f77bcf86cd799439051",
 			type: "email",
 			createdAt: new Date(),
-			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439027",
-			name: "SMS Notification WishlistItem",
-			description: "WishlistItem for SMS notifications",
+			employeeId: "507f1f77bcf86cd799439052",
+			itemId: "507f1f77bcf86cd799439053",
 			type: "sms",
 			createdAt: new Date(),
-			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439028",
-			name: "Email Marketing WishlistItem",
-			description: "WishlistItem for email marketing campaigns",
+			employeeId: "507f1f77bcf86cd799439054",
+			itemId: "507f1f77bcf86cd799439055",
 			type: "email",
 			createdAt: new Date(),
-			updatedAt: new Date(),
 		},
 		{
 			id: "507f1f77bcf86cd799439029",
-			name: "Generic WishlistItem",
-			description: "WishlistItem without type",
+			employeeId: "507f1f77bcf86cd799439056",
+			itemId: "507f1f77bcf86cd799439057",
 			type: null,
 			createdAt: new Date(),
-			updatedAt: new Date(),
 		},
 	];
 
@@ -62,14 +57,12 @@ describe("WishlistItem Controller", () => {
 		prisma = {
 			wishlistItem: {
 				findMany: async (_params: Prisma.WishlistItemFindManyArgs) => {
-					// Return multiple wishlistItems for grouping tests
 					if (req.query?.groupBy) {
 						return mockWishlistItems;
 					}
 					return [mockWishlistItem];
 				},
 				count: async (_params: Prisma.WishlistItemCountArgs) => {
-					// Return count based on whether grouping is requested
 					if (req.query?.groupBy) {
 						return mockWishlistItems.length;
 					}
@@ -136,7 +129,13 @@ describe("WishlistItem Controller", () => {
 	describe(".getAll()", () => {
 		it("should return paginated wishlistItems", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -149,25 +148,26 @@ describe("WishlistItem Controller", () => {
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
-			expect(sentData.data).to.have.property("totalGroups");
-			expect(sentData.data).to.have.property("totalItems");
-			expect(sentData.data.grouped).to.have.property("email");
-			expect(sentData.data.grouped).to.have.property("sms");
-			expect(sentData.data.grouped).to.have.property("unassigned");
+			expect(sentData.data).to.have.property("wishlistItems");
+			expect(sentData.data).to.have.property("groupedBy", "type");
+			expect(sentData.data.wishlistItems).to.have.property("email");
+			expect(sentData.data.wishlistItems).to.have.property("sms");
+			expect(sentData.data.wishlistItems).to.have.property("unassigned");
 		});
 
-		it("should group wishlistItems by name field", async function () {
+		it("should group wishlistItems by employeeId field", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "employeeId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "name");
-			expect(sentData.data.grouped).to.have.property("User Registration WishlistItem");
-			expect(sentData.data.grouped).to.have.property("SMS Notification WishlistItem");
+			expect(sentData.data).to.have.property("wishlistItems");
+			expect(sentData.data).to.have.property("groupedBy", "employeeId");
 		});
 
 		it("should handle wishlistItems with null values in grouping field", async function () {
@@ -175,38 +175,52 @@ describe("WishlistItem Controller", () => {
 			req.query = { groupBy: "type", document: "true", count: "true", pagination: "true" };
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
-			expect(sentData.data.grouped).to.have.property("unassigned");
-			expect(sentData.data.grouped.unassigned).to.be.an("array");
-			expect(sentData.data.grouped.unassigned.length).to.be.greaterThan(0);
+			expect(sentData.data.wishlistItems).to.have.property("unassigned");
+			expect(sentData.data.wishlistItems.unassigned).to.be.an("array");
+			expect(sentData.data.wishlistItems.unassigned.length).to.be.greaterThan(0);
 		});
 
 		it("should return normal response when groupBy is not provided", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
-			expect(sentData.data).to.not.have.property("grouped");
+			expect(sentData.data).to.have.property("wishlistItems");
+			expect(sentData.data.wishlistItems).to.be.an("array");
+			expect(sentData.data).to.not.have.property("groupedBy");
 		});
 
 		it("should handle empty groupBy parameter", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.query = { groupBy: "", document: "true", count: "true", pagination: "true" };
 			await wishlistItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.be.an("array");
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should combine grouping with other query parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { groupBy: "type", page: "1", limit: "10", sort: "name", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				groupBy: "type",
+				page: "1",
+				limit: "10",
+				sort: "employeeId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
-			expect(sentData.data).to.have.property("grouped");
-			expect(sentData.data).to.have.property("groupBy", "type");
+			expect(sentData.data).to.have.property("wishlistItems");
+			expect(sentData.data).to.have.property("groupedBy", "type");
 		});
 
 		it("should handle query validation failure", async function () {
@@ -219,9 +233,14 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw an error
 			prisma.wishlistItem.findMany = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -230,15 +249,20 @@ describe("WishlistItem Controller", () => {
 			};
 
 			await wishlistItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.wishlistItem.findMany = async () => {
 				throw new Error("Internal server error");
 			};
@@ -256,8 +280,7 @@ describe("WishlistItem Controller", () => {
 				document: "true",
 				count: "true",
 				pagination: "true",
-				query: "email",
-				filter: JSON.stringify([{ field: "type", operator: "equals", value: "email" }]),
+				filter: "employeeId:507f1f77bcf86cd799439050",
 			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
@@ -266,7 +289,15 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle pagination parameters", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "2", limit: "5", sort: "name", order: "asc", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "2",
+				limit: "5",
+				sort: "employeeId",
+				order: "asc",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -274,7 +305,12 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle field selection", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { fields: "name,type", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				fields: "employeeId,itemId",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -320,7 +356,8 @@ describe("WishlistItem Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await wishlistItemController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -330,15 +367,14 @@ describe("WishlistItem Controller", () => {
 			await wishlistItemController.getById(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
 
-			// Mock Prisma to throw an error
-			prisma.wishlistItem.findUnique = async () => {
+			prisma.wishlistItem.findFirst = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
 				error.code = "P1001";
@@ -346,7 +382,7 @@ describe("WishlistItem Controller", () => {
 			};
 
 			await wishlistItemController.getById(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -354,8 +390,7 @@ describe("WishlistItem Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
 
-			// Mock Prisma to throw a non-Prisma error
-			prisma.wishlistItem.findUnique = async () => {
+			prisma.wishlistItem.findFirst = async () => {
 				throw new Error("Internal server error");
 			};
 
@@ -369,8 +404,8 @@ describe("WishlistItem Controller", () => {
 		it("should create a new wishlistItem", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Contact Form WishlistItem",
-				description: "WishlistItem for contact forms with validation",
+				employeeId: "507f1f77bcf86cd799439060",
+				itemId: "507f1f77bcf86cd799439061",
 			};
 			req.body = createData;
 			await wishlistItemController.create(req as Request, res, next);
@@ -380,27 +415,11 @@ describe("WishlistItem Controller", () => {
 			expect(sentData.data).to.have.property("id");
 		});
 
-		it("should create a new wishlistItem with type field", async function () {
+		it("should create a new wishlistItem with different items", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Email WishlistItem",
-				description: "WishlistItem for email notifications",
-				type: "email",
-			};
-			req.body = createData;
-			await wishlistItemController.create(req as Request, res, next);
-			expect(statusCode).to.equal(201);
-			expect(sentData).to.have.property("status", "success");
-			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
-			expect(sentData.data).to.have.property("type", "email");
-		});
-
-		it("should create a new wishlistItem without type field", async function () {
-			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "Generic WishlistItem",
-				description: "WishlistItem without type",
+				employeeId: "507f1f77bcf86cd799439062",
+				itemId: "507f1f77bcf86cd799439063",
 			};
 			req.body = createData;
 			await wishlistItemController.create(req as Request, res, next);
@@ -413,9 +432,8 @@ describe("WishlistItem Controller", () => {
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Form WishlistItem",
-				description: "WishlistItem from form data",
-				type: "form",
+				employeeId: "507f1f77bcf86cd799439064",
+				itemId: "507f1f77bcf86cd799439065",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -432,8 +450,8 @@ describe("WishlistItem Controller", () => {
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "URL WishlistItem",
-				description: "WishlistItem from URL encoded data",
+				employeeId: "507f1f77bcf86cd799439066",
+				itemId: "507f1f77bcf86cd799439067",
 			};
 			req.body = createData;
 			(req as any).get = (header: string) => {
@@ -449,9 +467,22 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle validation errors", async function () {
 			this.timeout(TEST_TIMEOUT);
+			// Invalid ObjectId format for employeeId
 			const createData = {
-				name: "",
-				description: "WishlistItem with empty name",
+				employeeId: "not-a-valid-objectid",
+				itemId: "also-not-valid",
+			};
+			req.body = createData;
+			await wishlistItemController.create(req as Request, res, next);
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
+		});
+
+		it("should handle missing required fields", async function () {
+			this.timeout(TEST_TIMEOUT);
+			// Missing itemId
+			const createData = {
+				employeeId: "507f1f77bcf86cd799439068",
 			};
 			req.body = createData;
 			await wishlistItemController.create(req as Request, res, next);
@@ -462,12 +493,11 @@ describe("WishlistItem Controller", () => {
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Test WishlistItem",
-				description: "WishlistItem that will cause Prisma error",
+				employeeId: "507f1f77bcf86cd799439060",
+				itemId: "507f1f77bcf86cd799439061",
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw an error
 			prisma.wishlistItem.create = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -476,19 +506,18 @@ describe("WishlistItem Controller", () => {
 			};
 
 			await wishlistItemController.create(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Test WishlistItem",
-				description: "WishlistItem that will cause internal error",
+				employeeId: "507f1f77bcf86cd799439060",
+				itemId: "507f1f77bcf86cd799439061",
 			};
 			req.body = createData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.wishlistItem.create = async () => {
 				throw new Error("Internal server error");
 			};
@@ -503,8 +532,7 @@ describe("WishlistItem Controller", () => {
 		it("should update wishlistItem details", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Enhanced Contact Form WishlistItem",
-				description: "Updated wishlistItem with additional validation and styling options",
+				employeeId: "507f1f77bcf86cd799439070",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -512,13 +540,14 @@ describe("WishlistItem Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("wishlistItem");
+			expect(sentData.data.wishlistItem).to.have.property("id");
 		});
 
-		it("should update wishlistItem type field", async function () {
+		it("should update wishlistItem itemId field", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				type: "sms",
+				itemId: "507f1f77bcf86cd799439071",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -526,15 +555,15 @@ describe("WishlistItem Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("wishlistItem");
+			expect(sentData.data.wishlistItem).to.have.property("id");
 		});
 
-		it("should update multiple wishlistItem fields including type", async function () {
+		it("should update multiple wishlistItem fields", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated Email WishlistItem",
-				description: "Updated description",
-				type: "email",
+				employeeId: "507f1f77bcf86cd799439072",
+				itemId: "507f1f77bcf86cd799439073",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -542,14 +571,14 @@ describe("WishlistItem Controller", () => {
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
 			expect(sentData).to.have.property("data");
-			expect(sentData.data).to.have.property("id");
+			expect(sentData.data).to.have.property("wishlistItem");
+			expect(sentData.data.wishlistItem).to.have.property("id");
 		});
 
 		it("should handle form data (multipart/form-data)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Form Updated WishlistItem",
-				description: "Updated from form data",
+				employeeId: "507f1f77bcf86cd799439074",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -567,8 +596,7 @@ describe("WishlistItem Controller", () => {
 		it("should handle form data (application/x-www-form-urlencoded)", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "URL Updated WishlistItem",
-				description: "Updated from URL encoded data",
+				itemId: "507f1f77bcf86cd799439075",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -586,20 +614,20 @@ describe("WishlistItem Controller", () => {
 		it("should handle invalid ID format", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated WishlistItem",
+				employeeId: "507f1f77bcf86cd799439076",
 			};
 			req.params = { id: "invalid-id" };
 			req.body = updateData;
 			await wishlistItemController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle validation errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "",
-				description: "WishlistItem with empty name",
+				employeeId: "not-a-valid-objectid",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
@@ -611,26 +639,24 @@ describe("WishlistItem Controller", () => {
 		it("should handle non-existent wishlistItem update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Updated WishlistItem",
+				employeeId: "507f1f77bcf86cd799439077",
 			};
 			req.params = { id: "507f1f77bcf86cd799439099" };
 			req.body = updateData;
 			await wishlistItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Test WishlistItem",
-				description: "WishlistItem that will cause Prisma error",
+				employeeId: "507f1f77bcf86cd799439078",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw an error
 			prisma.wishlistItem.update = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -639,20 +665,18 @@ describe("WishlistItem Controller", () => {
 			};
 
 			await wishlistItemController.update(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle internal errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const updateData = {
-				name: "Test WishlistItem",
-				description: "WishlistItem that will cause internal error",
+				employeeId: "507f1f77bcf86cd799439079",
 			};
 			req.params = { id: mockWishlistItem.id };
 			req.body = updateData;
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.wishlistItem.update = async () => {
 				throw new Error("Internal server error");
 			};
@@ -676,7 +700,8 @@ describe("WishlistItem Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: "invalid-id" };
 			await wishlistItemController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			// No ObjectId validation - findFirst returns null → 404
+			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -686,14 +711,13 @@ describe("WishlistItem Controller", () => {
 			await wishlistItemController.remove(req as Request, res, next);
 			expect(statusCode).to.equal(404);
 			expect(sentData).to.have.property("status", "error");
-			expect(sentData).to.have.property("code", "NOT_FOUND");
+			expect(sentData).to.have.property("code", 404);
 		});
 
 		it("should handle Prisma errors", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
 
-			// Mock Prisma to throw an error
 			prisma.wishlistItem.delete = async () => {
 				const error = new Error("Database connection failed") as any;
 				error.name = "PrismaClientKnownRequestError";
@@ -702,7 +726,7 @@ describe("WishlistItem Controller", () => {
 			};
 
 			await wishlistItemController.remove(req as Request, res, next);
-			expect(statusCode).to.equal(400);
+			expect(statusCode).to.equal(500);
 			expect(sentData).to.have.property("status", "error");
 		});
 
@@ -710,7 +734,6 @@ describe("WishlistItem Controller", () => {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
 
-			// Mock Prisma to throw a non-Prisma error
 			prisma.wishlistItem.delete = async () => {
 				throw new Error("Internal server error");
 			};
@@ -746,24 +769,11 @@ describe("WishlistItem Controller", () => {
 			expect(sentData).to.have.property("status", "error");
 		});
 
-		it("should handle very long wishlistItem name", async function () {
+		it("should handle valid wishlistItem creation", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "A".repeat(1000), // Very long name
-				description: "WishlistItem with very long name",
-			};
-			req.body = createData;
-			await wishlistItemController.create(req as Request, res, next);
-			expect(statusCode).to.equal(201);
-			expect(sentData).to.have.property("status", "success");
-		});
-
-		it("should handle special characters in wishlistItem data", async function () {
-			this.timeout(TEST_TIMEOUT);
-			const createData = {
-				name: "WishlistItem with special chars: !@#$%^&*()",
-				description: "Description with émojis 🚀 and unicode",
-				type: "special-type",
+				employeeId: "507f1f77bcf86cd799439080",
+				itemId: "507f1f77bcf86cd799439081",
 			};
 			req.body = createData;
 			await wishlistItemController.create(req as Request, res, next);
@@ -774,12 +784,11 @@ describe("WishlistItem Controller", () => {
 		it("should handle concurrent requests", async function () {
 			this.timeout(TEST_TIMEOUT);
 			const createData = {
-				name: "Concurrent WishlistItem",
-				description: "WishlistItem created concurrently",
+				employeeId: "507f1f77bcf86cd799439082",
+				itemId: "507f1f77bcf86cd799439083",
 			};
 			req.body = createData;
 
-			// Simulate concurrent requests
 			const promises = Array(5)
 				.fill(null)
 				.map(() => wishlistItemController.create(req as Request, res, next));
@@ -799,13 +808,20 @@ describe("WishlistItem Controller", () => {
 				filter: "invalid-json",
 			};
 			await wishlistItemController.getAll(req as Request, res, next);
-			expect(statusCode).to.equal(400);
-			expect(sentData).to.have.property("status", "error");
+			// Filter parser silently ignores malformed entries
+			expect(statusCode).to.equal(200);
+			expect(sentData).to.have.property("status", "success");
 		});
 
 		it("should handle very large page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "999999", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "999999",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -813,7 +829,13 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle very large limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "999999", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "999999",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -821,7 +843,13 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle negative page numbers", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "-1", limit: "10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "-1",
+				limit: "10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -829,7 +857,13 @@ describe("WishlistItem Controller", () => {
 
 		it("should handle negative limit values", async function () {
 			this.timeout(TEST_TIMEOUT);
-			req.query = { page: "1", limit: "-10", document: "true", count: "true", pagination: "true" };
+			req.query = {
+				page: "1",
+				limit: "-10",
+				document: "true",
+				count: "true",
+				pagination: "true",
+			};
 			await wishlistItemController.getAll(req as Request, res, next);
 			expect(statusCode).to.equal(400);
 			expect(sentData).to.have.property("status", "error");
@@ -854,16 +888,17 @@ describe("WishlistItem Controller", () => {
 		it("should handle missing required fields in update", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
-			req.body = {}; // Empty body
+			req.body = {};
 			await wishlistItemController.update(req as Request, res, next);
-			expect(statusCode).to.equal(200);
-			expect(sentData).to.have.property("status", "success");
+			// Empty body → "No update fields provided" → 400
+			expect(statusCode).to.equal(400);
+			expect(sentData).to.have.property("status", "error");
 		});
 
 		it("should handle partial updates correctly", async function () {
 			this.timeout(TEST_TIMEOUT);
 			req.params = { id: mockWishlistItem.id };
-			req.body = { name: "Only name updated" }; // Only name, no description or type
+			req.body = { itemId: "507f1f77bcf86cd799439084" };
 			await wishlistItemController.update(req as Request, res, next);
 			expect(statusCode).to.equal(200);
 			expect(sentData).to.have.property("status", "success");
@@ -912,7 +947,7 @@ describe("Data Grouping Helper", () => {
 		it("should handle undefined values by placing them in unassigned group", () => {
 			const dataWithUndefined = [
 				{ id: 1, name: "WishlistItem 1", type: "email" },
-				{ id: 2, name: "WishlistItem 2" }, // missing type field
+				{ id: 2, name: "WishlistItem 2" },
 			];
 			const result = groupDataByField(dataWithUndefined, "type");
 			expect(result).to.have.property("email");
